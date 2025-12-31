@@ -1,0 +1,329 @@
+---
+layout: artifacts
+title: "RGBカラーピッカー"
+permalink: /apps/rgb_color_picker/
+---
+
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280;
+    --shadow: 0 4px 10px rgba(0,0,0,.08);
+    --ring:#3b82f6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+    background:var(--bg); color:var(--text);
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:24px;}
+  h1{font-size:28px; margin:8px 0 20px; text-align:center;}
+  h2{font-size:18px; margin:0 0 12px; color:#374151;}
+  h3{font-size:13px; margin:0 0 8px; color:var(--muted); font-weight:700;}
+  .card{
+    background:var(--card); border-radius:12px; box-shadow:var(--shadow);
+    padding:16px; margin-bottom:18px;
+  }
+  .row{display:flex; gap:24px; flex-wrap:wrap;}
+  .radio-group{display:flex; gap:18px; flex-wrap:wrap; align-items:center;}
+  label{cursor:pointer; display:flex; gap:8px; align-items:center; color:#374151;}
+  input[type="radio"]{transform: translateY(1px);}
+  .toast{
+    position:fixed; top:14px; right:14px; z-index:9999;
+    background:#16a34a; color:#fff; padding:10px 12px; border-radius:10px;
+    box-shadow:var(--shadow); display:none;
+    font-size:14px; max-width:min(420px, calc(100vw - 28px));
+    word-break: break-word;
+  }
+  .huebar{display:flex; flex-wrap:wrap; gap:4px;}
+  .huebtn{
+    width:32px; height:32px; border-radius:8px; border:0; cursor:pointer;
+    transition: transform .08s ease, box-shadow .08s ease;
+    outline:none;
+  }
+  .huebtn:hover{transform:scale(1.05)}
+  .huebtn.active{
+    box-shadow: 0 0 0 4px rgba(59,130,246,.45);
+    transform: scale(1.10);
+  }
+  .grid-title{display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;}
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap:10px;
+  }
+  .patch{
+    border-radius:10px; overflow:hidden; cursor:pointer;
+    transition: transform .08s ease, box-shadow .08s ease;
+    position:relative;
+  }
+  .patch:hover{transform:scale(1.05); box-shadow:var(--shadow)}
+  .patch-inner{
+    width:80px; height:80px; display:flex; align-items:center; justify-content:center;
+    margin:0 auto;
+  }
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:11px; line-height:1.2; text-align:center;
+  }
+  .tag{
+    display:inline-block; padding:2px 6px; border-radius:6px;
+    color:#fff; background: rgba(0,0,0,.55);
+    margin:2px 0;
+  }
+  .help{
+    background:#eff6ff; border-radius:12px; padding:14px 16px;
+    color:#1d4ed8;
+  }
+  .help h3{color:#1e40af; font-size:16px; margin:0 0 6px;}
+  .help ul{margin:0; padding-left:18px; color:#1d4ed8;}
+  .help li{margin:4px 0; font-size:13px;}
+  .smallmuted{color:var(--muted); font-size:12px;}
+</style>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+  <h1>RGBカラーピッカー</h1>
+
+  <div class="card">
+    <h2>コピー設定</h2>
+
+    <div class="row">
+      <div style="min-width:280px;">
+        <h3>色の順序</h3>
+        <div class="radio-group" role="radiogroup" aria-label="色の順序">
+          <label><input type="radio" name="colorOrder" value="rgb" checked> <span>RGB順</span></label>
+          <label><input type="radio" name="colorOrder" value="bgr"> <span>BGR順</span></label>
+        </div>
+      </div>
+
+      <div style="min-width:280px;">
+        <h3>フォーマット</h3>
+        <div class="radio-group" role="radiogroup" aria-label="フォーマット">
+          <label><input type="radio" name="copyFormat" value="rgb" checked> <span id="fmtLabelRgb">rgb(255, 255, 255)</span></label>
+          <label><input type="radio" name="copyFormat" value="array"> <span>[255,255,255]</span></label>
+          <label><input type="radio" name="copyFormat" value="comma"> <span>255,255,255</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="smallmuted" style="margin-top:10px;">
+      クリック / 右クリックでコピーします（同じ挙動）。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>色相を選択してください</h2>
+    <div class="huebar" id="huebar"></div>
+  </div>
+
+  <div class="card">
+    <div class="grid-title">
+      <div>
+        <h2 style="margin-bottom:4px;">色見本一覧（色相: <span id="hueText">0</span>°）</h2>
+        <div class="smallmuted">S(彩度) × L(明度) の10×10グリッド</div>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="help">
+    <h3>使用方法</h3>
+    <ul>
+      <li>コピー設定で色の順序（RGB/BGR）とフォーマットを選択</li>
+      <li>上部の色相バーから大まかな色をクリックで選択</li>
+      <li>下部のグリッドで詳細な色バリエーションを確認</li>
+      <li>色パッチをクリック（または右クリック）で値をコピー</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  // ---- State ----
+  let selectedHue = 0;
+  let copyFormat = "rgb";   // rgb, array, comma
+  let colorOrder = "rgb";   // rgb, bgr
+
+  // ---- Utils ----
+  function hslToRgb(h, s, l){
+    h = h / 360; s = s / 100; l = l / 100;
+
+    function hue2rgb(p, q, t){
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    if (s === 0){
+      const v = Math.round(l * 255);
+      return [v, v, v];
+    }
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+
+    const r = hue2rgb(p, q, h + 1/3);
+    const g = hue2rgb(p, q, h);
+    const b = hue2rgb(p, q, h - 1/3);
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
+  function formatRgb(r,g,b){
+    const values = (colorOrder === "rgb") ? [r,g,b] : [b,g,r];
+    const [v1,v2,v3] = values;
+
+    switch(copyFormat){
+      case "rgb":
+        return (colorOrder === "rgb")
+          ? `rgb(${v1}, ${v2}, ${v3})`
+          : `bgr(${v1}, ${v2}, ${v3})`;
+      case "array":
+        return `[${v1},${v2},${v3}]`;
+      case "comma":
+        return `${v1},${v2},${v3}`;
+      default:
+        return `rgb(${v1}, ${v2}, ${v3})`;
+    }
+  }
+
+  function showToast(msg, ok=true){
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.style.background = ok ? "#16a34a" : "#dc2626";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{ el.style.display="none"; }, 2000);
+  }
+
+  async function copyToClipboard(r,g,b){
+    const text = formatRgb(r,g,b);
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast(`${text} をコピーしました！`, true);
+    }catch(e){
+      // フォールバック（古いブラウザ/権限）
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast(`${text} をコピーしました！`, true);
+      }catch(_){
+        showToast("コピーに失敗しました", false);
+      }
+    }
+  }
+
+  function generateHueBar(){
+    const hues = [];
+    for (let i=0; i<360; i+=5) hues.push(i);
+    return hues;
+  }
+
+  function generateColorGrid(){
+    const colors = [];
+    const saturationSteps = 10;
+    const lightnessSteps = 10;
+
+    for (let s=0; s<=100; s += 100 / saturationSteps){
+      for (let l=10; l<=90; l += 80 / lightnessSteps){
+        const [r,g,b] = hslToRgb(selectedHue, s, l);
+        colors.push({r,g,b,s,l});
+      }
+    }
+    return colors;
+  }
+
+  // ---- Render ----
+  function renderHueBar(){
+    const bar = document.getElementById("huebar");
+    bar.innerHTML = "";
+
+    const hues = generateHueBar();
+    hues.forEach(hue=>{
+      const [r,g,b] = hslToRgb(hue, 100, 50);
+      const btn = document.createElement("button");
+      btn.className = "huebtn" + (hue === selectedHue ? " active" : "");
+      btn.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      btn.title = `色相: ${hue}°`;
+      btn.addEventListener("click", ()=>{
+        selectedHue = hue;
+        document.getElementById("hueText").textContent = String(selectedHue);
+        renderHueBar();
+        renderGrid();
+      });
+      bar.appendChild(btn);
+    });
+  }
+
+  function renderGrid(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    const colors = generateColorGrid();
+
+    colors.forEach((c)=>{
+      const patch = document.createElement("div");
+      patch.className = "patch";
+      patch.style.backgroundColor = `rgb(${c.r}, ${c.g}, ${c.b})`;
+      patch.title = `右クリックでコピー: ${formatRgb(c.r,c.g,c.b)}`;
+
+      patch.addEventListener("click", ()=> copyToClipboard(c.r,c.g,c.b));
+      patch.addEventListener("contextmenu", (e)=>{
+        e.preventDefault();
+        copyToClipboard(c.r,c.g,c.b);
+      });
+
+      const inner = document.createElement("div");
+      inner.className = "patch-inner mono";
+
+      const r = document.createElement("div");
+      r.className = "tag"; r.textContent = `R:${c.r}`;
+      const g = document.createElement("div");
+      g.className = "tag"; g.textContent = `G:${c.g}`;
+      const b = document.createElement("div");
+      b.className = "tag"; b.textContent = `B:${c.b}`;
+
+      inner.appendChild(r);
+      inner.appendChild(g);
+      inner.appendChild(b);
+      patch.appendChild(inner);
+
+      grid.appendChild(patch);
+    });
+  }
+
+  function syncFormatLabel(){
+    const lbl = document.getElementById("fmtLabelRgb");
+    lbl.textContent = (colorOrder === "rgb") ? "rgb(255, 255, 255)" : "bgr(255, 255, 255)";
+  }
+
+  // ---- Bind controls ----
+  document.querySelectorAll('input[name="colorOrder"]').forEach(r=>{
+    r.addEventListener("change", (e)=>{
+      colorOrder = e.target.value;
+      syncFormatLabel();
+      renderGrid(); // titleのformatなどが変わるため
+    });
+  });
+
+  document.querySelectorAll('input[name="copyFormat"]').forEach(r=>{
+    r.addEventListener("change", (e)=>{
+      copyFormat = e.target.value;
+      renderGrid();
+    });
+  });
+
+  // ---- Init ----
+  document.getElementById("hueText").textContent = String(selectedHue);
+  syncFormatLabel();
+  renderHueBar();
+  renderGrid();
+</script>
