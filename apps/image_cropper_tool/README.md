@@ -1,5 +1,5 @@
 ---
-title: 画像切り抜き座標指定ツール
+title: 画像トリミング＆座標取得ツール
 desc: 画像内の矩形範囲を切り取るための矩形座標を作成。
 tags: [Poke-Controller]
 order: 20
