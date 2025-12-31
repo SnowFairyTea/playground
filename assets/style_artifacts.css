@@ -311,3 +311,17 @@ input[type="file"]:hover { border-color: #84cc16; }
   background: #fee2e2;
   color: #dc2626;
 }
+
+.site-footer {
+  margin-top: 80px;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.site-footer hr {
+  margin-bottom: 15px;
+  border: none;
+  border-top: 1px solid #ddd;
+}
