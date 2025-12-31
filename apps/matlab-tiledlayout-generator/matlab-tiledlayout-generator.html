@@ -1,0 +1,585 @@
+---
+layout: artifacts
+title: "MATLAB Tiledlayout GUI Generator"
+permalink: /apps/matlab-tiledlayout-generator/
+---
+
+<style>
+
+    :root{
+      --bg:#f5f5f7; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+      --blue:#3b82f6; --blue2:rgba(59,130,246,.25); --green:#10b981; --red:#ef4444;
+      --shadow: 0 8px 20px rgba(0,0,0,.08);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN","Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:var(--sans); color:var(--text); background:var(--bg)}
+    .wrap{max-width:1200px; margin:0 auto; padding:24px}
+    .card{background:var(--card); border-radius:14px; box-shadow:var(--shadow); padding:18px}
+    h1{font-size:24px; margin:0 0 14px; text-align:center}
+    h2{font-size:18px; margin:0}
+    h3{font-size:16px; margin:0 0 10px}
+    .grid{display:grid; grid-template-columns: 1fr; gap:16px}
+    @media(min-width: 1024px){ .grid{grid-template-columns: 1fr 1fr} }
+    .row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .btns{display:flex; gap:8px; flex-wrap:wrap}
+    button{
+      border:0; border-radius:10px; padding:9px 12px; cursor:pointer; font-weight:600;
+      background:#e5e7eb; color:#111827;
+    }
+    button.primary{background:var(--blue); color:white}
+    button.good{background:var(--green); color:white}
+    button.danger{background:var(--red); color:white}
+    button.ghost{background:#eef2ff; color:#3730a3}
+    button:active{transform: translateY(1px)}
+    .panel{border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff}
+    .subtle{color:var(--muted); font-size:13px; line-height:1.5}
+    .hint{background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px}
+    .settingBox{background:#f8fafc; border:1px solid #ddd; border-radius:12px; padding:12px}
+    label{display:block; font-size:12px; color:#374151; margin:0 0 6px; font-weight:700}
+    input, select{
+      width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:10px; background:#fff;
+      font-family:var(--sans);
+    }
+    .two{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .monoBox{
+      background:#0b1220; color:#34d399; border-radius:14px; padding:14px;
+      font-family:var(--mono); font-size:12.5px; max-height:420px; overflow:auto; border:1px solid #0f172a;
+    }
+    .svgWrap{border:2px solid #d1d5db; border-radius:14px; overflow:hidden; background:#fff}
+    .note{font-size:13px; color:#111827}
+    .pill{display:inline-block; padding:2px 10px; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:12px; font-weight:700}
+    .small{font-size:12px; color:var(--muted)}
+    .kbd{font-family:var(--mono); font-size:12px; background:#111827; color:#fff; padding:2px 6px; border-radius:7px}
+    .toast{margin-top:10px; font-size:13px; color:#065f46; background:#ecfdf5; border:1px solid #a7f3d0; padding:10px 12px; border-radius:12px; display:none}
+  </style>
+</head>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>MATLAB Tiledlayout GUI Generator（単体HTML版）</h1>
+
+      <div class="grid">
+        <!-- Left: Canvas -->
+        <div>
+          <div class="row" style="margin-bottom:10px;">
+            <h2>Visual Layout Designer</h2>
+            <div class="btns">
+              <button id="btnCanvas" class="ghost">Canvas Settings</button>
+              <button id="btnGrid" class="primary">Grid ON</button>
+              <button id="btnClear" class="danger">Clear</button>
+            </div>
+          </div>
+
+          <div id="canvasSettings" class="settingBox" style="display:none; margin-bottom:10px;">
+            <h3>Canvas Settings</h3>
+            <div class="two" style="margin-bottom:10px;">
+              <div>
+                <label>Width (px)</label>
+                <input id="inWidth" type="number" min="200" max="1200" value="600" />
+              </div>
+              <div>
+                <label>Height (px)</label>
+                <input id="inHeight" type="number" min="200" max="800" value="400" />
+              </div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Grid Size (px)</label>
+              <input id="inGrid" type="number" min="10" max="50" value="20" />
+            </div>
+            <div class="hint small" id="gridInfo"></div>
+          </div>
+
+          <div class="svgWrap">
+            <svg id="canvas" width="600" height="400" style="display:block; cursor:crosshair; user-select:none;"></svg>
+          </div>
+
+          <div class="hint" style="margin-top:10px;">
+            <div class="note"><span class="pill">操作</span></div>
+            <div class="subtle">
+              ・ドラッグで領域（ax）を作成（グリッドにスナップ）<br/>
+              ・赤い×をクリックで削除<br/>
+              ・右側に MATLAB コードが自動生成されます
+            </div>
+            <div class="subtle" style="margin-top:6px;">
+              最適グリッド：<span id="optGrid" class="kbd">1×1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Code -->
+        <div>
+          <div class="row" style="margin-bottom:10px;">
+            <h2>Generated MATLAB Code</h2>
+            <div class="btns">
+              <button id="btnCopy" class="good">Copy Code</button>
+            </div>
+          </div>
+
+          <pre class="monoBox" id="codeBox"></pre>
+          <div class="toast" id="toast">コピーしました。</div>
+
+          <div class="settingBox" style="margin-top:12px;">
+            <h3>Code Generation Settings</h3>
+
+            <div style="margin-bottom:10px;">
+              <label>Code Type</label>
+              <select id="selCodeType">
+                <option value="tiledlayout">tiledlayout (R2019b+)</option>
+                <option value="subplot">subplot (classic)</option>
+              </select>
+            </div>
+
+            <div id="tlSettings">
+              <div style="margin-bottom:10px;">
+                <label>Tile Spacing</label>
+                <select id="selTileSpacing">
+                  <option value="normal">normal</option>
+                  <option value="compact">compact</option>
+                  <option value="tight">tight</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label>Padding</label>
+                <select id="selPadding">
+                  <option value="normal">normal</option>
+                  <option value="compact">compact</option>
+                  <option value="tight">tight</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="hint small" id="cmpHint"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== State ======
+  let rectangles = []; // {id,x,y,width,height}
+  let isDrawing = false;
+  let startPos = {x:0,y:0};
+  let currentRect = null;
+
+  const settings = {
+    tileSpacing: 'normal',
+    padding: 'normal',
+    codeType: 'tiledlayout'
+  };
+  const canvasSettings = {
+    width: 600,
+    height: 400,
+    gridSize: 20
+  };
+  let showGrid = true;
+
+  // ====== Elements ======
+  const svg = document.getElementById('canvas');
+  const codeBox = document.getElementById('codeBox');
+  const optGrid = document.getElementById('optGrid');
+
+  const btnCanvas = document.getElementById('btnCanvas');
+  const btnGrid = document.getElementById('btnGrid');
+  const btnClear = document.getElementById('btnClear');
+  const btnCopy = document.getElementById('btnCopy');
+
+  const canvasSettingsBox = document.getElementById('canvasSettings');
+  const inWidth = document.getElementById('inWidth');
+  const inHeight = document.getElementById('inHeight');
+  const inGrid = document.getElementById('inGrid');
+  const gridInfo = document.getElementById('gridInfo');
+
+  const selCodeType = document.getElementById('selCodeType');
+  const selTileSpacing = document.getElementById('selTileSpacing');
+  const selPadding = document.getElementById('selPadding');
+  const tlSettings = document.getElementById('tlSettings');
+  const cmpHint = document.getElementById('cmpHint');
+  const toast = document.getElementById('toast');
+
+  // ====== Helpers ======
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const snap = (v) => Math.round(v / canvasSettings.gridSize) * canvasSettings.gridSize;
+
+  function svgEl(tag, attrs = {}) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  }
+
+  function getMousePos(evt){
+    const r = svg.getBoundingClientRect();
+    const x = evt.clientX - r.left;
+    const y = evt.clientY - r.top;
+    return { x, y };
+  }
+
+  // GCD
+  function gcd(a,b){ while(b!==0){ const t=b; b=a%b; a=t; } return a; }
+  function gcdArray(arr){ return arr.reduce((res,cur)=>gcd(res,cur)); }
+
+  function calculateOptimalGrid(){
+    const W = canvasSettings.width;
+    const H = canvasSettings.height;
+    const G = canvasSettings.gridSize;
+
+    if(rectangles.length === 0){
+      return {
+        rows:1, cols:1,
+        xLines:[0, W/G],
+        yLines:[0, H/G],
+        cellWidths:[], cellHeights:[],
+        gcdX:1, gcdY:1, dx:[], dy:[]
+      };
+    }
+
+    const gridRects = rectangles.map(r => ({
+      left: r.x / G,
+      right: (r.x + r.width) / G,
+      top: r.y / G,
+      bottom: (r.y + r.height) / G
+    }));
+
+    const xSet = new Set(), ySet = new Set();
+    for(const r of gridRects){
+      xSet.add(r.left); xSet.add(r.right);
+      ySet.add(r.top);  ySet.add(r.bottom);
+    }
+    const xLines = Array.from(xSet).sort((a,b)=>a-b);
+    const yLines = Array.from(ySet).sort((a,b)=>a-b);
+
+    const dx = [];
+    for(let i=1;i<xLines.length;i++) dx.push(xLines[i]-xLines[i-1]);
+    const dy = [];
+    for(let i=1;i<yLines.length;i++) dy.push(yLines[i]-yLines[i-1]);
+
+    const gcdX = dx.length ? gcdArray(dx) : 1;
+    const gcdY = dy.length ? gcdArray(dy) : 1;
+
+    const cellWidths = dx.map(w => w / gcdX);
+    const cellHeights = dy.map(h => h / gcdY);
+
+    const cols = cellWidths.reduce((s,w)=>s+w, 0) || 1;
+    const rows = cellHeights.reduce((s,h)=>s+h, 0) || 1;
+
+    return { rows, cols, xLines, yLines, cellWidths, cellHeights, gcdX, gcdY, dx, dy };
+  }
+
+  function generateMatlabCode(){
+    if(rectangles.length === 0){
+      if(settings.codeType === 'tiledlayout'){
+        return "% No rectangles drawn\ntl = tiledlayout(1,1);\nax1 = nexttile();";
+      }else{
+        return "% No rectangles drawn\nfigure;\nax1 = subplot(1,1,1);";
+      }
+    }
+
+    const G = canvasSettings.gridSize;
+    const grid = calculateOptimalGrid();
+    const { rows, cols, xLines, yLines, cellWidths, cellHeights, gcdX, gcdY, dx, dy } = grid;
+
+    let code = "";
+
+    if(settings.codeType === 'tiledlayout'){
+      code += `% Generated MATLAB Tiledlayout Code\n`;
+      code += `% Grid analysis: GCD_X=${gcdX}, GCD_Y=${gcdY}\n`;
+      code += `% Column widths (grid units): [${dx.join(', ')}] -> cells: [${cellWidths.join(', ')}]\n`;
+      code += `% Row heights (grid units): [${dy.join(', ')}] -> cells: [${cellHeights.join(', ')}]\n`;
+      code += `tl = tiledlayout(${rows},${cols}`;
+
+      if(settings.tileSpacing !== 'normal') code += `,'TileSpacing','${settings.tileSpacing}'`;
+      if(settings.padding !== 'normal')     code += `,'Padding','${settings.padding}'`;
+      code += `);\n\n`;
+    }else{
+      code += `% Generated MATLAB Subplot Code\n`;
+      code += `% Grid size: ${rows}×${cols}\n`;
+      code += `% Note: subplot uses equal-width columns and equal-height rows\n`;
+      code += `figure;\n\n`;
+    }
+
+    rectangles.forEach((rect, idx) => {
+      const gridRect = {
+        left: rect.x / G,
+        right: (rect.x + rect.width) / G,
+        top: rect.y / G,
+        bottom: (rect.y + rect.height) / G
+      };
+
+      const leftIndex = xLines.findIndex(x => x === gridRect.left);
+      const rightIndex = xLines.findIndex(x => x === gridRect.right);
+      const topIndex = yLines.findIndex(y => y === gridRect.top);
+      const bottomIndex = yLines.findIndex(y => y === gridRect.bottom);
+
+      if(settings.codeType === 'tiledlayout'){
+        let startCol = 1;
+        for(let i=0;i<leftIndex;i++) startCol += cellWidths[i];
+
+        let startRow = 1;
+        for(let i=0;i<topIndex;i++) startRow += cellHeights[i];
+
+        let spanCols = 0;
+        for(let i=leftIndex;i<rightIndex;i++) spanCols += cellWidths[i];
+
+        let spanRows = 0;
+        for(let i=topIndex;i<bottomIndex;i++) spanRows += cellHeights[i];
+
+        const startIdx = (startRow - 1) * cols + startCol;
+
+        code += `% Subplot ${idx+1}: spans ${spanRows}×${spanCols} cells\n`;
+        code += `% Position: row ${startRow}, col ${startCol} (cell indices)\n`;
+        if(spanRows === 1 && spanCols === 1){
+          code += `ax${idx+1} = nexttile(${startIdx}); % single cell\n\n`;
+        }else{
+          code += `ax${idx+1} = nexttile(${startIdx}, [${spanRows},${spanCols}]); % multi-cell span\n\n`;
+        }
+      }else{
+        const startRow = topIndex + 1;
+        const startCol = leftIndex + 1;
+        const spanRows = bottomIndex - topIndex;
+        const spanCols = rightIndex - leftIndex;
+
+        code += `% Subplot ${idx+1}: position (${startRow},${startCol}) span ${spanRows}×${spanCols}\n`;
+        code += `% Note: subplot doesn't support span - using Position for multi-cell spans\n`;
+
+        if(spanRows === 1 && spanCols === 1){
+          const subplotIndex = (startRow - 1) * (xLines.length - 1) + startCol;
+          code += `ax${idx+1} = subplot(${yLines.length - 1},${xLines.length - 1},${subplotIndex});\n\n`;
+        }else{
+          const left = (startCol - 1) / (xLines.length - 1);
+          const bottom = 1 - (startRow + spanRows - 1) / (yLines.length - 1);
+          const width = spanCols / (xLines.length - 1);
+          const height = spanRows / (yLines.length - 1);
+          code += `ax${idx+1} = subplot('Position',[${left.toFixed(3)}, ${bottom.toFixed(3)}, ${width.toFixed(3)}, ${height.toFixed(3)}]);\n\n`;
+        }
+      }
+    });
+
+    return code.trimEnd();
+  }
+
+  // ====== Render ======
+  function render(){
+    // size
+    svg.setAttribute('width', canvasSettings.width);
+    svg.setAttribute('height', canvasSettings.height);
+    svg.setAttribute('viewBox', `0 0 ${canvasSettings.width} ${canvasSettings.height}`);
+
+    // clear
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // grid
+    if(showGrid){
+      const G = canvasSettings.gridSize;
+      for(let x=0;x<=canvasSettings.width;x+=G){
+        svg.appendChild(svgEl('line', {x1:x,y1:0,x2:x,y2:canvasSettings.height, stroke:'#e5e7eb', 'stroke-width':'1'}));
+      }
+      for(let y=0;y<=canvasSettings.height;y+=G){
+        svg.appendChild(svgEl('line', {x1:0,y1:y,x2:canvasSettings.width,y2:y, stroke:'#e5e7eb', 'stroke-width':'1'}));
+      }
+    }
+
+    // rectangles
+    rectangles.forEach((r, index) => {
+      const g = svgEl('g');
+      g.appendChild(svgEl('rect', {
+        x:r.x, y:r.y, width:r.width, height:r.height,
+        fill:'rgba(59,130,246,0.30)', stroke:'#3b82f6', 'stroke-width':'2'
+      }));
+
+      g.appendChild(svgEl('text', {
+        x: r.x + r.width/2,
+        y: r.y + r.height/2,
+        'text-anchor':'middle',
+        'dominant-baseline':'middle',
+        'font-size':'14',
+        'font-weight':'700',
+        fill:'#111827',
+        style:'pointer-events:none; user-select:none;'
+      })).textContent = `ax${index+1}`;
+
+      // delete button (circle + ×)
+      const cx = r.x + r.width - 10;
+      const cy = r.y + 10;
+      const c = svgEl('circle', { cx, cy, r:8, fill:'#ef4444', style:'cursor:pointer;' });
+      c.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        rectangles = rectangles.filter(rr => rr.id !== r.id);
+        update();
+      });
+      g.appendChild(c);
+
+      const t = svgEl('text', {
+        x:cx, y:cy,
+        'text-anchor':'middle',
+        'dominant-baseline':'middle',
+        'font-size':'12',
+        'font-weight':'800',
+        fill:'#ffffff',
+        style:'pointer-events:none; user-select:none;'
+      });
+      t.textContent = '×';
+      g.appendChild(t);
+
+      svg.appendChild(g);
+    });
+
+    // current rectangle
+    if(currentRect){
+      svg.appendChild(svgEl('rect', {
+        x:currentRect.x, y:currentRect.y, width:currentRect.width, height:currentRect.height,
+        fill:'rgba(59,130,246,0.20)', stroke:'#3b82f6', 'stroke-width':'2', 'stroke-dasharray':'6,6'
+      }));
+    }
+
+    // code / info
+    const grid = calculateOptimalGrid();
+    optGrid.textContent = `${grid.rows}×${grid.cols}`;
+    codeBox.textContent = generateMatlabCode();
+
+    const ratio = (canvasSettings.width / canvasSettings.height).toFixed(2);
+    const cellsX = Math.floor(canvasSettings.width / canvasSettings.gridSize);
+    const cellsY = Math.floor(canvasSettings.height / canvasSettings.gridSize);
+    gridInfo.textContent = `Grid ratio: ${ratio} | Cells: ${cellsX}×${cellsY} | Snap: ${canvasSettings.gridSize}px`;
+
+    // hint
+    if(settings.codeType === 'subplot'){
+      cmpHint.textContent =
+        "subplot は均等分割が基本です。複数セル跨ぎは Position 指定で擬似対応します（生成コード参照）。";
+    }else{
+      cmpHint.textContent =
+        "tiledlayout は任意スパンが素直に書けます。学術用途の図レイアウトにはこちらが推奨です。";
+    }
+  }
+
+  function update(){ render(); }
+
+  // ====== Events: drawing ======
+  svg.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const p = getMousePos(e);
+    const x = snap(p.x);
+    const y = snap(p.y);
+    isDrawing = true;
+    startPos = {x,y};
+    currentRect = {x,y,width:0,height:0};
+    update();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if(!isDrawing) return;
+    const p = getMousePos(e);
+    const curX = snap(p.x);
+    const curY = snap(p.y);
+
+    const x = Math.min(startPos.x, curX);
+    const y = Math.min(startPos.y, curY);
+    const width = Math.abs(curX - startPos.x);
+    const height = Math.abs(curY - startPos.y);
+
+    currentRect = {x,y,width,height};
+    update();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if(isDrawing && currentRect){
+      const G = canvasSettings.gridSize;
+      if(currentRect.width > G && currentRect.height > G){
+        rectangles.push({ ...currentRect, id: Date.now() + Math.random() });
+      }
+    }
+    isDrawing = false;
+    currentRect = null;
+    update();
+  });
+
+  // ====== UI controls ======
+  btnCanvas.addEventListener('click', () => {
+    const on = canvasSettingsBox.style.display !== 'none';
+    canvasSettingsBox.style.display = on ? 'none' : 'block';
+  });
+
+  btnGrid.addEventListener('click', () => {
+    showGrid = !showGrid;
+    btnGrid.textContent = showGrid ? 'Grid ON' : 'Grid OFF';
+    btnGrid.className = showGrid ? 'primary' : '';
+    update();
+  });
+
+  btnClear.addEventListener('click', () => {
+    rectangles = [];
+    update();
+  });
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { toast.style.display = 'none'; }, 1200);
+  }
+
+  btnCopy.addEventListener('click', async () => {
+    const text = generateMatlabCode();
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast('コピーしました。');
+    }catch{
+      // file:// だと権限で失敗する環境があるためフォールバック
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('コピーしました（フォールバック）。');
+    }
+  });
+
+  // canvas settings inputs
+  function applyCanvasSettings(){
+    const w = clamp(parseInt(inWidth.value || '600', 10), 200, 1200);
+    const h = clamp(parseInt(inHeight.value || '400', 10), 200, 800);
+    const g = clamp(parseInt(inGrid.value || '20', 10), 10, 50);
+
+    canvasSettings.width = w;
+    canvasSettings.height = h;
+    canvasSettings.gridSize = g;
+
+    // 既存矩形がはみ出す場合は切り詰め
+    rectangles = rectangles
+      .map(r => ({
+        ...r,
+        x: clamp(snap(r.x), 0, w),
+        y: clamp(snap(r.y), 0, h),
+        width: clamp(snap(r.width), 0, w),
+        height: clamp(snap(r.height), 0, h),
+      }))
+      .filter(r => r.width > g && r.height > g && r.x + r.width <= w + 0.001 && r.y + r.height <= h + 0.001);
+
+    update();
+  }
+
+  inWidth.addEventListener('change', applyCanvasSettings);
+  inHeight.addEventListener('change', applyCanvasSettings);
+  inGrid.addEventListener('change', applyCanvasSettings);
+
+  // code settings
+  selCodeType.addEventListener('change', () => {
+    settings.codeType = selCodeType.value;
+    tlSettings.style.display = (settings.codeType === 'tiledlayout') ? 'block' : 'none';
+    update();
+  });
+  selTileSpacing.addEventListener('change', () => { settings.tileSpacing = selTileSpacing.value; update(); });
+  selPadding.addEventListener('change', () => { settings.padding = selPadding.value; update(); });
+
+  // init
+  tlSettings.style.display = 'block';
+  update();
+})();
+</script>
+
