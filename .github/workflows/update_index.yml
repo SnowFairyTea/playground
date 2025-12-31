@@ -1,0 +1,37 @@
+name: Auto-update index from apps README
+
+on:
+  push:
+    paths:
+      - "apps/**"
+      - "tools/update_index.py"
+      - "index.html"
+
+permissions:
+  contents: write
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Update index.html
+        run: python tools/update_index.py
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "Auto-update app list"
+            git push
+          fi
