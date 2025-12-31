@@ -1,101 +1,237 @@
-:root {
-  --bg-main: #f7fee7;
-  --bg-panel: #ecfccb;
-  --accent: #bef264;
-  --accent-strong: #84cc16;
-  --text-main: #365314;
-  --border-soft: #d9f99d;
-  --danger: #dc2626;
-}
+
+/* ===== Original Styles (unchanged layout/behavior) ===== */
 
 body {
-  font-family: system-ui, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 20px;
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  background-color: #f5f5f5;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  background: var(--bg-panel);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 2px solid var(--accent);
 }
 
 .header {
-  background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
-  color: #365314;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   padding: 20px;
   text-align: center;
 }
 
-.controls,
-.input-section {
-  background: #f7fee7;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.coordinate-input,
-input[type="file"] {
-  background: #f7fee7;
-  border: 2px solid var(--border-soft);
-  color: var(--text-main);
-}
-
-.coordinate-input:focus,
-input[type="file"]:hover {
-  border-color: var(--accent-strong);
-  box-shadow: 0 0 0 2px rgba(132,204,22,0.3);
-}
-
-.toggle-btn,
-button {
-  background: linear-gradient(135deg, #bef264, #84cc16);
-  color: #365314;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.toggle-btn:hover,
-button:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-}
-
-.marker-icon {
-  background: #84cc16;
-  border: 3px solid #f7fee7;
-}
-
-.marker-label {
-  background: #365314;
-  color: #f7fee7;
-}
-
-.tooltip {
-  background: #365314;
-  color: #f7fee7;
-}
-
-.error {
-  background: #fee2e2;
-  color: var(--danger);
-  border: 1px solid #fecaca;
+.controls {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .status-info {
-  background: #ecfccb;
-  color: #365314;
-  border: 1px solid var(--accent);
+  background: #e8f5e8;
+  color: #2e7d32;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  border: 1px solid #c8e6c9;
 }
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+input[type="file"] {
+  padding: 8px;
+  border: 2px dashed #ddd;
+  border-radius: 5px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+input[type="file"]:hover {
+  border-color: #667eea;
+}
+
+.toggle-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-btn:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.input-section {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.coordinate-input {
+  width: 100%;
+  height: 120px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.coordinate-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+}
+
+.example {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.canvas-container {
+  padding: 20px;
+  text-align: center;
+  position: relative;
+}
+
+.canvas-wrapper {
+  display: inline-block;
+  position: relative;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  cursor: grab;
+}
+
+.canvas-wrapper:active {
+  cursor: grabbing;
+}
+
+.canvas-wrapper.zoomed {
+  overflow: auto;
+  max-height: 80vh;
+  max-width: 90vw;
+}
+
+#imageCanvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+}
+
+.marker-icon {
+  width: 20px;
+  height: 20px;
+  background: #ff6b6b;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.marker-icon:hover {
+  transform: scale(1.2);
+  background: #ff5252;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.marker-label {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  transform: translateX(-50%);
+}
+
+.no-image {
+  color: #999;
+  font-style: italic;
+  padding: 40px;
+}
+
+.error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control-group {
+    width: 100%;
+  }
+}
+
+
 /* ===== Green Theme Color Override (colors only) ===== */
 
 body { background-color: #f7fee7; }
@@ -158,16 +294,16 @@ input[type="file"]:hover { border-color: #84cc16; }
 .marker-icon:hover { background: #65a30d; }
 
 .marker-label {
-  background: #365314;
+  background: rgba(54, 83, 20, 0.92);
   color: #f7fee7;
 }
 
 .tooltip {
-  background: #365314;
+  background: rgba(54, 83, 20, 0.95);
   color: #f7fee7;
 }
 
-.tooltip::after { border-top-color: #365314; }
+.tooltip::after { border-top-color: rgba(54, 83, 20, 0.95); }
 
 .no-image { color: #4d7c0f; }
 
@@ -175,5 +311,3 @@ input[type="file"]:hover { border-color: #84cc16; }
   background: #fee2e2;
   color: #dc2626;
 }
-
-
