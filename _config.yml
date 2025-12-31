@@ -9,9 +9,13 @@ logo_lines:
     size: large
   - text: Playground
     size: small
-    
+
 description: Personal playground / demos / notes
 theme: null
 plugins: []
 
 google_fonts_url: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap"
+
+url: "https://snowfairytea.github.io"
+baseurl: "/playground"
+
