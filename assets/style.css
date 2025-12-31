@@ -1,0 +1,98 @@
+:root {
+  --bg-main: #f7fee7;
+  --bg-panel: #ecfccb;
+  --accent: #bef264;
+  --accent-strong: #84cc16;
+  --text-main: #365314;
+  --border-soft: #d9f99d;
+  --danger: #dc2626;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+  border: 2px solid var(--accent);
+}
+
+.header {
+  background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
+  color: #365314;
+  padding: 20px;
+  text-align: center;
+}
+
+.controls,
+.input-section {
+  background: #f7fee7;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.coordinate-input,
+input[type="file"] {
+  background: #f7fee7;
+  border: 2px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.coordinate-input:focus,
+input[type="file"]:hover {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 2px rgba(132,204,22,0.3);
+}
+
+.toggle-btn,
+button {
+  background: linear-gradient(135deg, #bef264, #84cc16);
+  color: #365314;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-btn:hover,
+button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.marker-icon {
+  background: #84cc16;
+  border: 3px solid #f7fee7;
+}
+
+.marker-label {
+  background: #365314;
+  color: #f7fee7;
+}
+
+.tooltip {
+  background: #365314;
+  color: #f7fee7;
+}
+
+.error {
+  background: #fee2e2;
+  color: var(--danger);
+  border: 1px solid #fecaca;
+}
+
+.status-info {
+  background: #ecfccb;
+  color: #365314;
+  border: 1px solid var(--accent);
+}
