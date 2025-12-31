@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  {% include head-base.html %}
+  <title>{{ page.title | default: site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/style_artifacts.css' | relative_url }}">
+</head>
+<body>
+
+{{ content }}
+
+{% include footer.html %}
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+site_links:
+  home_logo: "/assets/img/logo.svg"   # 無ければ一旦適当な画像でOK
+  github: "https://github.com/SnowFairyTea"
+  twitter: "https://x.com/SnowFairyTea"
+
+title: SnowFairyTea
+logo_lines:
+  - text: SnowFairyTea
+    size: large
+  - text: Playground
+    size: small
+
+description: Personal playground / demos / notes
+theme: null
+plugins: []
+
+google_fonts_url: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap"
+
+url: "https://snowfairytea.github.io"
+baseurl: "/playground"
+
