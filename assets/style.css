@@ -96,3 +96,84 @@ button:hover {
   color: #365314;
   border: 1px solid var(--accent);
 }
+/* ===== Green Theme Color Override (colors only) ===== */
+
+body { background-color: #f7fee7; }
+
+.container { background: #ecfccb; border: 2px solid #bef264; }
+
+.header {
+  background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
+  color: #365314;
+}
+
+.controls { border-bottom-color: #d9f99d; }
+
+.status-info {
+  background: #ecfccb;
+  color: #365314;
+  border-color: #bef264;
+}
+
+.control-group label { color: #365314; }
+
+input[type="file"] {
+  background: #f7fee7;
+  border-color: #d9f99d;
+}
+
+input[type="file"]:hover { border-color: #84cc16; }
+
+.toggle-btn {
+  background: linear-gradient(135deg, #bef264, #84cc16);
+  color: #365314;
+}
+
+.toggle-btn:hover {
+  background: linear-gradient(135deg, #a3e635, #65a30d);
+}
+
+.input-section { border-bottom-color: #d9f99d; }
+
+.coordinate-input {
+  background: #f7fee7;
+  border-color: #d9f99d;
+  color: #365314;
+}
+
+.coordinate-input:focus {
+  border-color: #84cc16;
+  box-shadow: 0 0 5px rgba(132, 204, 22, 0.3);
+}
+
+.example { color: #4d7c0f; }
+
+.canvas-wrapper { border-color: #d9f99d; }
+
+.marker-icon {
+  background: #84cc16;
+  border-color: #f7fee7;
+}
+
+.marker-icon:hover { background: #65a30d; }
+
+.marker-label {
+  background: #365314;
+  color: #f7fee7;
+}
+
+.tooltip {
+  background: #365314;
+  color: #f7fee7;
+}
+
+.tooltip::after { border-top-color: #365314; }
+
+.no-image { color: #4d7c0f; }
+
+.error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+
