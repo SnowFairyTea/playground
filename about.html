@@ -24,8 +24,23 @@ permalink: /about/
       {% else %}
         <span style="opacity:0.6;">{{ a.name }}</span>
       {% endif %}
-      {% if a.id != "" %}
-        <a>id : {{ a.id }}</a>
+
+    </li>
+  {% endfor %}
+</ul>
+
+<h2>Accounts</h2>
+<ul>
+  {% for a in site.accounts %}
+    <li>
+      {{ a.service }}:
+      {% if a.url %}
+        <a href="{{ a.url }}" target="_blank">{{ a.name }}</a>
+      {% else %}
+        {{ a.name }}
+      {% endif %}
+      {% if a.id %}
+        <span style="opacity:0.6;"> (id: {{ a.id }})</span>
       {% endif %}
     </li>
   {% endfor %}
