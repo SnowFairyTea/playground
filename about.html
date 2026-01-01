@@ -1,0 +1,40 @@
+---
+title: About SnowFairyTea
+layout: home
+permalink: /about/
+---
+
+<main>
+
+  <section class="section">
+    <h2>About</h2>
+    <p>
+      SnowFairyTea/妖精茶/fairy/SnowFairyなどの名前で活動します
+    </p>
+  </section>
+
+
+<h2>Links</h2>
+<ul>
+  {% for a in site.Links %}
+    <li>
+      {{ a.service }}:
+      {% if a.url != "#" %}
+        <a href="{{ a.url }}" target="_blank">{{ a.name }}</a>
+      {% else %}
+        <span style="opacity:0.6;">{{ a.name }}</span>
+      {% endif %}
+      {% if a.id != "#" %}
+        <a>id : {{ a.id }}</a>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+
+  </section>
+
+ 
+
+</main>
+
+

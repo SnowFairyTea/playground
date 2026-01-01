@@ -19,3 +19,24 @@ google_fonts_url: "https://fonts.googleapis.com/css2?family=Playfair+Display:wgh
 url: "https://snowfairytea.dev"
 baseurl: ""
 
+Links:
+  # - service: Steam
+  #   name: fairy
+  #   id: 869863946
+  #   url: 
+:
+  - service: GitHub
+    name: SnowFairyTea
+    url: https://github.com/SnowFairyTea
+
+  - service: X
+    name: SnowFairyTea
+    url: https://x.com/SnowFairyTea
+
+  - service: 良かったものリスト
+    name: 工事中
+    url: "#"
+
+  - service: ほしいものリスト（ポケモンGO）
+    name: 工事中
+    url: "#"
