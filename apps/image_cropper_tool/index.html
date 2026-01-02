@@ -3,8 +3,41 @@ layout: artifacts
 title: 画像トリミング＆座標取得ツール
 ---
 
+<!-- 追加: 座標表示用スタイル（大きく・クリック可能・成功フィードバック） -->
+<style>
+	/* ...既存のスタイルがあればそのまま... */
+	.coordinate-display {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.coordinate-text {
+		font-size: 1.25rem; /* 大きめ表示 */
+		padding: 8px 12px;
+		border-radius: 6px;
+		background: #f8f9fb;
+		border: 1px solid #e1e6ef;
+		cursor: pointer;
+		color: #222;
+		text-align: center;
+		white-space: nowrap;
+	}
+	.coordinate-text:active { transform: translateY(1px); }
+	.copy-btn { /* コピー用小ボタン */
+		padding: 6px 10px;
+		border-radius: 6px;
+		cursor: pointer;
+	}
+	.copy-success {
+		background: #e6ffea !important;
+		color: #0b7a2a !important;
+		border-color: #bfeec9 !important;
+	}
+</style>
+
     <div class="container">
-        <h1>🖼️ 画像トリミング＆座標取得ツール</h1>
+		<h1>🖼️ 画像トリミング＆座標取得ツール</h1>
         
         <div class="instructions">
             <h3>使い方</h3>
@@ -40,8 +73,9 @@ title: 画像トリミング＆座標取得ツール
         <div class="info-panel" id="infoPanel">
             <h3>📍 座標情報 [l, t, r, b]</h3>
             <div class="coordinate-display" id="coordinateDisplay">
-                座標を取得するには、画像上でトリミング範囲を選択してください
-                <button class="toggle-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
+                <!-- 初期表示はクリック可能な要素とコピーボタンの組にしておく（currentCoordinates が無ければコピーは無視される） -->
+                <button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>
+                <button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
             </div>
         </div>
 
@@ -233,8 +267,10 @@ title: 画像トリミング＆座標取得ツール
             currentCoordinates = [l, t, r, b];
 
             const coordinateText = `[${l}, ${t}, ${r}, ${b}]`;
-            document.getElementById('coordinateDisplay').innerHTML = 
-                `search_range = ${coordinateText}<button class="copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
+            // 数値部分を大きくしてクリックでコピーできるようにする
+            document.getElementById('coordinateDisplay').innerHTML =
+                `<button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">${coordinateText}</button>` +
+                `<button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
         }
 
         function copyCoordinates() {
@@ -244,12 +280,26 @@ title: 画像トリミング＆座標取得ツール
             
             navigator.clipboard.writeText(coordinateText).then(() => {
                 const copyBtn = document.getElementById('copyBtn');
-                copyBtn.textContent = 'コピー完了!';
-                copyBtn.classList.add('copy-success');
-                
+                const coordinateTextBtn = document.getElementById('coordinateText');
+
+                if (copyBtn) {
+                    copyBtn.textContent = 'コピー完了!';
+                    copyBtn.classList.add('copy-success');
+                }
+                if (coordinateTextBtn) {
+                    coordinateTextBtn.classList.add('copy-success');
+                    // 数値部分は既に表示されているが念のため正しいテキストをセット
+                    coordinateTextBtn.textContent = coordinateText;
+                }
+
                 setTimeout(() => {
-                    copyBtn.textContent = 'コピー';
-                    copyBtn.classList.remove('copy-success');
+                    if (copyBtn) {
+                        copyBtn.textContent = 'コピー';
+                        copyBtn.classList.remove('copy-success');
+                    }
+                    if (coordinateTextBtn) {
+                        coordinateTextBtn.classList.remove('copy-success');
+                    }
                 }, 2000);
             });
         }
@@ -312,8 +362,9 @@ title: 画像トリミング＆座標取得ツール
             
             // UI をリセット
             document.getElementById('cropBtn').disabled = true;
-            document.getElementById('coordinateDisplay').innerHTML = 
-                '座標を取得するには、画像上でトリミング範囲を選択してください<button class="copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>';
+            document.getElementById('coordinateDisplay').innerHTML =
+                `<button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>` +
+                `<button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
             document.getElementById('resultImages').style.display = 'none';
         }
     </script>
