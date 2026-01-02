@@ -325,3 +325,140 @@ input[type="file"]:hover { border-color: #84cc16; }
   border: none;
   border-top: 1px solid #ddd;
 }
+/* ===== Artifacts tool specific UI ===== */
+
+.instructions {
+  padding: 20px;
+  border-bottom: 1px solid #d9f99d;
+  background: #f7fee7;
+}
+
+.instructions h3 {
+  margin-top: 0;
+  color: #365314;
+}
+
+.instructions ul {
+  padding-left: 20px;
+  color: #365314;
+  font-size: 14px;
+}
+
+.upload-area {
+  margin: 20px;
+  padding: 40px;
+  border: 3px dashed #bef264;
+  border-radius: 12px;
+  text-align: center;
+  background: #f7fee7;
+  transition: all 0.3s ease;
+}
+
+.upload-area.dragover {
+  background: #ecfccb;
+  border-color: #65a30d;
+}
+
+.upload-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #365314;
+}
+
+.upload-btn {
+  margin-top: 10px;
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: linear-gradient(135deg, #bef264, #84cc16);
+  color: #365314;
+}
+
+.upload-btn:hover {
+  background: linear-gradient(135deg, #a3e635, #65a30d);
+}
+
+.file-input {
+  display: none;
+}
+
+.info-panel {
+  margin: 20px;
+  padding: 20px;
+  background: #ecfccb;
+  border-radius: 10px;
+  border: 1px solid #bef264;
+}
+
+.coordinate-display {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f7fee7;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.copy-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #84cc16;
+  color: #365314;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.copy-btn:hover {
+  background: #65a30d;
+}
+
+.copy-success {
+  background: #22c55e !important;
+  color: white !important;
+}
+
+.result-images {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.image-result {
+  background: #f7fee7;
+  border: 1px solid #bef264;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.image-result img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: linear-gradient(135deg, #bef264, #84cc16);
+  color: #365314;
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #a3e635, #65a30d);
+}
+
+.download-btn {
+  margin-top: 10px;
+}

@@ -1,6 +1,6 @@
 ---
 title: 画像トリミング＆座標取得ツール
-desc: 画像内の矩形範囲を切り取るための矩形座標を作成。
+desc: isContainTemplate用の画像切り抜きとcrop範囲取得ツール
 tags: [Poke-Controller]
 order: 20
 ---

@@ -9,18 +9,14 @@ title: 画像トリミング＆座標取得ツール
         <div class="instructions">
             <h3>使い方</h3>
             <ul>
-                <li>画像をドラッグ&ドロップするか、ファイルを選択してください</li>
-                <li>画像上をドラッグしてトリミング範囲を選択してください</li>
-                <li>座標は [l, t, r, b] 形式で表示されます（left, top, right, bottom）</li>
+                <li>このツールは、Poke-ControllerのisContainTemplate関数用の画像の切り抜きとcrop範囲指定を行います</li>
+                <li>画像をドラッグ&ドロップするか、ファイルを選択してアップロード</li>
+                <li>画像上をドラッグしてトリミング範囲を選択</li>
+                <li>crop範囲座標を [l, t, r, b] 形式でコピー</li>
+                <li>切り抜き画像をダウンロードボタンで取得</li>
             </ul>
             
-            <h3>座標の意味</h3>
-            <ul>
-                <li><strong>l</strong> (left): 左端のx座標 - 横軸 <code>l = x</code></li>
-                <li><strong>t</strong> (top): 上端のy座標 - 縦軸 <code>t = y</code></li>
-                <li><strong>r</strong> (right): 右端のx座標 - 横軸 <code>r = x + w</code></li>
-                <li><strong>b</strong> (bottom): 下端のy座標 - 縦軸 <code>b = y + h</code></li>
-            </ul>
+            
         </div>
 
         <div class="upload-area" id="uploadArea">
@@ -60,6 +56,15 @@ title: 画像トリミング＆座標取得ツール
                 <br>
                 <button class="btn download-btn" id="downloadBtn">ダウンロード</button>
             </div>
+        </div>
+        <div class="instructions">
+            <h3>座標の意味</h3>
+            <ul>
+                <li><strong>l</strong> (left): 左端のx座標 - 横軸 <code>l = x</code></li>
+                <li><strong>t</strong> (top): 上端のy座標 - 縦軸 <code>t = y</code></li>
+                <li><strong>r</strong> (right): 右端のx座標 - 横軸 <code>r = x + w</code></li>
+                <li><strong>b</strong> (bottom): 下端のy座標 - 縦軸 <code>b = y + h</code></li>
+            </ul>
         </div>
     </div>
 
