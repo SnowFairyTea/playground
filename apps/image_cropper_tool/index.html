@@ -11,7 +11,7 @@ title: 画像トリミング＆座標取得ツール
             <ul>
                 <li>このツールは、Poke-ControllerのisContainTemplate関数用の画像の切り抜きとcrop範囲指定を行います</li>
                 <li>画像をドラッグ&ドロップするか、ファイルを選択してアップロード</li>
-                <li>画像上をドラッグしてトリミング範囲を選択</li>
+                <li>画像上をドラッグしてトリミング範囲を選択、トリミング実行を押す</li>
                 <li>crop範囲座標を [l, t, r, b] 形式でコピー</li>
                 <li>切り抜き画像をダウンロードボタンで取得</li>
             </ul>
@@ -22,7 +22,7 @@ title: 画像トリミング＆座標取得ツール
         <div class="upload-area" id="uploadArea">
             <div class="upload-text">📁 画像をここにドラッグ&ドロップ</div>
             <div>または</div>
-            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+            <button class="toggle-btn" onclick="document.getElementById('fileInput').click()">
                 ファイルを選択
             </button>
             <input type="file" id="fileInput" class="file-input" accept="image/*">
@@ -33,15 +33,15 @@ title: 画像トリミング＆座標取得ツール
         </div>
 
         <div class="controls" id="controls">
-            <button class="btn" id="cropBtn" disabled>トリミング実行</button>
-            <button class="btn" id="resetBtn">リセット</button>
+            <button class="toggle-btn" id="cropBtn" disabled>トリミング実行</button>
+            <button class="toggle-btn" id="resetBtn">リセット</button>
         </div>
 
         <div class="info-panel" id="infoPanel">
             <h3>📍 座標情報 [l, t, r, b]</h3>
             <div class="coordinate-display" id="coordinateDisplay">
                 座標を取得するには、画像上でトリミング範囲を選択してください
-                <button class="copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
+                <button class="toggle-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
             </div>
         </div>
 
@@ -54,7 +54,7 @@ title: 画像トリミング＆座標取得ツール
                 <h3>トリミング結果</h3>
                 <img id="croppedImage" alt="トリミング画像">
                 <br>
-                <button class="btn download-btn" id="downloadBtn">ダウンロード</button>
+                <button class="toggle-btn" id="downloadBtn">ダウンロード</button>
             </div>
         </div>
         <div class="instructions">
