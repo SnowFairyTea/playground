@@ -100,12 +100,11 @@ title: 画像トリミング＆座標取得ツール
 	}
 	.cropped-item {
 		position: relative;
-		width: 100px;
-		height: 100px;
 		border-radius: 8px;
 		overflow: hidden;
 		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 		transition: all 0.3s ease;
+		flex: 0 1 auto;
 	}
 	.cropped-item:hover {
 		box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -113,7 +112,7 @@ title: 画像トリミング＆座標取得ツール
 	.cropped-item img {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		display: block;
 	}
 	.cropped-label {
@@ -149,6 +148,10 @@ title: 画像トリミング＆座標取得ツール
 		cursor: pointer;
 		transition: all 0.3s ease;
 		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #f5f5f5;
 	}
 	.thumbnail-item:hover {
 		transform: scale(1.05);
@@ -161,7 +164,7 @@ title: 画像トリミング＆座標取得ツール
 	.thumbnail-item img {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		display: block;
 	}
 	.thumbnail-item canvas {
@@ -222,23 +225,26 @@ title: 画像トリミング＆座標取得ツール
             </div>
             <div>
                 <h3>✏️ 座標を直接編集</h3>
-                <div class="coord-inputs">
-                    <div>
-                        <label>左 (L)</label>
-                        <input type="number" id="coordL" placeholder="L">
+                <div style="display: flex; gap: 15px; align-items: flex-start;">
+                    <div class="coord-inputs">
+                        <div>
+                            <label>左 (L)</label>
+                            <input type="number" id="coordL" placeholder="L">
+                        </div>
+                        <div>
+                            <label>上 (T)</label>
+                            <input type="number" id="coordT" placeholder="T">
+                        </div>
+                        <div>
+                            <label>右 (R)</label>
+                            <input type="number" id="coordR" placeholder="R">
+                        </div>
+                        <div>
+                            <label>下 (B)</label>
+                            <input type="number" id="coordB" placeholder="B">
+                        </div>
                     </div>
-                    <div>
-                        <label>上 (T)</label>
-                        <input type="number" id="coordT" placeholder="T">
-                    </div>
-                    <div>
-                        <label>右 (R)</label>
-                        <input type="number" id="coordR" placeholder="R">
-                    </div>
-                    <div>
-                        <label>下 (B)</label>
-                        <input type="number" id="coordB" placeholder="B">
-                    </div>
+                    <button class="toggle-btn" onclick="confirmCoordinatesFromInputs()" style="height: fit-content; align-self: center; padding: 10px 15px;">適用</button>
                 </div>
             </div>
         </div>
@@ -693,6 +699,32 @@ title: 画像トリミング＆座標取得ツール
             updateCoordinateDisplay();
             updateAllThumbnailRectangles();  // サムネイルも更新
             autoCropImage();  // 自動トリミング実行
+        }
+
+        // 確認ボタンから座標を適用（ボタンクリック時）
+        function confirmCoordinatesFromInputs() {
+            const l = parseInt(document.getElementById('coordL').value);
+            const t = parseInt(document.getElementById('coordT').value);
+            const r = parseInt(document.getElementById('coordR').value);
+            const b = parseInt(document.getElementById('coordB').value);
+
+            // バリデーション
+            if (isNaN(l) || isNaN(t) || isNaN(r) || isNaN(b)) {
+                alert('全ての座標値を入力してください。');
+                return;
+            }
+
+            if (l >= r || t >= b) {
+                alert('座標値が不正です。(L < R かつ T < B である必要があります)');
+                return;
+            }
+
+            currentCoordinates = [l, t, r, b];
+            saveCordinatesToStorage(currentCoordinates);
+            updateCoordinateDisplay();
+            updateAllThumbnailRectangles();  // サムネイルも更新
+            autoCropImage();  // 自動トリミング実行
+            alert('座標が適用されました。');
         }
 
         function copyCoordinates() {
