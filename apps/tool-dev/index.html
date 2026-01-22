@@ -36,18 +36,44 @@ title: 画像トリミング＆座標取得ツール
 	}
 	
 	/* 座標編集用スタイル */
-	#infoPanel label {
+	#coordPanel {
+		display: flex;
+		gap: 20px;
+		align-items: flex-start;
+		margin: 15px 0;
+		padding: 15px;
+		background: #f8f9fb;
+		border: 1px solid #e1e6ef;
+		border-radius: 8px;
+	}
+	#coordPanel > div {
+		flex: 1;
+	}
+	#coordPanel h3 {
+		margin: 0 0 10px 0;
+		font-size: 1rem;
+	}
+	.coord-inputs {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 8px;
+	}
+	.coord-inputs > div {
+		display: flex;
+		flex-direction: column;
+	}
+	.coord-inputs label {
 		display: block;
 		font-weight: bold;
 		margin-bottom: 4px;
-		font-size: 0.9rem;
+		font-size: 0.85rem;
 	}
-	#infoPanel input[type="number"] {
+	.coord-inputs input[type="number"] {
 		width: 100%;
-		padding: 8px;
+		padding: 6px;
 		border: 1px solid #ccc;
 		border-radius: 4px;
-		font-size: 1rem;
+		font-size: 0.95rem;
 		box-sizing: border-box;
 	}
 	
@@ -66,7 +92,44 @@ title: 画像トリミング＆座標取得ツール
 		border-left: 4px solid #2196F3;
 	}
 	
-	/* サムネイルギャラリーのスタイル */
+	/* トリミング結果ギャラリーのスタイル */
+	#croppedGallery {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.cropped-item {
+		position: relative;
+		width: 100px;
+		height: 100px;
+		border-radius: 8px;
+		overflow: hidden;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		transition: all 0.3s ease;
+	}
+	.cropped-item:hover {
+		box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+	}
+	.cropped-item img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.cropped-label {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: rgba(0,0,0,0.7);
+		color: white;
+		padding: 3px;
+		font-size: 0.65rem;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 	#thumbnailGallery {
 		display: flex;
 		gap: 10px;
@@ -149,47 +212,52 @@ title: 画像トリミング＆座標取得ツール
             <input type="file" id="fileInput" class="file-input" accept="image/*" multiple>
         </div>
 
+        <div id="coordPanel" style="display: none;">
+            <div>
+                <h3>📍 座標情報 [l, t, r, b]</h3>
+                <div class="coordinate-display" id="coordinateDisplay">
+                    <button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>
+                    <button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
+                </div>
+            </div>
+            <div>
+                <h3>✏️ 座標を直接編集</h3>
+                <div class="coord-inputs">
+                    <div>
+                        <label>左 (L)</label>
+                        <input type="number" id="coordL" placeholder="L">
+                    </div>
+                    <div>
+                        <label>上 (T)</label>
+                        <input type="number" id="coordT" placeholder="T">
+                    </div>
+                    <div>
+                        <label>右 (R)</label>
+                        <input type="number" id="coordR" placeholder="R">
+                    </div>
+                    <div>
+                        <label>下 (B)</label>
+                        <input type="number" id="coordB" placeholder="B">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="canvas-container" id="canvasContainer">
             <canvas id="imageCanvas"></canvas>
         </div>
 
         <div class="controls" id="controls">
-            <button class="toggle-btn" id="cropBtn" disabled>トリミング実行</button>
             <button class="toggle-btn" id="resetBtn">リセット</button>
-        </div>
-
-        <div class="info-panel" id="infoPanel">
-            <h3>📍 座標情報 [l, t, r, b]</h3>
-            <div class="coordinate-display" id="coordinateDisplay">
-                <button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>
-                <button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
-            </div>
-
-            <h3 style="margin-top: 20px;">✏️ 座標を直接編集</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
-                <div>
-                    <label>左 (L)</label>
-                    <input type="number" id="coordL" placeholder="L">
-                </div>
-                <div>
-                    <label>上 (T)</label>
-                    <input type="number" id="coordT" placeholder="T">
-                </div>
-                <div>
-                    <label>右 (R)</label>
-                    <input type="number" id="coordR" placeholder="R">
-                </div>
-                <div>
-                    <label>下 (B)</label>
-                    <input type="number" id="coordB" placeholder="B">
-                </div>
-            </div>
         </div>
 
         <div id="multiFilePanel" style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
             <h3>📋 画像ギャラリー</h3>
             <div id="thumbnailGallery"></div>
             <button class="toggle-btn" id="applyToAllBtn" onclick="applyRangeToAllFiles()" style="width: 100%; margin-top: 10px;">全ファイルに同じ範囲を適用</button>
+            
+            <h3 style="margin-top: 20px;">✂️ トリミング結果一覧</h3>
+            <div id="croppedGallery" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
         </div>
 
         <div class="result-images" id="resultImages">
@@ -227,6 +295,7 @@ title: 画像トリミング＆座標取得ツール
         let fileQueue = [];
         let currentFileIndex = 0;
         let savedCoordinates = null;
+        let croppedImages = [];  // トリミング結果を保存
 
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
@@ -288,9 +357,11 @@ title: 画像トリミング＆座標取得ツール
             canvas.addEventListener('mouseup', stopDrawing);
 
             // ボタンイベント
-            document.getElementById('cropBtn').addEventListener('click', cropImage);
             document.getElementById('resetBtn').addEventListener('click', resetAll);
-            document.getElementById('downloadBtn').addEventListener('click', downloadCroppedImage);
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', downloadCroppedImage);
+            }
 
             // 座標編集入力フィールドのイベント（リアルタイム更新）
             ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
@@ -309,6 +380,7 @@ title: 画像トリミング＆座標取得ツール
             }
 
             fileQueue = imageFiles;
+            croppedImages = new Array(imageFiles.length).fill(null);  // 初期化
             currentFileIndex = 0;
             
             loadNextFile();
@@ -333,6 +405,7 @@ title: 画像トリミング＆座標取得ツール
                     // 保存された座標があればセット
                     if (savedCoordinates) {
                         setCoordinateInputs(savedCoordinates);
+                        autoCropImage();  // 保存された座標で自動トリミング実行
                     }
                 };
                 img.src = e.target.result;
@@ -381,9 +454,9 @@ title: 画像トリミング＆座標取得ツール
         }
 
         function showControls() {
+            document.getElementById('coordPanel').style.display = 'flex';
             document.getElementById('canvasContainer').style.display = 'block';
             document.getElementById('controls').style.display = 'flex';
-            document.getElementById('infoPanel').style.display = 'block';
         }
 
         function showMultiFilePanel() {
@@ -572,6 +645,7 @@ title: 画像トリミング＆座標取得ツール
 
             updateCoordinateDisplay();
             updateAllThumbnailRectangles();  // サムネイルも更新
+            autoCropImage();  // 自動トリミング実行
         }
 
         function updateCoordinateDisplay() {
@@ -618,7 +692,7 @@ title: 画像トリミング＆座標取得ツール
             saveCordinatesToStorage(currentCoordinates);
             updateCoordinateDisplay();
             updateAllThumbnailRectangles();  // サムネイルも更新
-            document.getElementById('cropBtn').disabled = false;
+            autoCropImage();  // 自動トリミング実行
         }
 
         function copyCoordinates() {
@@ -651,9 +725,8 @@ title: 画像トリミング＆座標取得ツール
             });
         }
 
-        let croppedCanvas = null; // グローバル変数として追加
-
-        function cropImage() {
+        // 自動トリミング実行
+        function autoCropImage() {
             if (!currentCoordinates) return;
 
             const [l, t, r, b] = currentCoordinates;
@@ -661,7 +734,7 @@ title: 画像トリミング＆座標取得ツール
             const h = b - t;  // height
 
             // 新しいキャンバスを作成してトリミング
-            croppedCanvas = document.createElement('canvas');
+            const croppedCanvas = document.createElement('canvas');
             const tempCtx = croppedCanvas.getContext('2d');
             
             croppedCanvas.width = w;
@@ -669,25 +742,49 @@ title: 画像トリミング＆座標取得ツール
 
             tempCtx.drawImage(img, l, t, w, h, 0, 0, w, h);
 
-            // 結果を表示
-            const croppedImage = document.getElementById('croppedImage');
-            croppedImage.src = croppedCanvas.toDataURL();
+            // 現在のファイルのトリミング結果を保存
+            croppedImages[currentFileIndex] = croppedCanvas.toDataURL();
             
-            document.getElementById('resultImages').style.display = 'grid';
+            // トリミング結果ギャラリーを更新
+            updateCroppedGallery();
+        }
+
+        // トリミング結果ギャラリーを更新
+        function updateCroppedGallery() {
+            const galleryDiv = document.getElementById('croppedGallery');
+            galleryDiv.innerHTML = '';
+            
+            croppedImages.forEach((imageData, index) => {
+                if (!imageData) return;  // トリミングされていないファイルはスキップ
+                
+                const item = document.createElement('div');
+                item.className = 'cropped-item';
+                
+                const img = document.createElement('img');
+                img.src = imageData;
+                item.appendChild(img);
+                
+                const label = document.createElement('div');
+                label.className = 'cropped-label';
+                label.textContent = fileQueue[index].name;
+                item.appendChild(label);
+                
+                galleryDiv.appendChild(item);
+            });
         }
 
         // ダウンロード機能を独立した関数として定義
         function downloadCroppedImage() {
-            if (!croppedCanvas) {
-                alert('まずトリミングを実行してください。');
+            if (!currentCoordinates || croppedImages[currentFileIndex] === null) {
+                alert('まずトリミング範囲を指定してください。');
                 return;
             }
 
             try {
                 const link = document.createElement('a');
-                const fileName = fileQueue.length > 0 ? fileQueue[currentFileIndex].name.replace(/\.[^/.]+$/, "_cropped.png") : 'cropped_image.png';
+                const fileName = fileQueue[currentFileIndex].name.replace(/\.[^/.]+$/, "_cropped.png");
                 link.download = fileName;
-                link.href = croppedCanvas.toDataURL('image/png');
+                link.href = croppedImages[currentFileIndex];
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -730,7 +827,7 @@ title: 画像トリミング＆座標取得ツール
 
                 currentCoordinates = [...originalCoordinates];
                 updateCoordinateDisplay();
-                cropImage();
+                autoCropImage();
 
                 // ダウンロードして次へ
                 downloadCroppedImage();
@@ -749,14 +846,11 @@ title: 画像トリミング＆座標取得ツール
             // 変数をリセット
             isDrawing = false;
             currentCoordinates = null;
-            croppedCanvas = null;
             
             // UI をリセット
-            document.getElementById('cropBtn').disabled = true;
             document.getElementById('coordinateDisplay').innerHTML =
                 `<button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>` +
                 `<button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
-            document.getElementById('resultImages').style.display = 'none';
             
             // 座標入力をクリア
             ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
@@ -765,5 +859,9 @@ title: 画像トリミング＆座標取得ツール
             
             // サムネイルの矩形もクリア
             updateAllThumbnailRectangles();
+            
+            // トリミング結果ギャラリーをクリア
+            document.getElementById('croppedGallery').innerHTML = '';
+            croppedImages = new Array(fileQueue.length).fill(null);
         }
     </script>
