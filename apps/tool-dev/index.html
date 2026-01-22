@@ -77,6 +77,15 @@ title: 画像トリミング＆座標取得ツール
 		box-sizing: border-box;
 	}
 	
+	/* 座標適用ボタンのスタイル */
+	#applyCoordBtn {
+		padding: 15px 20px;
+		font-size: 1rem;
+		font-weight: bold;
+		min-width: 100px;
+		height: auto;
+	}
+	
 	/* ファイル一覧のスタイル */
 	.file-item {
 		padding: 10px;
@@ -244,7 +253,7 @@ title: 画像トリミング＆座標取得ツール
                             <input type="number" id="coordB" placeholder="B">
                         </div>
                     </div>
-                    <button class="toggle-btn" onclick="confirmCoordinatesFromInputs()" style="height: fit-content; align-self: center; padding: 10px 15px;">適用</button>
+                    <button id="applyCoordBtn" class="toggle-btn" onclick="confirmCoordinatesFromInputs()">適用</button>
                 </div>
             </div>
         </div>
@@ -253,14 +262,17 @@ title: 画像トリミング＆座標取得ツール
             <canvas id="imageCanvas"></canvas>
         </div>
 
-        <div class="controls" id="controls">
-            <button class="toggle-btn" id="resetBtn">リセット</button>
+        <div class="controls" id="controls" style="display: none;">
         </div>
 
         <div id="multiFilePanel" style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
             <h3>📋 画像ギャラリー</h3>
             <div id="thumbnailGallery"></div>
-            <button class="toggle-btn" id="applyToAllBtn" onclick="applyRangeToAllFiles()" style="width: 100%; margin-top: 10px;">全ファイルに同じ範囲を適用</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="toggle-btn" id="applyToCurrentBtn" onclick="applyCropToCurrentFile()" style="flex: 1;">この画像に適用</button>
+                <button class="toggle-btn" id="applyToAllBtn" onclick="applyRangeToAllFiles()" style="flex: 1;">全ファイルに同じ範囲を適用</button>
+                <button class="toggle-btn" id="resetBtn" onclick="resetAll()" style="padding: 10px 15px;">リセット</button>
+            </div>
             
             <h3 style="margin-top: 20px;">✂️ トリミング結果一覧</h3>
             <div id="croppedGallery" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
@@ -363,7 +375,6 @@ title: 画像トリミング＆座標取得ツール
             canvas.addEventListener('mouseup', stopDrawing);
 
             // ボタンイベント
-            document.getElementById('resetBtn').addEventListener('click', resetAll);
             const downloadBtn = document.getElementById('downloadBtn');
             if (downloadBtn) {
                 downloadBtn.addEventListener('click', downloadCroppedImage);
@@ -408,10 +419,9 @@ title: 画像トリミング＆座標取得ツール
                     showControls();
                     updateFileList();
                     
-                    // 保存された座標があればセット
+                    // 保存された座標があればセット（ただし自動トリミングは実行しない）
                     if (savedCoordinates) {
                         setCoordinateInputs(savedCoordinates);
-                        autoCropImage();  // 保存された座標で自動トリミング実行
                     }
                 };
                 img.src = e.target.result;
@@ -533,17 +543,17 @@ title: 画像トリミング＆座標取得ツール
             
             let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
             
-            // object-fit: coverの計算
+            // object-fit: containの計算（画像全体が見える）
             if (imageRatio > canvasRatio) {
                 // 画像が横長
-                drawHeight = canvasHeight;
-                drawWidth = drawHeight * imageRatio;
-                offsetX = (canvasWidth - drawWidth) / 2;
-            } else {
-                // 画像が縦長または正方形
                 drawWidth = canvasWidth;
                 drawHeight = drawWidth / imageRatio;
                 offsetY = (canvasHeight - drawHeight) / 2;
+            } else {
+                // 画像が縦長または正方形
+                drawHeight = canvasHeight;
+                drawWidth = drawHeight * imageRatio;
+                offsetX = (canvasWidth - drawWidth) / 2;
             }
             
             // 座標をサムネイルのスケールに変換
@@ -834,6 +844,17 @@ title: 画像トリミング＆座標取得ツール
             }
         }
 
+        // この画像に適用（現在のファイルのみ）
+        function applyCropToCurrentFile() {
+            if (!currentCoordinates) {
+                alert('先に座標を指定してください。');
+                return;
+            }
+
+            autoCropImage();
+            alert('現在の画像にトリミングを適用しました。');
+        }
+
         // 全ファイルに同じ範囲を適用
         function applyRangeToAllFiles() {
             if (!currentCoordinates) {
@@ -846,27 +867,33 @@ title: 画像トリミング＆座標取得ツール
                 return;
             }
 
-            // 全ファイルに対して順序に処理するためのフラグを設定
-            let processedCount = 0;
+            // 全ファイルに同じ座標を適用してトリミング実行
             const originalCoordinates = [...currentCoordinates];
+            const originalFileIndex = currentFileIndex;
 
-            // 現在のファイルからトリミングを開始
-            const processNextFileWithSameCoordinates = () => {
-                if (currentFileIndex >= fileQueue.length) {
-                    alert(`${processedCount}個のファイルを処理しました。`);
-                    return;
-                }
-
+            for (let i = 0; i < fileQueue.length; i++) {
+                currentFileIndex = i;
                 currentCoordinates = [...originalCoordinates];
-                updateCoordinateDisplay();
-                autoCropImage();
+                
+                // ファイルを読み込んでトリミング実行
+                const file = fileQueue[i];
+                const reader = new FileReader();
+                reader.onload = (function(index) {
+                    return function(e) {
+                        img.onload = function() {
+                            currentFileIndex = index;
+                            currentCoordinates = [...originalCoordinates];
+                            autoCropImage();
+                        };
+                        img.src = e.target.result;
+                    };
+                })(i);
+                reader.readAsDataURL(file);
+            }
 
-                // ダウンロードして次へ
-                downloadCroppedImage();
-                processedCount++;
-            };
-
-            processNextFileWithSameCoordinates();
+            // 元のファイルインデックスに戻す
+            currentFileIndex = originalFileIndex;
+            alert('全ファイルに同じ範囲を適用しました。');
         }
 
         function resetAll() {
