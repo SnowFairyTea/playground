@@ -1,0 +1,614 @@
+---
+layout: artifacts
+title: 画像トリミング＆座標取得ツール
+---
+
+<!-- 追加: 座標表示用スタイル（大きく・クリック可能・成功フィードバック） -->
+<style>
+	/* ...既存のスタイルがあればそのまま... */
+	.coordinate-display {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.coordinate-text {
+		font-size: 1.25rem; /* 大きめ表示 */
+		padding: 8px 12px;
+		border-radius: 6px;
+		background: #f8f9fb;
+		border: 1px solid #e1e6ef;
+		cursor: pointer;
+		color: #222;
+		text-align: center;
+		white-space: nowrap;
+	}
+	.coordinate-text:active { transform: translateY(1px); }
+	.copy-btn { /* コピー用小ボタン */
+		padding: 6px 10px;
+		border-radius: 6px;
+		cursor: pointer;
+	}
+	.copy-success {
+		background: #e6ffea !important;
+		color: #0b7a2a !important;
+		border-color: #bfeec9 !important;
+	}
+	
+	/* 座標編集用スタイル */
+	#infoPanel label {
+		display: block;
+		font-weight: bold;
+		margin-bottom: 4px;
+		font-size: 0.9rem;
+	}
+	#infoPanel input[type="number"] {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-size: 1rem;
+		box-sizing: border-box;
+	}
+	
+	/* ファイル一覧のスタイル */
+	.file-item {
+		padding: 10px;
+		margin: 5px 0;
+		background: #f5f5f5;
+		border-radius: 4px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.file-item.current {
+		background: #e3f2fd;
+		border-left: 4px solid #2196F3;
+	}
+</style>
+
+    <div class="container">
+		<h1>🖼️ 画像トリミング＆座標取得ツール</h1>
+        
+        <div class="instructions">
+            <h3>使い方</h3>
+            <ul>
+                <li>このツールは、Poke-ControllerのisContainTemplate関数用の画像の切り抜きとcrop範囲指定を行います</li>
+                <li>画像をドラッグ&ドロップするか、ファイルを選択してアップロード（複数ファイル選択対応）</li>
+                <li>画像上をドラッグしてトリミング範囲を選択、またはテキストボックスで直接座標を入力</li>
+                <li>crop範囲座標を [l, t, r, b] 形式でコピー</li>
+                <li>切り抜き画像をダウンロードボタンで取得</li>
+                <li>複数ファイルの場合、一覧から切り替えて同じ範囲で一括処理可能</li>
+            </ul>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-text">📁 画像をここにドラッグ&ドロップ</div>
+            <div>または</div>
+            <button class="toggle-btn" onclick="document.getElementById('fileInput').click()">
+                ファイルを選択
+            </button>
+            <input type="file" id="fileInput" class="file-input" accept="image/*" multiple>
+        </div>
+
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+
+        <div class="controls" id="controls">
+            <button class="toggle-btn" id="cropBtn" disabled>トリミング実行</button>
+            <button class="toggle-btn" id="resetBtn">リセット</button>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <h3>📍 座標情報 [l, t, r, b]</h3>
+            <div class="coordinate-display" id="coordinateDisplay">
+                <button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>
+                <button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>
+            </div>
+
+            <h3 style="margin-top: 20px;">✏️ 座標を直接編集</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                <div>
+                    <label>左 (L)</label>
+                    <input type="number" id="coordL" placeholder="L">
+                </div>
+                <div>
+                    <label>上 (T)</label>
+                    <input type="number" id="coordT" placeholder="T">
+                </div>
+                <div>
+                    <label>右 (R)</label>
+                    <input type="number" id="coordR" placeholder="R">
+                </div>
+                <div>
+                    <label>下 (B)</label>
+                    <input type="number" id="coordB" placeholder="B">
+                </div>
+            </div>
+            <button class="toggle-btn" onclick="applyCoordinates()" style="width: 100%;">座標を適用</button>
+        </div>
+
+        <div id="multiFilePanel" style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
+            <h3>📋 処理中のファイル一覧</h3>
+            <div id="fileList"></div>
+            <button class="toggle-btn" id="applyToAllBtn" onclick="applyRangeToAllFiles()" style="width: 100%; margin-top: 10px;">全ファイルに同じ範囲を適用</button>
+        </div>
+
+        <div class="result-images" id="resultImages">
+            <div class="image-result">
+                <h3>元画像</h3>
+                <img id="originalImage" alt="元画像">
+            </div>
+            <div class="image-result">
+                <h3>トリミング結果</h3>
+                <img id="croppedImage" alt="トリミング画像">
+                <br>
+                <button class="toggle-btn" id="downloadBtn">ダウンロード</button>
+            </div>
+        </div>
+        <div class="instructions">
+            <h3>座標の意味</h3>
+            <ul>
+                <li><strong>l</strong> (left): 左端のx座標 - 横軸 <code>l = x</code></li>
+                <li><strong>t</strong> (top): 上端のy座標 - 縦軸 <code>t = y</code></li>
+                <li><strong>r</strong> (right): 右端のx座標 - 横軸 <code>r = x + w</code></li>
+                <li><strong>b</strong> (bottom): 下端のy座標 - 縦軸 <code>b = y + h</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx;
+        let img = new Image();
+        let isDrawing = false;
+        let startX, startY, endX, endY;
+        let originalImageData;
+        let currentCoordinates = null;
+
+        // 複数ファイル管理用
+        let fileQueue = [];
+        let currentFileIndex = 0;
+        let savedCoordinates = null;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('imageCanvas');
+            ctx = canvas.getContext('2d');
+            setupEventListeners();
+            loadSavedCoordinates();
+        });
+
+        // セッションストレージに座標を保存
+        function saveCordinatesToStorage(coordinates) {
+            if (coordinates) {
+                sessionStorage.setItem('lastCropCoordinates', JSON.stringify(coordinates));
+            }
+        }
+
+        // セッションストレージから座標を読み込み
+        function loadSavedCoordinates() {
+            const saved = sessionStorage.getItem('lastCropCoordinates');
+            if (saved) {
+                savedCoordinates = JSON.parse(saved);
+                console.log('前回の座標を復元しました:', savedCoordinates);
+            }
+        }
+
+        function setupEventListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // ドラッグ&ドロップ
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFiles(Array.from(files));
+                }
+            });
+
+            // ファイル選択
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFiles(Array.from(e.target.files));
+                }
+            });
+
+            // キャンバスイベント
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+
+            // ボタンイベント
+            document.getElementById('cropBtn').addEventListener('click', cropImage);
+            document.getElementById('resetBtn').addEventListener('click', resetAll);
+            document.getElementById('downloadBtn').addEventListener('click', downloadCroppedImage);
+
+            // 座標編集入力フィールドのイベント
+            ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateCoordinatesFromInputs);
+            });
+        }
+
+        // 複数ファイルを処理
+        function handleFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                alert('画像ファイルを選択してください。');
+                return;
+            }
+
+            fileQueue = imageFiles;
+            currentFileIndex = 0;
+            
+            loadNextFile();
+            showMultiFilePanel();
+        }
+
+        // 次のファイルを読み込む
+        function loadNextFile() {
+            if (currentFileIndex >= fileQueue.length) {
+                alert('全てのファイルの処理が完了しました。');
+                return;
+            }
+
+            const file = fileQueue[currentFileIndex];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.onload = function() {
+                    displayImage();
+                    showControls();
+                    updateFileList();
+                    
+                    // 保存された座標があればセット
+                    if (savedCoordinates) {
+                        setCoordinateInputs(savedCoordinates);
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.onload = function() {
+                    displayImage();
+                    showControls();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayImage() {
+            const maxWidth = 800;
+            const maxHeight = 600;
+            
+            let { width, height } = img;
+            
+            // アスペクト比を保持してリサイズ
+            if (width > maxWidth || height > maxHeight) {
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                width *= ratio;
+                height *= ratio;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            originalImageData = ctx.getImageData(0, 0, width, height);
+
+            // 元画像を結果エリアに表示
+            document.getElementById('originalImage').src = img.src;
+        }
+
+        function showControls() {
+            document.getElementById('canvasContainer').style.display = 'block';
+            document.getElementById('controls').style.display = 'flex';
+            document.getElementById('infoPanel').style.display = 'block';
+        }
+
+        function showMultiFilePanel() {
+            if (fileQueue.length > 1) {
+                document.getElementById('multiFilePanel').style.display = 'block';
+            }
+        }
+
+        function updateFileList() {
+            const fileListDiv = document.getElementById('fileList');
+            fileListDiv.innerHTML = '';
+            
+            fileQueue.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item' + (index === currentFileIndex ? ' current' : '');
+                item.innerHTML = `<span>${file.name}</span><button class="toggle-btn" onclick="switchToFile(${index})" style="padding: 4px 8px;">切り替え</button>`;
+                fileListDiv.appendChild(item);
+            });
+        }
+
+        function switchToFile(index) {
+            currentFileIndex = index;
+            loadNextFile();
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const pos = getMousePos(e);
+            startX = pos.x;
+            startY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const pos = getMousePos(e);
+            endX = pos.x;
+            endY = pos.y;
+
+            // キャンバスをクリア
+            ctx.putImageData(originalImageData, 0, 0);
+
+            // 選択範囲を描画
+            ctx.strokeStyle = '#ff4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+
+            // 座標を更新
+            updateCoordinates();
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            document.getElementById('cropBtn').disabled = false;
+        }
+
+        function updateCoordinates() {
+            // 実際の画像サイズに対する座標を計算
+            const scaleX = img.width / canvas.width;
+            const scaleY = img.height / canvas.height;
+
+            const x1 = Math.min(startX, endX) * scaleX;
+            const y1 = Math.min(startY, endY) * scaleY;
+            const x2 = Math.max(startX, endX) * scaleX;
+            const y2 = Math.max(startY, endY) * scaleY;
+
+            // [l, t, r, b] 形式の座標
+            const l = Math.round(x1);  // left
+            const t = Math.round(y1);  // top
+            const r = Math.round(x2);  // right
+            const b = Math.round(y2);  // bottom
+
+            currentCoordinates = [l, t, r, b];
+            saveCordinatesToStorage(currentCoordinates);
+
+            updateCoordinateDisplay();
+        }
+
+        function updateCoordinateDisplay() {
+            if (!currentCoordinates) return;
+
+            const [l, t, r, b] = currentCoordinates;
+            const coordinateText = `[${l}, ${t}, ${r}, ${b}]`;
+            
+            document.getElementById('coordinateDisplay').innerHTML =
+                `<button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">${coordinateText}</button>` +
+                `<button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
+
+            // テキストボックスに値を反映
+            setCoordinateInputs([l, t, r, b]);
+        }
+
+        // テキストボックスに座標をセット
+        function setCoordinateInputs(coords) {
+            if (!coords || coords.length < 4) return;
+            document.getElementById('coordL').value = coords[0];
+            document.getElementById('coordT').value = coords[1];
+            document.getElementById('coordR').value = coords[2];
+            document.getElementById('coordB').value = coords[3];
+        }
+
+        // テキストボックスから座標を適用
+        function applyCoordinates() {
+            const l = parseInt(document.getElementById('coordL').value);
+            const t = parseInt(document.getElementById('coordT').value);
+            const r = parseInt(document.getElementById('coordR').value);
+            const b = parseInt(document.getElementById('coordB').value);
+
+            // バリデーション
+            if (isNaN(l) || isNaN(t) || isNaN(r) || isNaN(b)) {
+                alert('全ての座標値を入力してください。');
+                return;
+            }
+
+            if (l >= r || t >= b) {
+                alert('座標値が不正です。(L < R かつ T < B である必要があります)');
+                return;
+            }
+
+            currentCoordinates = [l, t, r, b];
+            saveCordinatesToStorage(currentCoordinates);
+            updateCoordinateDisplay();
+            document.getElementById('cropBtn').disabled = false;
+            alert('座標が適用されました。');
+        }
+
+        // テキストボックスの値が変更されたときの処理
+        function updateCoordinatesFromInputs() {
+            // リアルタイムで値を同期するだけで、座標は適用ボタンで確定
+        }
+
+        function copyCoordinates() {
+            if (!currentCoordinates) return;
+
+            const coordinateText = `[${currentCoordinates[0]}, ${currentCoordinates[1]}, ${currentCoordinates[2]}, ${currentCoordinates[3]}]`;
+            
+            navigator.clipboard.writeText(coordinateText).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const coordinateTextBtn = document.getElementById('coordinateText');
+
+                if (copyBtn) {
+                    copyBtn.textContent = 'コピー完了!';
+                    copyBtn.classList.add('copy-success');
+                }
+                if (coordinateTextBtn) {
+                    coordinateTextBtn.classList.add('copy-success');
+                    coordinateTextBtn.textContent = coordinateText;
+                }
+
+                setTimeout(() => {
+                    if (copyBtn) {
+                        copyBtn.textContent = 'コピー';
+                        copyBtn.classList.remove('copy-success');
+                    }
+                    if (coordinateTextBtn) {
+                        coordinateTextBtn.classList.remove('copy-success');
+                    }
+                }, 2000);
+            });
+        }
+
+        let croppedCanvas = null; // グローバル変数として追加
+
+        function cropImage() {
+            if (!currentCoordinates) return;
+
+            const [l, t, r, b] = currentCoordinates;
+            const w = r - l;  // width
+            const h = b - t;  // height
+
+            // 新しいキャンバスを作成してトリミング
+            croppedCanvas = document.createElement('canvas');
+            const tempCtx = croppedCanvas.getContext('2d');
+            
+            croppedCanvas.width = w;
+            croppedCanvas.height = h;
+
+            tempCtx.drawImage(img, l, t, w, h, 0, 0, w, h);
+
+            // 結果を表示
+            const croppedImage = document.getElementById('croppedImage');
+            croppedImage.src = croppedCanvas.toDataURL();
+            
+            document.getElementById('resultImages').style.display = 'grid';
+        }
+
+        // ダウンロード機能を独立した関数として定義
+        function downloadCroppedImage() {
+            if (!croppedCanvas) {
+                alert('まずトリミングを実行してください。');
+                return;
+            }
+
+            try {
+                const link = document.createElement('a');
+                const fileName = fileQueue.length > 0 ? fileQueue[currentFileIndex].name.replace(/\.[^/.]+$/, "_cropped.png") : 'cropped_image.png';
+                link.download = fileName;
+                link.href = croppedCanvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 次のファイルへ
+                if (fileQueue.length > 1 && currentFileIndex < fileQueue.length - 1) {
+                    setTimeout(() => {
+                        currentFileIndex++;
+                        loadNextFile();
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('ダウンロードエラー:', error);
+                alert('ダウンロードに失敗しました。');
+            }
+        }
+
+        // 全ファイルに同じ範囲を適用
+        function applyRangeToAllFiles() {
+            if (!currentCoordinates) {
+                alert('先に座標を指定してください。');
+                return;
+            }
+
+            if (fileQueue.length <= 1) {
+                alert('処理するファイルが複数ありません。');
+                return;
+            }
+
+            // 全ファイルに対して順序に処理するためのフラグを設定
+            let processedCount = 0;
+            const originalCoordinates = [...currentCoordinates];
+
+            // 現在のファイルからトリミングを開始
+            const processNextFileWithSameCoordinates = () => {
+                if (currentFileIndex >= fileQueue.length) {
+                    alert(`${processedCount}個のファイルを処理しました。`);
+                    return;
+                }
+
+                currentCoordinates = [...originalCoordinates];
+                updateCoordinateDisplay();
+                cropImage();
+
+                // ダウンロードして次へ
+                downloadCroppedImage();
+                processedCount++;
+            };
+
+            processNextFileWithSameCoordinates();
+        }
+
+        function resetAll() {
+            // キャンバスをクリア
+            if (originalImageData) {
+                ctx.putImageData(originalImageData, 0, 0);
+            }
+            
+            // 変数をリセット
+            isDrawing = false;
+            currentCoordinates = null;
+            croppedCanvas = null;
+            
+            // UI をリセット
+            document.getElementById('cropBtn').disabled = true;
+            document.getElementById('coordinateDisplay').innerHTML =
+                `<button class="coordinate-text" id="coordinateText" onclick="copyCoordinates()">座標を取得するには、画像上でトリミング範囲を選択してください</button>` +
+                `<button class="toggle-btn copy-btn" id="copyBtn" onclick="copyCoordinates()">コピー</button>`;
+            document.getElementById('resultImages').style.display = 'none';
+            
+            // 座標入力をクリア
+            ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+        }
+    </script>
