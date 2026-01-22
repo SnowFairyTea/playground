@@ -285,7 +285,7 @@ title: 画像トリミング＆座標取得ツール
                 <button class="toggle-btn" id="resetBtn" onclick="resetAll()" style="padding: 10px 15px;">リセット</button>
             </div>
             
-            <h3 style="margin-top: 20px;">✂️ トリミング結果一覧</h3>
+            <h3 style="margin-top: 20px;">✂️ トリミング結果一覧(左クリックでDL)</h3>
             <div id="croppedGallery" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
         </div>
 
@@ -956,6 +956,36 @@ title: 画像トリミング＆座標取得ツール
             }
         }
 
+        // 指定インデックスの画像を座標でトリミングしてDataURLを返す
+        function cropFileAtIndex(index, coords) {
+            return new Promise((resolve, reject) => {
+                const file = fileQueue[index];
+                if (!file || !coords || coords.length < 4) return resolve(null);
+
+                const [l, t, r, b] = coords;
+                const w = r - l;
+                const h = b - t;
+                if (w <= 0 || h <= 0) return resolve(null);
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const tctx = canvas.getContext('2d');
+                        tctx.drawImage(tempImg, l, t, w, h, 0, 0, w, h);
+                        resolve(canvas.toDataURL());
+                    };
+                    tempImg.onerror = reject;
+                    tempImg.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         // この画像に適用（現在のファイルのみ）
         function applyCropToCurrentFile() {
             if (!currentCoordinates) {
@@ -966,7 +996,7 @@ title: 画像トリミング＆座標取得ツール
         }
 
         // 全ファイルに同じ範囲を適用
-        function applyRangeToAllFiles() {
+        async function applyRangeToAllFiles() {
             if (!currentCoordinates) {
                 return;
             }
@@ -975,32 +1005,22 @@ title: 画像トリミング＆座標取得ツール
                 return;
             }
 
-            // 全ファイルに同じ座標を適用してトリミング実行
             const originalCoordinates = [...currentCoordinates];
             const originalFileIndex = currentFileIndex;
 
-            for (let i = 0; i < fileQueue.length; i++) {
-                currentFileIndex = i;
-                currentCoordinates = [...originalCoordinates];
-                
-                // ファイルを読み込んでトリミング実行
-                const file = fileQueue[i];
-                const reader = new FileReader();
-                reader.onload = (function(index) {
-                    return function(e) {
-                        img.onload = function() {
-                            currentFileIndex = index;
-                            currentCoordinates = [...originalCoordinates];
-                            autoCropImage();
-                        };
-                        img.src = e.target.result;
-                    };
-                })(i);
-                reader.readAsDataURL(file);
-            }
+            // 各ファイルを独立して処理（UIに影響させない）
+            const results = await Promise.all(
+                fileQueue.map((_, idx) => cropFileAtIndex(idx, originalCoordinates))
+            );
 
-            // 元のファイルインデックスに戻す
-            currentFileIndex = originalFileIndex;
+            results.forEach((dataUrl, idx) => {
+                if (dataUrl) {
+                    croppedImages[idx] = dataUrl;
+                }
+            });
+
+            currentFileIndex = originalFileIndex; // 表示中のファイルを維持
+            updateCroppedGallery();
         }
 
         function resetAll() {
