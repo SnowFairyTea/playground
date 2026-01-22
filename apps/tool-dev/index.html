@@ -65,6 +65,64 @@ title: 画像トリミング＆座標取得ツール
 		background: #e3f2fd;
 		border-left: 4px solid #2196F3;
 	}
+	
+	/* サムネイルギャラリーのスタイル */
+	#thumbnailGallery {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-top: 15px;
+		padding: 10px;
+		background: #f9f9f9;
+		border-radius: 8px;
+	}
+	.thumbnail-item {
+		position: relative;
+		width: 120px;
+		height: 120px;
+		border: 3px solid transparent;
+		border-radius: 8px;
+		overflow: hidden;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	}
+	.thumbnail-item:hover {
+		transform: scale(1.05);
+		box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+	}
+	.thumbnail-item.active {
+		border-color: #2196F3;
+		box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+	}
+	.thumbnail-item img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.thumbnail-item canvas {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+	}
+	.thumbnail-label {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: rgba(0,0,0,0.7);
+		color: white;
+		padding: 4px;
+		font-size: 0.75rem;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 </style>
 
     <div class="container">
@@ -108,7 +166,7 @@ title: 画像トリミング＆座標取得ツール
             </div>
 
             <h3 style="margin-top: 20px;">✏️ 座標を直接編集</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
                 <div>
                     <label>左 (L)</label>
                     <input type="number" id="coordL" placeholder="L">
@@ -126,12 +184,11 @@ title: 画像トリミング＆座標取得ツール
                     <input type="number" id="coordB" placeholder="B">
                 </div>
             </div>
-            <button class="toggle-btn" onclick="applyCoordinates()" style="width: 100%;">座標を適用</button>
         </div>
 
         <div id="multiFilePanel" style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-            <h3>📋 処理中のファイル一覧</h3>
-            <div id="fileList"></div>
+            <h3>📋 画像ギャラリー</h3>
+            <div id="thumbnailGallery"></div>
             <button class="toggle-btn" id="applyToAllBtn" onclick="applyRangeToAllFiles()" style="width: 100%; margin-top: 10px;">全ファイルに同じ範囲を適用</button>
         </div>
 
@@ -235,9 +292,11 @@ title: 画像トリミング＆座標取得ツール
             document.getElementById('resetBtn').addEventListener('click', resetAll);
             document.getElementById('downloadBtn').addEventListener('click', downloadCroppedImage);
 
-            // 座標編集入力フィールドのイベント
+            // 座標編集入力フィールドのイベント（リアルタイム更新）
             ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
-                document.getElementById(id).addEventListener('change', updateCoordinatesFromInputs);
+                const input = document.getElementById(id);
+                input.addEventListener('input', applyCoordinatesFromInputs);
+                input.addEventListener('change', applyCoordinatesFromInputs);
             });
         }
 
@@ -334,20 +393,118 @@ title: 画像トリミング＆座標取得ツール
         }
 
         function updateFileList() {
-            const fileListDiv = document.getElementById('fileList');
-            fileListDiv.innerHTML = '';
+            const galleryDiv = document.getElementById('thumbnailGallery');
+            galleryDiv.innerHTML = '';
             
             fileQueue.forEach((file, index) => {
                 const item = document.createElement('div');
-                item.className = 'file-item' + (index === currentFileIndex ? ' current' : '');
-                item.innerHTML = `<span>${file.name}</span><button class="toggle-btn" onclick="switchToFile(${index})" style="padding: 4px 8px;">切り替え</button>`;
-                fileListDiv.appendChild(item);
+                item.className = 'thumbnail-item' + (index === currentFileIndex ? ' active' : '');
+                item.dataset.fileIndex = index;
+                
+                // サムネイル画像を作成
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const thumbnailImg = new Image();
+                    thumbnailImg.onload = function() {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = e.target.result;
+                        item.appendChild(imgElement);
+                        
+                        // 矩形描画用のcanvasを追加
+                        const thumbnailCanvas = document.createElement('canvas');
+                        thumbnailCanvas.width = 120;
+                        thumbnailCanvas.height = 120;
+                        thumbnailCanvas.dataset.originalWidth = thumbnailImg.width;
+                        thumbnailCanvas.dataset.originalHeight = thumbnailImg.height;
+                        item.appendChild(thumbnailCanvas);
+                        
+                        const label = document.createElement('div');
+                        label.className = 'thumbnail-label';
+                        label.textContent = file.name;
+                        item.appendChild(label);
+                        
+                        // 既存の座標があれば描画
+                        if (currentCoordinates) {
+                            drawRectangleOnThumbnail(thumbnailCanvas, thumbnailImg.width, thumbnailImg.height);
+                        }
+                    };
+                    thumbnailImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                
+                item.onclick = () => switchToFile(index);
+                galleryDiv.appendChild(item);
+            });
+        }
+
+        // サムネイル上に矩形を描画
+        function drawRectangleOnThumbnail(canvas, originalWidth, originalHeight) {
+            if (!currentCoordinates || !canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // キャンバスをクリア
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // 画像のアスペクト比を計算
+            const imageRatio = originalWidth / originalHeight;
+            const canvasRatio = canvasWidth / canvasHeight;
+            
+            let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+            
+            // object-fit: coverの計算
+            if (imageRatio > canvasRatio) {
+                // 画像が横長
+                drawHeight = canvasHeight;
+                drawWidth = drawHeight * imageRatio;
+                offsetX = (canvasWidth - drawWidth) / 2;
+            } else {
+                // 画像が縦長または正方形
+                drawWidth = canvasWidth;
+                drawHeight = drawWidth / imageRatio;
+                offsetY = (canvasHeight - drawHeight) / 2;
+            }
+            
+            // 座標をサムネイルのスケールに変換
+            const scaleX = drawWidth / originalWidth;
+            const scaleY = drawHeight / originalHeight;
+            
+            const [l, t, r, b] = currentCoordinates;
+            const x = l * scaleX + offsetX;
+            const y = t * scaleY + offsetY;
+            const w = (r - l) * scaleX;
+            const h = (b - t) * scaleY;
+            
+            // 矩形を描画
+            ctx.strokeStyle = '#ff4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.strokeRect(x, y, w, h);
+        }
+
+        // 全サムネイルの矩形を更新
+        function updateAllThumbnailRectangles() {
+            const thumbnails = document.querySelectorAll('.thumbnail-item canvas');
+            thumbnails.forEach(canvas => {
+                const originalWidth = parseInt(canvas.dataset.originalWidth);
+                const originalHeight = parseInt(canvas.dataset.originalHeight);
+                drawRectangleOnThumbnail(canvas, originalWidth, originalHeight);
             });
         }
 
         function switchToFile(index) {
             currentFileIndex = index;
             loadNextFile();
+            // アクティブ状態を更新
+            document.querySelectorAll('.thumbnail-item').forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
         }
 
         function getMousePos(e) {
@@ -414,6 +571,7 @@ title: 画像トリミング＆座標取得ツール
             saveCordinatesToStorage(currentCoordinates);
 
             updateCoordinateDisplay();
+            updateAllThumbnailRectangles();  // サムネイルも更新
         }
 
         function updateCoordinateDisplay() {
@@ -439,34 +597,28 @@ title: 画像トリミング＆座標取得ツール
             document.getElementById('coordB').value = coords[3];
         }
 
-        // テキストボックスから座標を適用
-        function applyCoordinates() {
+        // テキストボックスから座標を適用（リアルタイム）
+        function applyCoordinatesFromInputs() {
             const l = parseInt(document.getElementById('coordL').value);
             const t = parseInt(document.getElementById('coordT').value);
             const r = parseInt(document.getElementById('coordR').value);
             const b = parseInt(document.getElementById('coordB').value);
 
-            // バリデーション
+            // 全ての値が入力されていない場合はスキップ
             if (isNaN(l) || isNaN(t) || isNaN(r) || isNaN(b)) {
-                alert('全ての座標値を入力してください。');
                 return;
             }
 
+            // 座標が不正な場合はスキップ（エラー表示なし）
             if (l >= r || t >= b) {
-                alert('座標値が不正です。(L < R かつ T < B である必要があります)');
                 return;
             }
 
             currentCoordinates = [l, t, r, b];
             saveCordinatesToStorage(currentCoordinates);
             updateCoordinateDisplay();
+            updateAllThumbnailRectangles();  // サムネイルも更新
             document.getElementById('cropBtn').disabled = false;
-            alert('座標が適用されました。');
-        }
-
-        // テキストボックスの値が変更されたときの処理
-        function updateCoordinatesFromInputs() {
-            // リアルタイムで値を同期するだけで、座標は適用ボタンで確定
         }
 
         function copyCoordinates() {
@@ -610,5 +762,8 @@ title: 画像トリミング＆座標取得ツール
             ['coordL', 'coordT', 'coordR', 'coordB'].forEach(id => {
                 document.getElementById(id).value = '';
             });
+            
+            // サムネイルの矩形もクリア
+            updateAllThumbnailRectangles();
         }
     </script>
