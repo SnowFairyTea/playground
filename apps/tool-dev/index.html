@@ -914,10 +914,16 @@ title: 画像トリミング＆座標取得ツール
         function downloadCroppedAt(index) {
             try {
                 if (!croppedImages || !croppedImages[index]) return;
-                const link = document.createElement('a');
                 const baseName = (fileQueue && fileQueue[index] ? fileQueue[index].name : `image_${index + 1}`);
-                const fileName = baseName.replace(/\.[^/.]+$/, "_cropped.png");
-                link.download = fileName;
+                const suggested = baseName.replace(/\.[^/.]+$/, "_cropped.png");
+                const userName = window.prompt('保存するファイル名を入力してください', suggested);
+                if (!userName) return; // キャンセル時は何もしない
+
+                // 拡張子が付いていなければ .png を付与
+                const finalName = /\.[^/.]+$/.test(userName) ? userName : `${userName}.png`;
+
+                const link = document.createElement('a');
+                link.download = finalName;
                 link.href = croppedImages[index];
                 document.body.appendChild(link);
                 link.click();
