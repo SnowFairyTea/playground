@@ -9,7 +9,7 @@ START = "<!-- AUTO-GENERATED:START -->"
 END = "<!-- AUTO-GENERATED:END -->"
 
 # 表示したいカテゴリ順（無いものは後ろに回る）
-CATEGORY_ORDER = ["color", "tools", "pokemon", "research", "demo", "misc", "archive"]
+CATEGORY_ORDER = ["Poke-Controller","MATLAB","color", "tools", "pokemon", "research", "demo", "misc", "archive"]
 
 def parse_front_matter(text: str) -> dict:
     """
