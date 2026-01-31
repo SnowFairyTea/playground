@@ -1,6 +1,6 @@
 ---
-title: 画像トリミング＆座標取得ツール
-desc: isContainTemplate用の画像切り抜きとcrop範囲取得ツール
+title: (旧)画像トリミング＆座標取得ツール
+desc: (旧)isContainTemplate用の画像切り抜きとcrop範囲取得ツール
 tags: [Archive]
 order: 2
 ---
