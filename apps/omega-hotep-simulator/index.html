@@ -1,6 +1,6 @@
 ﻿---
 layout: artifacts
-title: "繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ"
+title: "オメガホテプシミュレータ"
 permalink: /apps/omega-hotep-simulator/
 ---
 <!DOCTYPE html>
@@ -8,11 +8,11 @@ permalink: /apps/omega-hotep-simulator/
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ - 繝ｩ繝ｳ繝繝2縺､縺ｮ閭ｽ蜉帙′騾｣骼也匱蜍包ｼ∫ｵ先棡繧旦RL縺ｧ繧ｷ繧ｧ繧｢縺ｧ縺阪∪縺吶・>
-  <meta property="og:title" content="繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ">
-  <meta property="og:description" content="繝ｩ繝ｳ繝繝2縺､縺ｮ閭ｽ蜉帙′騾｣骼厄ｼ∫ｵ先棡繧旦RL縺ｧ繧ｷ繧ｧ繧｢縲・>
-  <title>繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>室</text></svg>">
+  <meta name="description" content="オメガホテプシミュレータ - ランダム2つの能力が連鎖発動！結果をURLでシェアできます。">
+  <meta property="og:title" content="オメガホテプシミュレータ">
+  <meta property="og:description" content="ランダム2つの能力が連鎖！結果をURLでシェア。">
+  <title>オメガホテプシミュレータ</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎺</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +44,7 @@ permalink: /apps/omega-hotep-simulator/
       gap: 12px;
     }
 
-    /* 笏笏 HEADER 笏笏 */
+    /* ── HEADER ── */
     header { text-align: center; padding: 6px 0 2px; }
     header h1 {
       font-size: clamp(1.1rem, 5vw, 1.7rem);
@@ -64,7 +64,7 @@ permalink: /apps/omega-hotep-simulator/
       flex-wrap: wrap;
     }
 
-    /* 笏笏 INFO ICON BUTTON 笏笏 */
+    /* ── INFO ICON BUTTON ── */
     .info-icon-btn {
       display: inline-flex;
       align-items: center;
@@ -88,7 +88,7 @@ permalink: /apps/omega-hotep-simulator/
       box-shadow: 0 0 8px rgba(74,222,128,.4);
     }
 
-    /* 笏笏 INFO MODAL 笏笏 */
+    /* ── INFO MODAL ── */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -176,7 +176,7 @@ permalink: /apps/omega-hotep-simulator/
     }
     .modal-note strong { color: var(--accent); }
 
-    /* 笏笏 REPLAY BADGE 笏笏 */
+    /* ── REPLAY BADGE ── */
     .replay-badge {
       background: #0c1a3f;
       color: #93c5fd;
@@ -188,10 +188,10 @@ permalink: /apps/omega-hotep-simulator/
       display: none;
     }
 
-    /* 笏笏 BOARD 笏笏 */
+    /* ── BOARD ── */
     .board { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
 
-    /* 笏笏 PANEL 笏笏 */
+    /* ── PANEL ── */
     .panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -206,7 +206,7 @@ permalink: /apps/omega-hotep-simulator/
       margin-bottom: 10px;
     }
 
-    /* 笏笏 LEADER 笏笏 */
+    /* ── LEADER ── */
     .leader-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
     .leader-avatar {
       width: 46px; height: 46px;
@@ -237,7 +237,7 @@ permalink: /apps/omega-hotep-simulator/
       transition: width .5s ease;
     }
 
-    /* 笏笏 FOLLOWERS 笏笏 */
+    /* ── FOLLOWERS ── */
     .followers-row { display: flex; gap: 8px; flex-wrap: wrap; min-height: 52px; align-items: center; }
     .follower {
       background: var(--card-bg);
@@ -253,7 +253,7 @@ permalink: /apps/omega-hotep-simulator/
       filter: grayscale(1);
     }
     .follower.destroyed::after {
-      content: '笨・;
+      content: '✕';
       position: absolute;
       inset: 0;
       display: flex;
@@ -271,7 +271,7 @@ permalink: /apps/omega-hotep-simulator/
     }
     .f-name { font-size: .73rem; font-weight: 700; }
 
-    /* 笏笏 CARD 笏笏 */
+    /* ── CARD ── */
     .card-wrap {
       background: linear-gradient(160deg, #0e2a14, #1a3a20, #0e2a14);
       border: 2px solid var(--accent);
@@ -316,7 +316,7 @@ permalink: /apps/omega-hotep-simulator/
     }
     .ab-num { font-weight: 900; color: var(--accent); margin-right: 3px; }
 
-    /* 笏笏 PP 笏笏 */
+    /* ── PP ── */
     .pp-row { display: flex; align-items: center; gap: 10px; }
     .pp-lbl  { font-size: .84rem; font-weight: 700; color: var(--blue); }
     .pp-gems { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -330,7 +330,7 @@ permalink: /apps/omega-hotep-simulator/
     .pp-gem.on { background: var(--blue); box-shadow: 0 0 8px rgba(96,165,250,.7); }
     .pp-num { font-size: .8rem; color: var(--dim); }
 
-    /* 笏笏 FANFARE BUTTON 笏笏 */
+    /* ── FANFARE BUTTON ── */
     .fanfare-btn {
       width: 100%;
       padding: 15px;
@@ -363,7 +363,7 @@ permalink: /apps/omega-hotep-simulator/
     .fanfare-btn:active:not(:disabled) { transform: translateY(0); }
     .fanfare-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
 
-    /* 笏笏 CHOU SHINKA BUTTON 笏笏 */
+    /* ── CHOU SHINKA BUTTON ── */
     .chouShinka-btn {
       width: 100%;
       padding: 13px;
@@ -392,7 +392,7 @@ permalink: /apps/omega-hotep-simulator/
     .chouShinka-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 24px rgba(217,119,6,.65); }
     .chouShinka-btn:active { transform: translateY(0); }
 
-    /* 笏笏 CHAIN MODE TOGGLE 笏笏 */
+    /* ── CHAIN MODE TOGGLE ── */
     .chain-mode-row {
       display: flex;
       align-items: center;
@@ -427,13 +427,13 @@ permalink: /apps/omega-hotep-simulator/
     .mode-seg-btn.active { background: rgba(74,222,128,.2); color: var(--accent); }
     .mode-seg-btn:hover:not(.active) { background: rgba(255,255,255,.05); color: var(--text); }
 
-    /* 笏笏 RESULT BANNER 笏笏 */
+    /* ── RESULT BANNER ── */
     .result-banner { border-radius: 10px; padding: 12px; text-align: center; font-weight: 900; font-size: .98rem; display: none; }
     .result-banner.show-v { display: block; background: linear-gradient(135deg, #052e16, #065f46); color: #6ee7b7; border: 1px solid #059669; }
     .result-banner.show-e { display: block; background: linear-gradient(135deg, #1a100a, #2d1f0a); color: #fde68a; border: 1px solid #92400e; }
     .result-banner.show-l { display: block; background: linear-gradient(135deg, #0c1a3f, #1e3a5f); color: #93c5fd; border: 1px solid #2563eb; }
 
-    /* 笏笏 COUNT SUMMARY 笏笏 */
+    /* ── COUNT SUMMARY ── */
     .count-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -460,7 +460,7 @@ permalink: /apps/omega-hotep-simulator/
     }
     .count-sub { font-size: .65rem; color: var(--dim); margin-top: 2px; }
 
-    /* 笏笏 LOG 笏笏 */
+    /* ── LOG ── */
     .log-scroll {
       max-height: 230px;
       overflow-y: auto;
@@ -501,7 +501,7 @@ permalink: /apps/omega-hotep-simulator/
       margin-bottom: 5px;
     }
 
-    /* 笏笏 ACTION BUTTONS 笏笏 */
+    /* ── ACTION BUTTONS ── */
     .action-row { display: none; gap: 8px; justify-content: center; flex-wrap: wrap; }
     .btn {
       padding: 10px 22px;
@@ -529,7 +529,7 @@ permalink: /apps/omega-hotep-simulator/
     }
     .btn-chou:hover { background: linear-gradient(135deg, #b45309, #d97706); box-shadow: 0 4px 20px rgba(217,119,6,.6); }
 
-    /* 笏笏 FLOATING NUMBERS 笏笏 */
+    /* ── FLOATING NUMBERS ── */
     .float {
       position: fixed;
       font-size: 1.45rem;
@@ -547,7 +547,7 @@ permalink: /apps/omega-hotep-simulator/
       100% { opacity: 0; transform: translateY(-65px) scale(.8); }
     }
 
-    /* 笏笏 SECRET BUTTON 笏笏 */
+    /* ── SECRET BUTTON ── */
     .secret-btn {
       position: fixed;
       bottom: 12px; right: 14px;
@@ -565,7 +565,7 @@ permalink: /apps/omega-hotep-simulator/
     .secret-btn:hover { color: var(--text); border-color: var(--border); }
     .secret-btn.on { color: var(--accent); border-color: var(--accent); text-shadow: 0 0 8px rgba(74,222,128,.5); box-shadow: 0 0 10px rgba(74,222,128,.2); }
 
-    /* 笏笏 CHAIN HUD 笏笏 */
+    /* ── CHAIN HUD ── */
     .chain-hud {
       position: fixed;
       top: 14px; right: 14px;
@@ -586,76 +586,78 @@ permalink: /apps/omega-hotep-simulator/
 <body>
 
 <header>
-  <h1>繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ</h1>
-  <p>繝ｩ繝ｳ繝繝縺ｫ驕ｸ縺ｰ繧後◆2縺､縺ｮ閭ｽ蜉帙′逋ｺ蜍輔や促繧貞ｼ輔＞縺滓凾縺ｮ縺ｿ騾｣骼厄ｼ∫ｵ先棡繧旦RL縺ｧ繧ｷ繧ｧ繧｢縺ｧ縺阪∪縺・    <button class="info-icon-btn" onclick="openInfoModal()" title="遒ｺ邇・・繝繝｡繝ｼ繧ｸ陦ｨ" style="display:none"><i>i</i></button>
+  <h1>オメガホテプシミュレータ</h1>
+  <p>ランダムに選ばれた2つの能力が発動。④を引いた時のみ連鎖！結果をURLでシェアできます
+    <button class="info-icon-btn" onclick="openInfoModal()" title="確率・ダメージ表" style="display:none"><i>i</i></button>
   </p>
 </header>
 
-<!-- 笏笏 INFO MODAL 笏笏 -->
+<!-- ── INFO MODAL ── -->
 <div id="infoModal" class="modal-overlay" onclick="closeInfoModalByOverlay(event)">
   <div class="modal-box">
     <div class="modal-header">
-      <h3>投 遒ｺ邇・・繝繝｡繝ｼ繧ｸ陦ｨ</h3>
-      <button class="modal-close" onclick="closeInfoModal()">笨・/button>
+      <h3>📊 確率・ダメージ表</h3>
+      <button class="modal-close" onclick="closeInfoModal()">✕</button>
     </div>
 
     <div class="modal-section">
-      <h4>蜷・・蜉帙・驕ｸ縺ｰ繧後ｋ遒ｺ邇・/h4>
+      <h4>各能力の選ばれる確率</h4>
       <table class="info-table">
         <thead>
-          <tr><th>閭ｽ蜉・/th><th>蜉ｹ譫・/th><th class="num-col">遒ｺ邇・/th></tr>
+          <tr><th>能力</th><th>効果</th><th class="num-col">確率</th></tr>
         </thead>
         <tbody>
-          <tr><td><span class="badge b1">竭</span> 遐ｴ螢・/td><td>逶ｸ謇九ヵ繧ｩ繝ｭ繝ｯ繝ｼ1菴薙ｒ遐ｴ螢・/td><td class="num-col">50%</td></tr>
-          <tr><td><span class="badge b2">竭｡</span> 繝繝｡</td><td>逶ｸ謇九Μ繝ｼ繝繝ｼ縺ｫ2繝繝｡繝ｼ繧ｸ</td><td class="num-col">50%</td></tr>
-          <tr><td><span class="badge b3">竭｢</span> PP</td><td>閾ｪ蛻・P+2蝗槫ｾｩ</td><td class="num-col">50%</td></tr>
-          <tr><td><span class="badge b4">竭｣</span> 騾｣骼・/td><td>+4/+4 ・・繝輔ぃ繝ｳ繝輔ぃ繝ｼ繝ｬ蜀咲匱蜍・/td><td class="num-col">50%</td></tr>
+          <tr><td><span class="badge b1">①</span> 破壊</td><td>相手フォロワー1体を破壊</td><td class="num-col">50%</td></tr>
+          <tr><td><span class="badge b2">②</span> ダメ</td><td>相手リーダーに2ダメージ</td><td class="num-col">50%</td></tr>
+          <tr><td><span class="badge b3">③</span> PP</td><td>自分PP+2回復</td><td class="num-col">50%</td></tr>
+          <tr><td><span class="badge b4">④</span> 連鎖</td><td>+4/+4 ＆ ファンファーレ再発動</td><td class="num-col">50%</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="modal-section">
-      <h4>繝√ぉ繧､繝ｳ邨ゆｺ・・蟶・・譛溷ｾ・ム繝｡繝ｼ繧ｸ</h4>
+      <h4>チェイン終了分布・期待ダメージ</h4>
       <table class="info-table">
         <thead>
-          <tr><th>邨ゆｺ・メ繧ｧ繧､繝ｳ</th><th class="num-col">遒ｺ邇・/th><th class="num-col">譛溷ｾ・ム繝｡繝ｼ繧ｸ</th></tr>
+          <tr><th>終了チェイン</th><th class="num-col">確率</th><th class="num-col">期待ダメージ</th></tr>
         </thead>
         <tbody>
-          <tr><td>1繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・/td><td class="num-col">50.00%</td><td class="num-col">1.3</td></tr>
-          <tr><td>2繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・/td><td class="num-col">25.00%</td><td class="num-col">2.0</td></tr>
-          <tr><td>3繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・/td><td class="num-col">12.50%</td><td class="num-col">2.7</td></tr>
-          <tr><td>4繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・/td><td class="num-col">6.25%</td><td class="num-col">3.3</td></tr>
-          <tr><td>5繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・/td><td class="num-col">3.13%</td><td class="num-col">4.0</td></tr>
-          <tr><td>6繝√ぉ繧､繝ｳ莉･荳翫〒邨ゆｺ・/td><td class="num-col">3.12%</td><td class="num-col">4.7+</td></tr>
-          <tr class="info-highlight"><td>蜈ｨ菴薙・譛溷ｾ・､</td><td class="num-col">竏・/td><td class="num-col">2.0</td></tr>
+          <tr><td>1チェインで終了</td><td class="num-col">50.00%</td><td class="num-col">1.3</td></tr>
+          <tr><td>2チェインで終了</td><td class="num-col">25.00%</td><td class="num-col">2.0</td></tr>
+          <tr><td>3チェインで終了</td><td class="num-col">12.50%</td><td class="num-col">2.7</td></tr>
+          <tr><td>4チェインで終了</td><td class="num-col">6.25%</td><td class="num-col">3.3</td></tr>
+          <tr><td>5チェインで終了</td><td class="num-col">3.13%</td><td class="num-col">4.0</td></tr>
+          <tr><td>6チェイン以上で終了</td><td class="num-col">3.12%</td><td class="num-col">4.7+</td></tr>
+          <tr class="info-highlight"><td>全体の期待値</td><td class="num-col">−</td><td class="num-col">2.0</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="modal-section">
-      <h4>陬懆ｶｳ</h4>
+      <h4>補足</h4>
       <p class="modal-note">
-        繝ｻ4縺､縺ｮ閭ｽ蜉帙°繧峨Λ繝ｳ繝繝縺ｫ2縺､繧帝∈謚橸ｼ・(4,2)=6騾壹ｊ遲臥｢ｺ邇・ｼ・br>
-        繝ｻ竭｣縺悟性縺ｾ繧後ｋ繝壹い縺ｯ3/6 = <strong>50%</strong>・磯｣骼也ｶ咏ｶ夂紫・・br>
-        繝ｻ竭｡縺悟性縺ｾ繧後ｋ繝壹い縺ｯ3/6 = 50%・・繝√ぉ繧､繝ｳ縺ゅ◆繧頑怙螟ｧ2繝繝｡・・br>
-        繝ｻ譛溷ｾ・ム繝｡繝ｼ繧ｸ縺ｯ縲君 繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・＠縺溷ｴ蜷医・蜷郁ｨ医阪・譛溷ｾ・､<br>
-        繝ｻ遒ｺ螳壹メ繧ｧ繧､繝ｳ繝｢繝ｼ繝画凾縺ｯ蟶ｸ縺ｫ竭｣・倶ｻ・縺､繧帝∈謚槭＠縲∫嶌謇九′蛟偵ｌ繧九∪縺ｧ邯咏ｶ・      </p>
+        ・4つの能力からランダムに2つを選択（C(4,2)=6通り等確率）<br>
+        ・④が含まれるペアは3/6 = <strong>50%</strong>（連鎖継続率）<br>
+        ・②が含まれるペアは3/6 = 50%（1チェインあたり最大2ダメ）<br>
+        ・期待ダメージは「N チェインで終了した場合の合計」の期待値<br>
+        ・確定チェインモード時は常に④＋他1つを選択し、相手が倒れるまで継続
+      </p>
     </div>
   </div>
 </div>
 
-<div id="replayBadge" class="replay-badge">煤 繧ｷ繝ｼ繝峨Μ繝励Ξ繧､荳ｭ</div>
+<div id="replayBadge" class="replay-badge">🔁 シードリプレイ中</div>
 
 <div class="board">
 
-  <!-- 笏笏 OPPONENT AREA 笏笏 -->
+  <!-- ── OPPONENT AREA ── -->
   <div class="panel">
-    <div class="panel-label">笞費ｸ・逶ｸ謇九・蝣ｴ</div>
+    <div class="panel-label">⚔️ 相手の場</div>
     <div class="leader-row">
-      <div class="leader-avatar" id="leaderAvatar">荘</div>
+      <div class="leader-avatar" id="leaderAvatar">👑</div>
       <div class="leader-info">
         <div class="leader-name-row">
-          <span class="leader-name">逶ｸ謇九Μ繝ｼ繝繝ｼ</span>
+          <span class="leader-name">相手リーダー</span>
           <span class="leader-hp-tx">HP: <span id="leaderHp">20</span> / 20</span>
         </div>
         <div class="hpbar-wrap">
@@ -666,10 +668,10 @@ permalink: /apps/omega-hotep-simulator/
     <div class="followers-row" id="followersRow"></div>
   </div>
 
-  <!-- 笏笏 CARD AREA 笏笏 -->
+  <!-- ── CARD AREA ── -->
   <div class="panel">
     <div class="card-wrap" id="cardWrap">
-      <div class="card-title">笨ｦ 逡乗悶・雎｡蠕ｴ繧ｪ繝｡繧ｬ繧ｪ繝・・ 笨ｦ</div>
+      <div class="card-title">✦ 畏怖の象徴オメガホテプ ✦</div>
       <div class="card-stats-row">
         <div class="stat-block">
           <div class="stat-val atk" id="statAtk">4</div>
@@ -682,31 +684,32 @@ permalink: /apps/omega-hotep-simulator/
         </div>
       </div>
       <div class="ab-grid">
-        <div class="ab-item"><span class="ab-num">竭</span>逶ｸ謇九ヵ繧ｩ繝ｭ繝ｯ繝ｼ1譫夂ｴ螢・/div>
-        <div class="ab-item"><span class="ab-num">竭｡</span>逶ｸ謇九Μ繝ｼ繝繝ｼ縺ｫ2繝繝｡</div>
-        <div class="ab-item"><span class="ab-num">竭｢</span>閾ｪ蛻・P+2蝗槫ｾｩ</div>
-        <div class="ab-item"><span class="ab-num">竭｣</span>+4/+4 ・・繝輔ぃ繝ｳ繝輔ぃ繝ｼ繝ｬ蜀咲匱蜍・/div>
+        <div class="ab-item"><span class="ab-num">①</span>相手フォロワー1枚破壊</div>
+        <div class="ab-item"><span class="ab-num">②</span>相手リーダーに2ダメ</div>
+        <div class="ab-item"><span class="ab-num">③</span>自分PP+2回復</div>
+        <div class="ab-item"><span class="ab-num">④</span>+4/+4 ＆ ファンファーレ再発動</div>
       </div>
     </div>
   </div>
 
-  <!-- 笏笏 CHAIN MODE TOGGLE 笏笏 -->
+  <!-- ── CHAIN MODE TOGGLE ── -->
   <div class="chain-mode-row">
-    <span class="chain-mode-lbl">繝√ぉ繧､繝ｳ荳企剞</span>
+    <span class="chain-mode-lbl">チェイン上限</span>
     <div class="mode-seg">
-      <button class="mode-seg-btn active" id="modeBtn20" onclick="setChainLimit(false)">白 20蝗・/button>
-      <button class="mode-seg-btn" id="modeBtnInf" onclick="setChainLimit(true)">笙ｾ 辟｡蛻ｶ髯・/button>
+      <button class="mode-seg-btn active" id="modeBtn20" onclick="setChainLimit(false)">🔒 20回</button>
+      <button class="mode-seg-btn" id="modeBtnInf" onclick="setChainLimit(true)">♾ 無制限</button>
     </div>
   </div>
 
-  <!-- 笏笏 FANFARE BUTTON 笏笏 -->
+  <!-- ── FANFARE BUTTON ── -->
   <button class="fanfare-btn" id="fanfareBtn" onclick="startFanfare()">
-    室 繝輔ぃ繝ｳ繝輔ぃ繝ｼ繝ｬ逋ｺ蜍包ｼ・  </button>
-  <button class="chouShinka-btn" id="chouShinkaBtn" onclick="startChouShinka()">笞｡ 雜・ｲ蛹・/button>
+    🎺 ファンファーレ発動！
+  </button>
+  <button class="chouShinka-btn" id="chouShinkaBtn" onclick="startChouShinka()">⚡ 超進化</button>
 
-  <!-- 笏笏 PP AREA 笏笏 -->
+  <!-- ── PP AREA ── -->
   <div class="panel">
-    <div class="panel-label">虫 繝励Ξ繧､繝､繝ｼPP</div>
+    <div class="panel-label">💎 プレイヤーPP</div>
     <div class="pp-row">
       <span class="pp-lbl">PP</span>
       <div class="pp-gems" id="ppGems"></div>
@@ -714,39 +717,39 @@ permalink: /apps/omega-hotep-simulator/
     </div>
   </div>
 
-  <!-- 笏笏 RESULT BANNER 笏笏 -->
+  <!-- ── RESULT BANNER ── -->
   <div class="result-banner" id="resultBanner"></div>
 
-  <!-- 笏笏 LOG 笏笏 -->
+  <!-- ── LOG ── -->
   <div class="panel">
-    <div class="panel-label">糖 繧､繝吶Φ繝医Ο繧ｰ</div>
+    <div class="panel-label">📜 イベントログ</div>
     <div class="log-scroll" id="logScroll">
-      <div class="log-ph">縲後ヵ繧｡繝ｳ繝輔ぃ繝ｼ繝ｬ逋ｺ蜍包ｼ√阪ｒ謚ｼ縺励※縺上□縺輔＞</div>
+      <div class="log-ph">「ファンファーレ発動！」を押してください</div>
     </div>
   </div>
 
-  <!-- 笏笏 COUNT SUMMARY 笏笏 -->
+  <!-- ── COUNT SUMMARY ── -->
   <div class="panel" id="countSummary" style="display:none">
-    <div class="panel-label">投 逋ｺ蜍募屓謨ｰ繧ｵ繝槭Μ繝ｼ</div>
+    <div class="panel-label">📊 発動回数サマリー</div>
     <div class="count-grid" id="countGrid"></div>
   </div>
 
-  <!-- 笏笏 ACTION BUTTONS 笏笏 -->
+  <!-- ── ACTION BUTTONS ── -->
   <div class="action-row" id="actionRow">
-    <button class="btn btn-tweet" onclick="tweetResult()">撫 繝昴せ繝・/button>
-    <button class="btn btn-share" id="shareBtn" onclick="shareResult()">搭 URL繧偵さ繝斐・</button>
-    <button class="btn btn-reset" onclick="resetGame()">売 繝ｪ繧ｻ繝・ヨ</button>
+    <button class="btn btn-tweet" onclick="tweetResult()">𝕏 ポスト</button>
+    <button class="btn btn-share" id="shareBtn" onclick="shareResult()">📋 URLをコピー</button>
+    <button class="btn btn-reset" onclick="resetGame()">🔄 リセット</button>
   </div>
 
 </div>
 
-<div class="chain-hud" id="chainHud">室 Chain: 0</div>
-<button class="secret-btn" id="secretBtn" onclick="toggleForceChain()">竏・遒ｺ螳壹メ繧ｧ繧､繝ｳ</button>
+<div class="chain-hud" id="chainHud">🎺 Chain: 0</div>
+<button class="secret-btn" id="secretBtn" onclick="toggleForceChain()">∞ 確定チェイン</button>
 
 <script>
 'use strict';
 
-// 笏笏 Seeded PRNG (mulberry32) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
 function makePRNG(seed) {
   let s = seed >>> 0;
   return () => {
@@ -757,7 +760,7 @@ function makePRNG(seed) {
   };
 }
 
-// 笏笏 State 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── State ────────────────────────────────────────────────────────────────────
 let G, rng, seed;
 let logEmpty = true;
 let forceChain = false;
@@ -772,11 +775,11 @@ function freshState() {
     opp: {
       leader: { hp: 20, max: 20 },
       followers: [
-        { id: 'fA', label: '繝輔か繝ｭ繝ｯ繝ｼ1', destroyed: false },
-        { id: 'fB', label: '繝輔か繝ｭ繝ｯ繝ｼ2', destroyed: false },
-        { id: 'fC', label: '繝輔か繝ｭ繝ｯ繝ｼ3', destroyed: false },
-        { id: 'fD', label: '繝輔か繝ｭ繝ｯ繝ｼ4', destroyed: false },
-        { id: 'fE', label: '繝輔か繝ｭ繝ｯ繝ｼ5', destroyed: false },
+        { id: 'fA', label: 'フォロワー1', destroyed: false },
+        { id: 'fB', label: 'フォロワー2', destroyed: false },
+        { id: 'fC', label: 'フォロワー3', destroyed: false },
+        { id: 'fD', label: 'フォロワー4', destroyed: false },
+        { id: 'fE', label: 'フォロワー5', destroyed: false },
       ]
     },
     me: { pp: 1, ppMax: 10 },
@@ -784,7 +787,7 @@ function freshState() {
   };
 }
 
-// 笏笏 Render 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Render ───────────────────────────────────────────────────────────────────
 function render() {
   const hp = Math.max(0, G.opp.leader.hp);
   document.getElementById('leaderHp').textContent = hp;
@@ -806,7 +809,7 @@ function render() {
   document.getElementById('statDef').textContent = G.card.def;
 }
 
-// 笏笏 Floating Effect Numbers 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Floating Effect Numbers ──────────────────────────────────────────────────
 function spawnFloat(text, cls, anchor) {
   const el = document.createElement('div');
   el.className = `float ${cls}`;
@@ -823,20 +826,20 @@ function spawnFloat(text, cls, anchor) {
   setTimeout(() => el.remove(), 1000);
 }
 
-// 笏笏 Apply Abilities 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Apply Abilities ──────────────────────────────────────────────────────────
 async function applyAbility(id) {
   abilityCounts[id]++;
   switch (id) {
 
     case 1: {
       const alive = G.opp.followers.filter(f => !f.destroyed);
-      if (!alive.length) return '繝輔か繝ｭ繝ｯ繝ｼ縺ｪ縺暦ｼ育┌蜉ｹ・・;
+      if (!alive.length) return 'フォロワーなし（無効）';
       const target = alive[Math.floor(rng() * alive.length)];
       const el = document.getElementById(target.id);
       if (el) { el.classList.add('flash'); await wait(220); }
       target.destroyed = true;
       render();
-      return `${target.label}繧堤ｴ螢奇ｼ～;
+      return `${target.label}を破壊！`;
     }
 
     case 2: {
@@ -844,15 +847,15 @@ async function applyAbility(id) {
       render();
       const av = document.getElementById('leaderAvatar');
       av.classList.remove('hit'); void av.offsetWidth; av.classList.add('hit');
-      spawnFloat('竏・', 'f-dmg', av);
-      return '逶ｸ謇九Μ繝ｼ繝繝ｼ縺ｫ2繝繝｡繝ｼ繧ｸ・・;
+      spawnFloat('−2', 'f-dmg', av);
+      return '相手リーダーに2ダメージ！';
     }
 
     case 3: {
       G.me.pp = Math.min(G.me.pp + 2, G.me.ppMax);
       spawnFloat('+2 PP', 'f-heal', document.getElementById('ppGems'));
       render();
-      return 'PP+2蝗槫ｾｩ・・;
+      return 'PP+2回復！';
     }
 
     case 4: {
@@ -861,14 +864,14 @@ async function applyAbility(id) {
       cw.classList.remove('pulse'); void cw.offsetWidth; cw.classList.add('pulse');
       spawnFloat('+4/+4', 'f-buff', cw);
       render();
-      return `+4/+4 竊・${G.card.atk}/${G.card.def}`;
+      return `+4/+4 → ${G.card.atk}/${G.card.def}`;
     }
   }
 }
 
-// 笏笏 Log 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Log ──────────────────────────────────────────────────────────────────────
 const BADGE_CLS   = { 1:'b1', 2:'b2', 3:'b3', 4:'b4' };
-const BADGE_LABEL = { 1:'竭遐ｴ螢・, 2:'竭｡繝繝｡', 3:'竭｢PP蝗槫ｾｩ', 4:'竭｣繝舌ヵ・・｣骼・ };
+const BADGE_LABEL = { 1:'①破壊', 2:'②ダメ', 3:'③PP回復', 4:'④バフ＆連鎖' };
 
 function addLog(chain, picks, details) {
   const scroll = document.getElementById('logScroll');
@@ -878,7 +881,7 @@ function addLog(chain, picks, details) {
   const div = document.createElement('div');
   div.className = 'log-entry';
   div.innerHTML = `<span class="log-chain">Chain ${chain}</span>${badges}
-    <div class="log-detail">${details.join(' ・・')}</div>`;
+    <div class="log-detail">${details.join(' ／ ')}</div>`;
   scroll.appendChild(div);
   scroll.scrollTop = scroll.scrollHeight;
 }
@@ -888,12 +891,12 @@ function addLogSeparator(text) {
   if (logEmpty) { scroll.innerHTML = ''; logEmpty = false; }
   const div = document.createElement('div');
   div.className = 'log-separator';
-  div.textContent = `笏笏 ${text} 笏笏`;
+  div.textContent = `── ${text} ──`;
   scroll.appendChild(div);
   scroll.scrollTop = scroll.scrollHeight;
 }
 
-// 笏笏 Utilities 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Utilities ─────────────────────────────────────────────────────────────────
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function pick2() {
@@ -919,20 +922,20 @@ function setChainLimit(unlimited) {
   document.getElementById('modeBtnInf').classList.toggle('active', unlimited);
 }
 
-// 笏笏 Count Summary 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Count Summary ─────────────────────────────────────────────────────────────
 function showCountSummary() {
-  const labels = { 1:'竭 遐ｴ螢・, 2:'竭｡ 繝繝｡', 3:'竭｢ PP', 4:'竭｣ 騾｣骼・ };
+  const labels = { 1:'① 破壊', 2:'② ダメ', 3:'③ PP', 4:'④ 連鎖' };
   const cls    = { 1:'b1',     2:'b2',    3:'b3',     4:'b4'     };
   document.getElementById('countGrid').innerHTML = [1,2,3,4].map(id => `
     <div class="count-item">
       <span class="count-badge-label ${cls[id]}">${labels[id]}</span>
       <div class="count-num">${abilityCounts[id]}</div>
-      <div class="count-sub">蝗・/div>
+      <div class="count-sub">回</div>
     </div>`).join('');
   document.getElementById('countSummary').style.display = 'block';
 }
 
-// 笏笏 Chain Logic 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Chain Logic ───────────────────────────────────────────────────────────────
 async function runChain() {
   const hud = document.getElementById('chainHud');
   hud.style.display = 'block';
@@ -943,7 +946,7 @@ async function runChain() {
   while (keepGoing && localN < LIMIT) {
     localN++;
     globalChainCount++;
-    hud.textContent = `室 Chain: ${globalChainCount}`;
+    hud.textContent = `🎺 Chain: ${globalChainCount}`;
 
     const cw = document.getElementById('cardWrap');
     cw.classList.remove('pulse'); void cw.offsetWidth; cw.classList.add('pulse');
@@ -959,13 +962,13 @@ async function runChain() {
     addLog(globalChainCount, picks, details);
 
     if (G.opp.leader.hp <= 0) {
-      showBanner('v', `醇 ${globalChainCount}繝√ぉ繧､繝ｳ縺ｧ逶ｸ謇九Μ繝ｼ繝繝ｼ繧呈茶遐ｴ・～);
+      showBanner('v', `🏆 ${globalChainCount}チェインで相手リーダーを撃破！`);
       keepGoing = false;
       break;
     }
 
     if (!picks.includes(4)) {
-      showBanner('e', `軸 ${globalChainCount}繝√ぉ繧､繝ｳ縺ｧ邨ゆｺ・);
+      showBanner('e', `🎲 ${globalChainCount}チェインで終了`);
       keepGoing = false;
       break;
     }
@@ -974,7 +977,7 @@ async function runChain() {
   }
 
   if (keepGoing) {
-    showBanner('l', `劇 ${globalChainCount}繝√ぉ繧､繝ｳ蛻ｰ驕費ｼ・ｼ井ｸ企剞${LIMIT}蝗橸ｼ荏);
+    showBanner('l', `🌀 ${globalChainCount}チェイン到達！（上限${LIMIT}回）`);
   }
 
   hud.style.display = 'none';
@@ -999,10 +1002,10 @@ function showBanner(type, msg) {
 }
 
 function tweetResult() {
-  const countLabels = { 1:'竭', 2:'竭｡', 3:'竭｢', 4:'竭｣' };
+  const countLabels = { 1:'①', 2:'②', 3:'③', 4:'④' };
   const countStr = [1,2,3,4]
     .filter(id => abilityCounts[id] > 0)
-    .map(id => `${countLabels[id]}ﾃ・{abilityCounts[id]}`)
+    .map(id => `${countLabels[id]}×${abilityCounts[id]}`)
     .join(' ');
 
   let hash = `seed=${seed}`;
@@ -1012,8 +1015,8 @@ function tweetResult() {
 
   const text = [
     lastBannerMsg,
-    `逋ｺ蜍・ ${countStr}`,
-    '#繧ｪ繝｡繧ｬ繧ｪ繝・・繧ｷ繝溘Η繝ｬ繝ｼ繧ｿ',
+    `発動: ${countStr}`,
+    '#オメガホテプシミュレータ',
     shareUrl,
   ].join('\n');
 
@@ -1023,7 +1026,7 @@ function tweetResult() {
   );
 }
 
-// 笏笏 Start / Share / Reset 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Start / Share / Reset ─────────────────────────────────────────────────────
 async function startFanfare() {
   document.getElementById('fanfareBtn').disabled = true;
   document.getElementById('actionRow').style.display = 'none';
@@ -1042,12 +1045,12 @@ function shareResult() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url)
       .then(() => {
-        btn.textContent = '笨・繧ｳ繝斐・縺励∪縺励◆・・;
-        setTimeout(() => { btn.textContent = '搭 邨先棡URL繧偵さ繝斐・'; }, 2600);
+        btn.textContent = '✅ コピーしました！';
+        setTimeout(() => { btn.textContent = '📋 結果URLをコピー'; }, 2600);
       })
-      .catch(() => prompt('URL繧偵さ繝斐・縺励※繧ｷ繧ｧ繧｢縺励※縺上□縺輔＞:', url));
+      .catch(() => prompt('URLをコピーしてシェアしてください:', url));
   } else {
-    prompt('URL繧偵さ繝斐・縺励※繧ｷ繧ｧ繧｢縺励※縺上□縺輔＞:', url);
+    prompt('URLをコピーしてシェアしてください:', url);
   }
 }
 
@@ -1065,13 +1068,13 @@ function resetGame() {
   document.getElementById('countSummary').style.display = 'none';
   document.getElementById('chouShinkaBtn').style.display= 'none';
   document.getElementById('fanfareBtn').disabled        = false;
-  document.getElementById('fanfareBtn').textContent     = '室 繝輔ぃ繝ｳ繝輔ぃ繝ｼ繝ｬ逋ｺ蜍包ｼ・;
+  document.getElementById('fanfareBtn').textContent     = '🎺 ファンファーレ発動！';
   document.getElementById('logScroll').innerHTML =
-    '<div class="log-ph">縲後ヵ繧｡繝ｳ繝輔ぃ繝ｼ繝ｬ逋ｺ蜍包ｼ√阪ｒ謚ｼ縺励※縺上□縺輔＞</div>';
+    '<div class="log-ph">「ファンファーレ発動！」を押してください</div>';
   render();
 }
 
-// 笏笏 雜・ｲ蛹・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── 超進化 ────────────────────────────────────────────────────────────────────
 async function startChouShinka() {
   chouShinkaUsed = true;
   document.getElementById('chouShinkaBtn').style.display = 'none';
@@ -1081,11 +1084,11 @@ async function startChouShinka() {
   const chouSeed = (Math.random() * 0xFFFFFFFF) >>> 0;
   rng = makePRNG(chouSeed);
 
-  addLogSeparator('笞｡ 雜・ｲ蛹・逋ｺ蜍包ｼ・);
+  addLogSeparator('⚡ 超進化 発動！');
   await runChain();
 }
 
-// 笏笏 URL Seed Replay 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── URL Seed Replay ───────────────────────────────────────────────────────────
 function checkURLSeed() {
   const rawHash = location.hash.slice(1);
   if (!rawHash) return;
@@ -1104,14 +1107,14 @@ function checkURLSeed() {
   document.getElementById('replayBadge').style.display = 'inline-block';
   const btn = document.getElementById('fanfareBtn');
   btn.disabled    = true;
-  btn.textContent = '煤 繝ｪ繝励Ξ繧､蜀咲函荳ｭ窶ｦ';
+  btn.textContent = '🔁 リプレイ再生中…';
   setTimeout(async () => {
     await runChain();
-    btn.textContent = '室 繝輔ぃ繝ｳ繝輔ぃ繝ｼ繝ｬ逋ｺ蜍包ｼ・;
+    btn.textContent = '🎺 ファンファーレ発動！';
   }, 700);
 }
 
-// 笏笏 Info Modal 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Info Modal ────────────────────────────────────────────────────────────────
 function openInfoModal() {
   document.getElementById('infoModal').classList.add('open');
 }
@@ -1122,7 +1125,7 @@ function closeInfoModalByOverlay(e) {
   if (e.target === document.getElementById('infoModal')) closeInfoModal();
 }
 
-// 笏笏 Init 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Init ──────────────────────────────────────────────────────────────────────
 G = freshState();
 render();
 checkURLSeed();
