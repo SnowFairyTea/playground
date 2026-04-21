@@ -23,5 +23,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps/slides/decks/manifest.json
-          git diff --cached --quiet || git commit -m "chore: update slides manifest [skip ci]"
+          git diff --cached --quiet || git commit -m "chore: update slides manifest"
           git push
