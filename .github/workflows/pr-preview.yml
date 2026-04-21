@@ -3,6 +3,12 @@ name: PR Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR番号（手動実行時）'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,7 +20,7 @@ concurrency:
 
 jobs:
   deploy-preview:
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,13 +55,16 @@ jobs:
         with:
           script: |
             const url = '${{ steps.preview.outputs.url }}';
-            const sha  = context.payload.pull_request.head.sha.slice(0, 7);
+            const pr  = context.payload.pull_request;
+            const prNumber = pr ? pr.number : parseInt('${{ inputs.pr_number || 0 }}', 10);
+            if (!prNumber) { console.log('PR番号なし、スキップ'); return; }
+            const sha = pr ? pr.head.sha.slice(0, 7) : context.sha.slice(0, 7);
             const body = [
               '## プレビュー',
               '',
               `**[${url}](${url})**`,
               '',
-              `Branch: \`${{ github.head_ref }}\` @ \`${sha}\``,
+              `Branch: \`${{ github.head_ref || github.ref_name }}\` @ \`${sha}\``,
               '',
               '_コミットのたびに自動更新。PRクローズ時にプレビューは削除されます。_',
             ].join('\n');
@@ -63,7 +72,7 @@ jobs:
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: prNumber,
             });
 
             const existing = comments.find(
@@ -81,7 +90,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.issue.number,
+                issue_number: prNumber,
                 body,
               });
             }
