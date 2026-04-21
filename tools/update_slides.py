@@ -10,7 +10,15 @@ SUPPORTED = {".pdf": "pdf", ".html": "html", ".pptx": "pptx"}
 
 
 def slug_to_title(stem: str) -> str:
-    return stem.replace("-", " ").replace("_", " ").title()
+    words = stem.replace("-", " ").replace("_", " ").split()
+    result = []
+    for w in words:
+        ascii_alpha = [c for c in w if c.isascii() and c.isalpha()]
+        if not ascii_alpha or all(c.isupper() for c in ascii_alpha):
+            result.append(w)
+        else:
+            result.append(w.capitalize())
+    return " ".join(result)
 
 
 def html_title(path: Path) -> str:
