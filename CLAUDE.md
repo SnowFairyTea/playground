@@ -1,6 +1,7 @@
 # Playground — Claude Reference
 
 GitHub Pages (Jekyll) の個人デモサイト。サーバーサイド処理なし、静的HTML/CSS/JSのみ。
+PRの文章は日本語を使用すること
 
 ## 新しいアプリを追加する手順
 
