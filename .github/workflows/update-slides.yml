@@ -1,0 +1,27 @@
+name: Update slides manifest
+
+on:
+  push:
+    paths:
+      - 'apps/slides/decks/**'
+      - '!apps/slides/decks/manifest.json'
+  workflow_dispatch:
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run update_slides.py
+        run: python3 tools/update_slides.py
+
+      - name: Commit manifest.json if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/slides/decks/manifest.json
+          git diff --cached --quiet || git commit -m "chore: update slides manifest [skip ci]"
+          git push
