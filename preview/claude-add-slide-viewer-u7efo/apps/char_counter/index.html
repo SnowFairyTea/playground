@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+<link rel="stylesheet" href="/preview/claude-add-slide-viewer-u7efo/assets/style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+
+
+
+  <title>文字数カウンター</title>
+  <link rel="stylesheet" href="/preview/claude-add-slide-viewer-u7efo/assets/style_artifacts.css">
+</head>
+<body>
+
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #fff; --text: #111827; --muted: #6b7280;
+    --shadow: 0 4px 10px rgba(0,0,0,.08);
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; margin: 8px 0 20px; text-align: center; }
+  .card {
+    background: var(--card); border-radius: 12px; box-shadow: var(--shadow);
+    padding: 20px; margin-bottom: 18px;
+  }
+
+  textarea {
+    width: 100%; min-height: 220px; resize: vertical;
+    border: 2px solid #e5e7eb; border-radius: 10px;
+    padding: 14px; font-size: 15px; line-height: 1.7;
+    font-family: inherit; color: var(--text);
+    transition: border-color .15s;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .stat-box {
+    background: #f9fafb; border-radius: 10px;
+    padding: 14px 16px; text-align: center;
+    border: 1px solid #e5e7eb;
+  }
+  .stat-value {
+    font-size: 32px; font-weight: 700; color: var(--accent);
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+  }
+
+  .options { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .options label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+
+  .clear-btn {
+    margin-left: auto; padding: 6px 16px; border-radius: 8px;
+    background: #fee2e2; color: #dc2626; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    transition: background .12s;
+  }
+  .clear-btn:hover { background: #fecaca; }
+
+  .help {
+    background: #eff6ff; border-radius: 12px; padding: 14px 16px;
+    color: #1d4ed8; font-size: 13px;
+  }
+  .help h3 { color: #1e40af; font-size: 15px; margin: 0 0 6px; }
+  .help ul { margin: 0; padding-left: 18px; }
+  .help li { margin: 4px 0; }
+</style>
+
+<div class="wrap">
+  <h1>文字数カウンター</h1>
+
+  <div class="card">
+    <div class="options">
+      <label>
+        <input type="checkbox" id="optIgnoreSpace"> スペース・改行を除く
+      </label>
+      <label>
+        <input type="checkbox" id="optIgnoreNewline"> 改行を除く（スペースは含む）
+      </label>
+      <button class="clear-btn" id="clearBtn">クリア</button>
+    </div>
+    <textarea id="inputText" placeholder="ここにテキストを入力してください…"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">文字数（全体）</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statFiltered">0</div>
+        <div class="stat-label" id="labelFiltered">文字数（スペース・改行除く）</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statLines">0</div>
+        <div class="stat-label">行数</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statWords">0</div>
+        <div class="stat-label">単語数</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statBytes">0</div>
+        <div class="stat-label">バイト数 (UTF-8)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statParagraphs">0</div>
+        <div class="stat-label">段落数</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="help">
+    <h3>使用方法</h3>
+    <ul>
+      <li>テキストエリアに文字を入力すると、リアルタイムでカウントされます</li>
+      <li>「スペース・改行を除く」チェックで空白類を除いた文字数を表示</li>
+      <li>「改行を除く」チェックで改行のみを除いた文字数を表示</li>
+      <li>単語数は空白・改行で区切られたトークンの数です</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const inputText      = document.getElementById("inputText");
+  const optIgnoreSpace = document.getElementById("optIgnoreSpace");
+  const optIgnoreNewline = document.getElementById("optIgnoreNewline");
+  const clearBtn       = document.getElementById("clearBtn");
+
+  const statTotal      = document.getElementById("statTotal");
+  const statFiltered   = document.getElementById("statFiltered");
+  const labelFiltered  = document.getElementById("labelFiltered");
+  const statLines      = document.getElementById("statLines");
+  const statWords      = document.getElementById("statWords");
+  const statBytes      = document.getElementById("statBytes");
+  const statParagraphs = document.getElementById("statParagraphs");
+
+  function countBytes(str) {
+    return new TextEncoder().encode(str).length;
+  }
+
+  function update() {
+    const text = inputText.value;
+
+    statTotal.textContent = text.length;
+
+    if (optIgnoreSpace.checked) {
+      statFiltered.textContent = text.replace(/[\s\u3000]/g, "").length;
+      labelFiltered.textContent = "文字数（スペース・改行除く）";
+    } else if (optIgnoreNewline.checked) {
+      statFiltered.textContent = text.replace(/\n/g, "").length;
+      labelFiltered.textContent = "文字数（改行除く）";
+    } else {
+      statFiltered.textContent = text.replace(/[ \t\u3000]/g, "").length;
+      labelFiltered.textContent = "文字数（半角・全角スペース除く）";
+    }
+
+    statLines.textContent = text === "" ? 0 : text.split("\n").length;
+
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    statWords.textContent = words.length;
+
+    statBytes.textContent = countBytes(text);
+
+    const paragraphs = text.trim().split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    statParagraphs.textContent = paragraphs.length;
+  }
+
+  inputText.addEventListener("input", update);
+  optIgnoreSpace.addEventListener("change", () => {
+    if (optIgnoreSpace.checked) optIgnoreNewline.checked = false;
+    update();
+  });
+  optIgnoreNewline.addEventListener("change", () => {
+    if (optIgnoreNewline.checked) optIgnoreSpace.checked = false;
+    update();
+  });
+  clearBtn.addEventListener("click", () => {
+    inputText.value = "";
+    update();
+  });
+
+  update();
+</script>
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+        <a href="/preview/claude-add-slide-viewer-u7efo/" class="footer-text-logo">
+            
+            <span class="logo-line logo-large">SnowFairyTea</span>
+            
+            <span class="logo-line logo-small">Playground</span>
+            
+        </a>
+    </div>
+
+
+
+    <div class="footer-right">
+      
+        <a href="https://github.com/SnowFairyTea" target="_blank" rel="noopener">GitHub</a>
+      
+      
+        <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
+      
+      
+    </div>
+      <a href="/preview/claude-add-slide-viewer-u7efo/about/">About</a>
+  </div>
+</footer>
+
+
+</body>
+</html>
