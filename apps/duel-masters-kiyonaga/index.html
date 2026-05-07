@@ -1,0 +1,500 @@
+---
+layout: artifacts
+title: "清永ヒット率計算機"
+permalink: /apps/duel-masters-kiyonaga/
+---
+
+<style>
+:root {
+  --bg: #f3f4f6;
+  --card: #fff;
+  --text: #111827;
+  --muted: #6b7280;
+  --shadow: 0 4px 10px rgba(0,0,0,.08);
+  --red: #dc2626;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+  background: var(--bg); color: var(--text);
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+/* Banner */
+.banner {
+  border-radius: 16px; padding: 20px 28px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow); transition: background .4s;
+  color: #fff;
+}
+.hit-rate { font-size: 62px; font-weight: 900; line-height: 1; letter-spacing: -2px; }
+.banner-sub { font-size: 13px; opacity: .85; margin-top: 3px; }
+.deck-count { font-size: 26px; font-weight: 800; text-align: right; }
+
+/* Card */
+.card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+.card-hdr { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 12px; }
+
+/* Deck grid */
+.deck-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.tile-slot { aspect-ratio: 1; }
+.tile {
+  width: 100%; height: 100%; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none; touch-action: none;
+  transition: opacity .15s, transform .1s, filter .2s;
+  position: relative; overflow: hidden;
+}
+.tile:hover { transform: scale(1.06); }
+.tile:active { transform: scale(.95); }
+.tile.empty { border: 2px dashed #d1d5db; background: #f9fafb; cursor: default; }
+.tile.empty:hover { transform: none; }
+.tile-cost { font-size: 28px; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.tile-cost2 { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.85); margin-top: 1px; }
+.tile.excluded { opacity: .28; filter: grayscale(.6); }
+.tile.excluded::after {
+  content: '×';
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 28px; font-weight: 900; color: rgba(255,255,255,.8);
+  background: rgba(0,0,0,.25); border-radius: 8px;
+}
+
+/* Controls */
+.cost-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.cost-btn {
+  width: 44px; height: 44px; border-radius: 8px; border: none; cursor: pointer;
+  font-size: 15px; font-weight: 800; color: #fff;
+  transition: opacity .15s, transform .1s;
+}
+.cost-btn:hover:not(:disabled) { opacity: .82; transform: scale(1.1); }
+.cost-btn:active:not(:disabled) { transform: scale(.93); }
+.cost-btn:disabled { opacity: .22; cursor: not-allowed; }
+
+.twin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.twin-row label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.num-in {
+  width: 54px; padding: 6px; border: 1.5px solid #d1d5db; border-radius: 8px;
+  font-size: 15px; text-align: center; font-weight: 700; appearance: textfield;
+}
+.num-in:focus { outline: none; border-color: var(--red); }
+.num-in::-webkit-inner-spin-button,
+.num-in::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+.btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; transition: opacity .15s; }
+.btn:hover { opacity: .82; }
+.btn-primary { background: var(--red); color: #fff; }
+.btn-secondary { background: #e5e7eb; color: var(--text); }
+.action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Cost table */
+.cost-table { width: 100%; border-collapse: collapse; }
+.cost-table td { padding: 3px 6px; font-size: 13px; vertical-align: middle; }
+.bar-bg { background: #f3f4f6; border-radius: 4px; height: 10px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.cost-badge {
+  display: inline-block; width: 26px; height: 26px; border-radius: 6px;
+  color: #fff; font-weight: 800; font-size: 12px; line-height: 26px; text-align: center;
+}
+
+/* Import */
+.collapsible { display: none; margin-top: 12px; }
+.collapsible.open { display: block; }
+.import-ta {
+  width: 100%; min-height: 110px; border: 1.5px solid #d1d5db; border-radius: 8px;
+  padding: 10px; font-size: 13px; font-family: monospace; resize: vertical;
+}
+.import-ta:focus { outline: none; border-color: var(--red); }
+
+/* Toast */
+.toast {
+  position: fixed; top: 14px; right: 14px; z-index: 9999;
+  padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow);
+  display: none; font-size: 14px; font-weight: 600; color: #fff;
+}
+
+@media (max-width: 480px) {
+  .deck-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .hit-rate { font-size: 44px; }
+  .deck-count { font-size: 20px; }
+  .tile-cost { font-size: 22px; }
+  .tile-cost2 { font-size: 10px; }
+}
+</style>
+
+<div id="toast" class="toast"></div>
+
+<div class="wrap">
+
+  <!-- Hit Rate Banner -->
+  <div class="banner" id="banner" style="background:#6b7280">
+    <div>
+      <div class="hit-rate" id="hit-rate">--</div>
+      <div class="banner-sub">3枚すべてのコストが異なる確率</div>
+      <div class="banner-sub" id="excl-info" style="min-height:1.2em"></div>
+    </div>
+    <div>
+      <div class="deck-count"><span id="cnt-active">0</span> / <span id="cnt-total">0</span> 枚</div>
+      <div class="banner-sub" style="text-align:right">残り / デッキ総枚数</div>
+    </div>
+  </div>
+
+  <!-- Deck Grid -->
+  <div class="card">
+    <div class="card-hdr">デッキ &nbsp;·&nbsp; クリック: 除外/復活 &nbsp;·&nbsp; 長押し: 削除</div>
+    <div class="deck-grid" id="grid"></div>
+  </div>
+
+  <!-- Add Cards -->
+  <div class="card">
+    <div class="card-hdr">カードを追加</div>
+    <div class="cost-btns" id="cost-btns"></div>
+    <div class="twin-row">
+      <label>ツインパクト</label>
+      <input class="num-in" id="tw-a" type="number" min="1" max="12" placeholder="A">
+      <span style="color:var(--muted);font-weight:700">/</span>
+      <input class="num-in" id="tw-b" type="number" min="1" max="12" placeholder="B">
+      <button class="btn btn-primary" onclick="addTwinpact()">追加</button>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="resetExcludes()">除外リセット</button>
+      <button class="btn btn-secondary" style="color:var(--red)" onclick="clearDeck()">デッキをクリア</button>
+    </div>
+  </div>
+
+  <!-- Cost Summary -->
+  <div class="card">
+    <div class="card-hdr">コスト別構成</div>
+    <table class="cost-table"><tbody id="cost-tbody"></tbody></table>
+    <p id="twin-note" style="display:none;font-size:11px;color:var(--muted);margin-top:8px">
+      ※ ツインパクトカードは両方のコストで集計されます
+    </p>
+  </div>
+
+  <!-- Bulk Import / Export -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card-hdr" style="margin:0">一括入力 / エクスポート</div>
+      <button class="btn btn-secondary" onclick="toggleImport()" style="font-size:12px">開く / 閉じる</button>
+    </div>
+    <div class="collapsible" id="import-wrap">
+      <p style="font-size:12px;color:var(--muted);margin:10px 0 6px">
+        1行1枚で入力。通常カード: <code>3</code> &nbsp; ツインパクト: <code>3/5</code> &nbsp; <code>#</code> で始まる行はコメント
+      </p>
+      <textarea class="import-ta" id="import-ta" placeholder="3&#10;3&#10;3&#10;5&#10;5&#10;3/5"></textarea>
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="importFromText()">読み込む</button>
+        <button class="btn btn-secondary" onclick="exportToText()">現在のデッキをエクスポート</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL Share -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="card-hdr" style="margin:0">URL共有</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">デッキ構成をURLにエンコード（除外状態は含まれません）</p>
+      </div>
+      <button class="btn btn-primary" onclick="copyShareUrl()">URLをコピー</button>
+    </div>
+  </div>
+
+</div><!-- .wrap -->
+
+<script>
+// Cost → color mapping
+const COLORS = [
+  '#7c3aed','#6d28d9','#2563eb','#0891b2','#0d9488',
+  '#059669','#65a30d','#d97706','#ea580c','#dc2626','#b91c1c','#881337'
+];
+const cc = n => COLORS[Math.min(Math.max(n, 1), 12) - 1] || '#6b7280';
+
+// Deck state: [{costs:[3], excluded:false}, ...]
+let deck = [];
+
+// ---- Hit rate calculation ----
+function canHit(a, b, c) {
+  for (const x of a)
+    for (const y of b) if (y !== x)
+      for (const z of c) if (z !== x && z !== y) return true;
+  return false;
+}
+
+function calcRate(cards) {
+  const N = cards.length;
+  if (N < 3) return null;
+  let h = 0, t = 0;
+  for (let i = 0; i < N - 2; i++)
+    for (let j = i + 1; j < N - 1; j++)
+      for (let k = j + 1; k < N; k++) {
+        t++;
+        if (canHit(cards[i].costs, cards[j].costs, cards[k].costs)) h++;
+      }
+  return t === 0 ? 0 : h / t;
+}
+
+// ---- Render ----
+function sortDeck() {
+  deck.sort((a, b) =>
+    Math.min(...a.costs) - Math.min(...b.costs) || a.costs.length - b.costs.length
+  );
+}
+
+function render() {
+  sortDeck();
+  renderGrid();
+  renderStats();
+  renderCostTable();
+  updateBtns();
+  saveHash();
+}
+
+function renderGrid() {
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+  for (let i = 0; i < 40; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'tile-slot';
+
+    if (i < deck.length) {
+      const c = deck[i];
+      const twin = c.costs.length > 1;
+      const tile = document.createElement('div');
+      tile.className = `tile${c.excluded ? ' excluded' : ''}`;
+
+      if (twin) {
+        tile.style.background = `linear-gradient(135deg, ${cc(c.costs[0])} 50%, ${cc(c.costs[1])} 50%)`;
+      } else {
+        tile.style.background = cc(c.costs[0]);
+      }
+
+      const mainEl = document.createElement('div');
+      mainEl.className = 'tile-cost';
+      mainEl.textContent = c.costs[0];
+      tile.appendChild(mainEl);
+
+      if (twin) {
+        const subEl = document.createElement('div');
+        subEl.className = 'tile-cost2';
+        subEl.textContent = '/ ' + c.costs[1];
+        tile.appendChild(subEl);
+      }
+
+      // Click: toggle exclude/restore
+      tile.addEventListener('click', () => {
+        deck[i].excluded = !deck[i].excluded;
+        render();
+      });
+
+      // Long press: delete
+      let pt;
+      tile.addEventListener('pointerdown', () => {
+        pt = setTimeout(() => { deck.splice(i, 1); render(); showToast('削除しました', false); }, 600);
+      });
+      tile.addEventListener('pointerup',     () => clearTimeout(pt));
+      tile.addEventListener('pointermove',   () => clearTimeout(pt));
+      tile.addEventListener('pointercancel', () => clearTimeout(pt));
+
+      slot.appendChild(tile);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'tile empty';
+      slot.appendChild(empty);
+    }
+    g.appendChild(slot);
+  }
+}
+
+function renderStats() {
+  const active = deck.filter(c => !c.excluded);
+  const excl   = deck.length - active.length;
+  const rate   = calcRate(active);
+
+  document.getElementById('hit-rate').textContent =
+    rate === null ? '--' : (rate * 100).toFixed(1) + '%';
+  document.getElementById('cnt-active').textContent = active.length;
+  document.getElementById('cnt-total').textContent  = deck.length;
+  document.getElementById('excl-info').textContent  = excl > 0 ? `除外中 ${excl} 枚` : '';
+
+  const bg = rate === null ? '#6b7280'
+           : rate >= .70   ? '#16a34a'
+           : rate >= .40   ? '#d97706'
+           :                 '#dc2626';
+  document.getElementById('banner').style.background = bg;
+}
+
+function renderCostTable() {
+  const rows = {};
+  let hasTwin = false;
+  for (const c of deck) {
+    if (c.costs.length > 1) hasTwin = true;
+    for (const cost of c.costs) {
+      if (!rows[cost]) rows[cost] = { a: 0, e: 0 };
+      c.excluded ? rows[cost].e++ : rows[cost].a++;
+    }
+  }
+  document.getElementById('twin-note').style.display = hasTwin ? '' : 'none';
+
+  const keys = Object.keys(rows).map(Number).sort((a, b) => a - b);
+  const maxA  = Math.max(...keys.map(k => rows[k].a), 1);
+  const tb    = document.getElementById('cost-tbody');
+
+  if (!keys.length) {
+    tb.innerHTML = '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:8px">カードなし</td></tr>';
+    return;
+  }
+
+  tb.innerHTML = keys.map(k => {
+    const { a, e } = rows[k];
+    const pct = (a / maxA * 100).toFixed(0);
+    const exclStr = e > 0 ? ` <span style="color:var(--muted);font-size:11px">(+${e}除外)</span>` : '';
+    return `<tr>
+      <td><span class="cost-badge" style="background:${cc(k)}">${k}</span></td>
+      <td style="font-weight:700;font-size:13px;white-space:nowrap;padding:0 6px">${a}枚${exclStr}</td>
+      <td style="width:55%"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${cc(k)}"></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateBtns() {
+  const full = deck.length >= 40;
+  for (let c = 1; c <= 12; c++) {
+    const btn = document.getElementById('cb-' + c);
+    if (btn) btn.disabled = full;
+  }
+}
+
+// ---- Init cost buttons (once) ----
+function initCostBtns() {
+  const el = document.getElementById('cost-btns');
+  for (let c = 1; c <= 12; c++) {
+    const btn = document.createElement('button');
+    btn.className = 'cost-btn';
+    btn.id = 'cb-' + c;
+    btn.textContent = c;
+    btn.style.background = cc(c);
+    btn.onclick = () => addCard([c]);
+    el.appendChild(btn);
+  }
+}
+
+// ---- Actions ----
+function addCard(costs) {
+  if (deck.length >= 40) { showToast('40枚が上限です', false); return; }
+  deck.push({ costs, excluded: false });
+  render();
+}
+
+function addTwinpact() {
+  const a = parseInt(document.getElementById('tw-a').value);
+  const b = parseInt(document.getElementById('tw-b').value);
+  if (!a || !b || a < 1 || a > 12 || b < 1 || b > 12 || isNaN(a) || isNaN(b)) {
+    showToast('コストA・Bを1〜12で入力してください', false); return;
+  }
+  if (a === b) { showToast('コストA・Bは異なる値にしてください', false); return; }
+  addCard([a, b]);
+  document.getElementById('tw-a').value = '';
+  document.getElementById('tw-b').value = '';
+}
+
+function resetExcludes() { deck.forEach(c => c.excluded = false); render(); showToast('除外をリセットしました'); }
+
+function clearDeck() {
+  if (deck.length > 0 && !confirm('デッキをすべてクリアしますか？')) return;
+  deck = [];
+  render();
+}
+
+function toggleImport() { document.getElementById('import-wrap').classList.toggle('open'); }
+
+function importFromText() {
+  const lines = document.getElementById('import-ta').value.split(/\r?\n/);
+  const nd = [];
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l || l.startsWith('#')) continue;
+    if (l.includes('/')) {
+      const parts = l.split('/').map(s => parseInt(s.trim()));
+      const [a, b] = parts;
+      if (!isNaN(a) && !isNaN(b) && a >= 1 && a <= 12 && b >= 1 && b <= 12)
+        nd.push({ costs: [a, b], excluded: false });
+    } else {
+      const c = parseInt(l);
+      if (!isNaN(c) && c >= 1 && c <= 12)
+        nd.push({ costs: [c], excluded: false });
+    }
+    if (nd.length >= 40) break;
+  }
+  if (!nd.length) { showToast('有効なカードが見つかりません', false); return; }
+  if (deck.length > 0 && !confirm(`現在のデッキ(${deck.length}枚)を上書きしますか？`)) return;
+  deck = nd;
+  render();
+  showToast(deck.length + '枚を読み込みました');
+}
+
+function exportToText() {
+  if (!deck.length) { showToast('デッキが空です', false); return; }
+  document.getElementById('import-ta').value = deck.map(c => c.costs.join('/')).join('\n');
+  document.getElementById('import-wrap').classList.add('open');
+  showToast('エクスポートしました');
+}
+
+// ---- URL Hash ----
+function saveHash() {
+  if (!deck.length) { history.replaceState(null, '', location.pathname + location.search); return; }
+  const encoded = deck.map(c => c.costs.join('~')).join(',');
+  history.replaceState(null, '', '#' + encoded);
+}
+
+function loadHash() {
+  const h = location.hash.slice(1);
+  if (!h) return;
+  try {
+    deck = h.split(',').slice(0, 40).flatMap(p => {
+      const costs = p.split('~').map(Number);
+      return costs.length >= 1 && costs.every(c => !isNaN(c) && c >= 1 && c <= 12)
+        ? [{ costs, excluded: false }]
+        : [];
+    });
+  } catch (e) { deck = []; }
+}
+
+function copyShareUrl() {
+  saveHash();
+  copyToClipboard(location.href);
+}
+
+// ---- Toast & Clipboard ----
+function showToast(msg, ok = true) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = ok ? '#16a34a' : '#dc2626';
+  el.style.display = 'block';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.style.display = 'none'; }, 2200);
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('コピーしました！');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('コピーしました！');
+  }
+}
+
+// ---- Enter key support ----
+['tw-a', 'tw-b'].forEach(id =>
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') addTwinpact(); })
+);
+
+// ---- Bootstrap ----
+initCostBtns();
+loadHash();
+render();
+</script>
