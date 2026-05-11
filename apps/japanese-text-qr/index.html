@@ -1,0 +1,284 @@
+---
+layout: artifacts
+title: "日本語QRコード生成"
+permalink: /apps/japanese-text-qr/
+---
+
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --card: #fff;
+    --text: #111827;
+    --muted: #6b7280;
+    --shadow: 0 4px 10px rgba(0,0,0,.08);
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+  .card {
+    background: var(--card); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px;
+  }
+  .toast {
+    position: fixed; top: 14px; right: 14px; z-index: 9999;
+    background: #16a34a; color: #fff;
+    padding: 10px 12px; border-radius: 10px;
+    box-shadow: var(--shadow); display: none; font-size: 14px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+  textarea {
+    width: 100%; min-height: 120px; padding: 12px;
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: 1rem; font-family: inherit; resize: vertical;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  .controls {
+    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+    align-items: center;
+  }
+  button {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 0.95rem; font-family: inherit;
+    transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: #e5e7eb; color: var(--text); }
+  .char-count { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+  .size-control {
+    display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  }
+  .size-control label { font-size: 0.9rem; color: var(--muted); white-space: nowrap; }
+  .size-control input[type=range] { flex: 1; }
+  .size-val { font-size: 0.9rem; font-weight: 600; min-width: 52px; }
+  .qr-section {
+    padding: 8px 0;
+  }
+  .qr-grid {
+    display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+  }
+  .qr-item {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .qr-item canvas {
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .qr-label {
+    font-size: 0.85rem; color: var(--muted); font-weight: 600;
+  }
+  .qr-placeholder {
+    color: var(--muted); font-size: 0.95rem; text-align: center;
+    padding: 40px 0; margin: 0;
+  }
+  .hint {
+    background: #eff6ff; border-radius: 8px; padding: 14px 16px;
+    font-size: 0.875rem; color: #1d4ed8; line-height: 1.6;
+  }
+  .hint strong { display: block; margin-bottom: 6px; font-size: 0.95rem; }
+  .hint ul { margin: 0; padding-left: 1.2em; }
+  .hint li { margin-bottom: 4px; }
+  .error-msg { color: #dc2626; font-size: 0.9rem; margin-top: 6px; display: none; }
+  .multi-note {
+    background: #fefce8; border-radius: 8px; padding: 10px 14px;
+    font-size: 0.85rem; color: #854d0e; margin-bottom: 16px; display: none;
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <h1>日本語QRコード生成</h1>
+    <p class="subtitle">テキストを入力するとQRコードを自動生成します。スマホで読み取ると文章をコピーできます。</p>
+
+    <textarea id="input-text" placeholder="ここにテキストを入力してください（日本語・英語・記号OK）" oninput="onInput()"></textarea>
+    <p class="error-msg" id="error-msg"></p>
+
+    <div class="controls">
+      <button class="btn-secondary" onclick="clearAll()">クリア</button>
+      <span class="char-count" id="char-count">0 文字</span>
+    </div>
+
+    <div class="size-control">
+      <label for="size-slider">サイズ</label>
+      <input type="range" id="size-slider" min="128" max="512" step="32" value="256" oninput="onSizeChange()">
+      <span class="size-val" id="size-val">256px</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="qr-section">
+      <p class="multi-note" id="multi-note"></p>
+      <div class="qr-grid" id="qr-container">
+        <p class="qr-placeholder">テキストを入力するとQRコードが表示されます</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hint">
+      <strong>スマホでの使い方</strong>
+      <ul>
+        <li>iPhoneの標準カメラアプリでQRコードをスキャンすると、テキストが通知バナーに表示され、長押しで「コピー」できます</li>
+        <li>Androidでも標準カメラやGoogleレンズで同様にコピーできます</li>
+        <li>長文は自動的に複数枚のQRコードに分割されます。順番にスキャンしてテキストを結合してください</li>
+        <li>1枚あたり日本語約930文字（UTF-8換算で約2,800バイト）まで入ります</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/qrcode.min.js"></script>
+<script>
+  const MAX_BYTES = 2800;
+  const encoder = new TextEncoder();
+  let lastText = '';
+  let autoTimer = null;
+
+  // テキストをバイト上限で分割（サロゲートペア対応）
+  function splitByBytes(text) {
+    const chunks = [];
+    let pos = 0;
+    while (pos < text.length) {
+      let lo = 1, hi = text.length - pos;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (encoder.encode(text.slice(pos, pos + mid)).length <= MAX_BYTES) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      // サロゲートペアの途中で切らない
+      let end = pos + lo;
+      if (end < text.length &&
+          text.charCodeAt(end - 1) >= 0xD800 && text.charCodeAt(end - 1) <= 0xDBFF) {
+        end--;
+      }
+      if (end <= pos) end = pos + 1;
+      chunks.push(text.slice(pos, end));
+      pos = end;
+    }
+    return chunks;
+  }
+
+  function onInput() {
+    const text = document.getElementById('input-text').value;
+    document.getElementById('char-count').textContent = `${[...text].length} 文字`;
+    clearTimeout(autoTimer);
+    if (text.trim()) {
+      autoTimer = setTimeout(generate, 500);
+    } else {
+      clearDisplay();
+    }
+  }
+
+  function onSizeChange() {
+    const val = document.getElementById('size-slider').value;
+    document.getElementById('size-val').textContent = `${val}px`;
+    if (lastText) generate();
+  }
+
+  async function generate() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) return;
+
+    const size = parseInt(document.getElementById('size-slider').value);
+    const container = document.getElementById('qr-container');
+    const errEl = document.getElementById('error-msg');
+    const noteEl = document.getElementById('multi-note');
+    errEl.style.display = 'none';
+
+    const chunks = splitByBytes(text);
+
+    if (chunks.length > 1) {
+      noteEl.textContent =
+        `テキストが長いため ${chunks.length} 枚のQRコードに分割しました。順番にスキャンしてください。`;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    container.innerHTML = '';
+
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const canvas = document.createElement('canvas');
+        await QRCode.toCanvas(canvas, chunks[i], {
+          width: size,
+          margin: 2,
+          errorCorrectionLevel: 'L',
+          color: { dark: '#111827', light: '#ffffff' }
+        });
+
+        const item = document.createElement('div');
+        item.className = 'qr-item';
+
+        if (chunks.length > 1) {
+          const label = document.createElement('div');
+          label.className = 'qr-label';
+          label.textContent = `${i + 1} / ${chunks.length}`;
+          item.appendChild(label);
+        }
+
+        item.appendChild(canvas);
+
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn-secondary';
+        dlBtn.style.fontSize = '0.8rem';
+        dlBtn.style.padding = '6px 14px';
+        dlBtn.textContent = chunks.length > 1 ? `${i + 1}枚目をDL` : '画像をダウンロード';
+        dlBtn.onclick = () => downloadCanvas(canvas, i + 1);
+        item.appendChild(dlBtn);
+
+        container.appendChild(item);
+      }
+      lastText = text;
+    } catch (e) {
+      container.innerHTML = '<p class="qr-placeholder">QRコードを生成できませんでした</p>';
+      errEl.textContent = `エラー: ${e.message}`;
+      errEl.style.display = 'block';
+      lastText = '';
+    }
+  }
+
+  function downloadCanvas(canvas, index) {
+    const a = document.createElement('a');
+    a.download = `qrcode_${index}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('ダウンロードしました！');
+  }
+
+  function clearDisplay() {
+    document.getElementById('qr-container').innerHTML =
+      '<p class="qr-placeholder">テキストを入力するとQRコードが表示されます</p>';
+    document.getElementById('multi-note').style.display = 'none';
+    document.getElementById('error-msg').style.display = 'none';
+    lastText = '';
+  }
+
+  function clearAll() {
+    document.getElementById('input-text').value = '';
+    document.getElementById('char-count').textContent = '0 文字';
+    clearDisplay();
+  }
+
+  function showToast(msg, ok = true) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.background = ok ? '#16a34a' : '#dc2626';
+    el.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = 'none'; }, 2000);
+  }
+</script>
