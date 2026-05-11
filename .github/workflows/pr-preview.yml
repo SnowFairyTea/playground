@@ -15,7 +15,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: pr-preview-${{ github.event.pull_request.number }}
+  group: pr-preview-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +24,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Post "building" comment
+        uses: actions/github-script@v7
+        id: building_comment
+        with:
+          script: |
+            const pr  = context.payload.pull_request;
+            const prNumber = pr ? pr.number : parseInt('${{ inputs.pr_number || 0 }}', 10);
+            if (!prNumber) { core.setOutput('comment_id', ''); return; }
+
+            const body = [
+              '## プレビュー',
+              '',
+              '_ビルド中... しばらくお待ちください。_',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const existing = comments.find(
+              c => c.user.type === 'Bot' && c.body.includes('## プレビュー')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.setOutput('comment_id', String(existing.id));
+            } else {
+              const { data: created } = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+              core.setOutput('comment_id', String(created.id));
+            }
 
       - name: Compute preview path
         id: preview
@@ -59,31 +102,24 @@ jobs:
             const prNumber = pr ? pr.number : parseInt('${{ inputs.pr_number || 0 }}', 10);
             if (!prNumber) { console.log('PR番号なし、スキップ'); return; }
             const sha = pr ? pr.head.sha.slice(0, 7) : context.sha.slice(0, 7);
+            const now = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
             const body = [
               '## プレビュー',
               '',
               `**[${url}](${url})**`,
               '',
               `Branch: \`${{ github.head_ref || github.ref_name }}\` @ \`${sha}\``,
+              `最終更新: ${now}`,
               '',
               '_コミットのたびに自動更新。PRクローズ時にプレビューは削除されます。_',
             ].join('\n');
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-
-            const existing = comments.find(
-              c => c.user.type === 'Bot' && c.body.includes('## プレビュー')
-            );
-
-            if (existing) {
+            const commentId = parseInt('${{ steps.building_comment.outputs.comment_id }}', 10);
+            if (commentId) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: existing.id,
+                comment_id: commentId,
                 body,
               });
             } else {
