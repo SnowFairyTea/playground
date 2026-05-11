@@ -60,12 +60,20 @@ permalink: /apps/japanese-text-qr/
   .size-control input[type=range] { flex: 1; }
   .size-val { font-size: 0.9rem; font-weight: 600; min-width: 52px; }
   .qr-section {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 16px; padding: 24px 0;
+    padding: 8px 0;
   }
-  #qr-container canvas {
+  .qr-grid {
+    display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+  }
+  .qr-item {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .qr-item canvas {
     border-radius: 8px;
     box-shadow: var(--shadow);
+  }
+  .qr-label {
+    font-size: 0.85rem; color: var(--muted); font-weight: 600;
   }
   .qr-placeholder {
     color: var(--muted); font-size: 0.95rem; text-align: center;
@@ -79,6 +87,10 @@ permalink: /apps/japanese-text-qr/
   .hint ul { margin: 0; padding-left: 1.2em; }
   .hint li { margin-bottom: 4px; }
   .error-msg { color: #dc2626; font-size: 0.9rem; margin-top: 6px; display: none; }
+  .multi-note {
+    background: #fefce8; border-radius: 8px; padding: 10px 14px;
+    font-size: 0.85rem; color: #854d0e; margin-bottom: 16px; display: none;
+  }
 </style>
 
 <div class="wrap">
@@ -103,10 +115,10 @@ permalink: /apps/japanese-text-qr/
 
   <div class="card">
     <div class="qr-section">
-      <div id="qr-container">
+      <p class="multi-note" id="multi-note"></p>
+      <div class="qr-grid" id="qr-container">
         <p class="qr-placeholder">テキストを入力するとQRコードが表示されます</p>
       </div>
-      <button class="btn-secondary" id="download-btn" onclick="downloadQR()" style="display:none">画像をダウンロード</button>
     </div>
   </div>
 
@@ -116,8 +128,8 @@ permalink: /apps/japanese-text-qr/
       <ul>
         <li>iPhoneの標準カメラアプリでQRコードをスキャンすると、テキストが通知バナーに表示され、長押しで「コピー」できます</li>
         <li>Androidでも標準カメラやGoogleレンズで同様にコピーできます</li>
-        <li>テキストが長いほどQRコードが複雑になります。読み取りにくい場合はサイズを大きくしてください</li>
-        <li>QR コードに含められるテキストの上限は約1,800文字（日本語）です</li>
+        <li>長文は自動的に複数枚のQRコードに分割されます。順番にスキャンしてテキストを結合してください</li>
+        <li>1枚あたり日本語約930文字（UTF-8換算で約2,800バイト）まで入ります</li>
       </ul>
     </div>
   </div>
@@ -127,8 +139,37 @@ permalink: /apps/japanese-text-qr/
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
+  const MAX_BYTES = 2800;
+  const encoder = new TextEncoder();
   let lastText = '';
   let autoTimer = null;
+
+  // テキストをバイト上限で分割（サロゲートペア対応）
+  function splitByBytes(text) {
+    const chunks = [];
+    let pos = 0;
+    while (pos < text.length) {
+      let lo = 1, hi = text.length - pos;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (encoder.encode(text.slice(pos, pos + mid)).length <= MAX_BYTES) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      // サロゲートペアの途中で切らない
+      let end = pos + lo;
+      if (end < text.length &&
+          text.charCodeAt(end - 1) >= 0xD800 && text.charCodeAt(end - 1) <= 0xDBFF) {
+        end--;
+      }
+      if (end <= pos) end = pos + 1;
+      chunks.push(text.slice(pos, end));
+      pos = end;
+    }
+    return chunks;
+  }
 
   function onInput() {
     const text = document.getElementById('input-text').value;
@@ -154,34 +195,65 @@ permalink: /apps/japanese-text-qr/
     const size = parseInt(document.getElementById('size-slider').value);
     const container = document.getElementById('qr-container');
     const errEl = document.getElementById('error-msg');
+    const noteEl = document.getElementById('multi-note');
     errEl.style.display = 'none';
 
+    const chunks = splitByBytes(text);
+
+    if (chunks.length > 1) {
+      noteEl.textContent =
+        `テキストが長いため ${chunks.length} 枚のQRコードに分割しました。順番にスキャンしてください。`;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    container.innerHTML = '';
+
     try {
-      const canvas = document.createElement('canvas');
-      await QRCode.toCanvas(canvas, text, {
-        width: size,
-        margin: 2,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#111827', light: '#ffffff' }
-      });
-      container.innerHTML = '';
-      container.appendChild(canvas);
-      document.getElementById('download-btn').style.display = 'block';
+      for (let i = 0; i < chunks.length; i++) {
+        const canvas = document.createElement('canvas');
+        await QRCode.toCanvas(canvas, chunks[i], {
+          width: size,
+          margin: 2,
+          errorCorrectionLevel: 'L',
+          color: { dark: '#111827', light: '#ffffff' }
+        });
+
+        const item = document.createElement('div');
+        item.className = 'qr-item';
+
+        if (chunks.length > 1) {
+          const label = document.createElement('div');
+          label.className = 'qr-label';
+          label.textContent = `${i + 1} / ${chunks.length}`;
+          item.appendChild(label);
+        }
+
+        item.appendChild(canvas);
+
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn-secondary';
+        dlBtn.style.fontSize = '0.8rem';
+        dlBtn.style.padding = '6px 14px';
+        dlBtn.textContent = chunks.length > 1 ? `${i + 1}枚目をDL` : '画像をダウンロード';
+        dlBtn.onclick = () => downloadCanvas(canvas, i + 1);
+        item.appendChild(dlBtn);
+
+        container.appendChild(item);
+      }
       lastText = text;
     } catch (e) {
       container.innerHTML = '<p class="qr-placeholder">QRコードを生成できませんでした</p>';
-      document.getElementById('download-btn').style.display = 'none';
       errEl.textContent = `エラー: ${e.message}`;
       errEl.style.display = 'block';
       lastText = '';
     }
   }
 
-  function downloadQR() {
-    const canvas = document.querySelector('#qr-container canvas');
-    if (!canvas) return;
+  function downloadCanvas(canvas, index) {
     const a = document.createElement('a');
-    a.download = 'qrcode.png';
+    a.download = `qrcode_${index}.png`;
     a.href = canvas.toDataURL('image/png');
     a.click();
     showToast('ダウンロードしました！');
@@ -190,7 +262,7 @@ permalink: /apps/japanese-text-qr/
   function clearDisplay() {
     document.getElementById('qr-container').innerHTML =
       '<p class="qr-placeholder">テキストを入力するとQRコードが表示されます</p>';
-    document.getElementById('download-btn').style.display = 'none';
+    document.getElementById('multi-note').style.display = 'none';
     document.getElementById('error-msg').style.display = 'none';
     lastText = '';
   }
