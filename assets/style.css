@@ -54,6 +54,18 @@
     }
 
 
+.news-list .news-date {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #fff;
+  background: #0366d6;
+  border-radius: 4px;
+  padding: 1px 7px;
+  margin-right: 6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .footer-text-logo {
   display: inline-block;
   font-family: 'Playfair Display', serif;
