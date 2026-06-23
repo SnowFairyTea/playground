@@ -146,40 +146,95 @@ h1 {
 
 .file-count { font-size: 12px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
 
-/* サイズメーター */
-.size-meter {
-  margin-top: 12px;
-  padding: 12px 14px;
+/* サイズサマリー（圧縮設定カード内） */
+.size-summary {
+  margin-top: 14px;
+  padding: 14px;
   background: #f9fafb;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
-  font-size: 12px;
   display: none;
 }
-.size-row {
+.size-arrow-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.size-box {
+  flex: 1;
+  text-align: center;
+}
+.size-box-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.size-box-val {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--text);
+}
+.size-box-val.size-ok   { color: var(--success); }
+.size-box-val.size-warn { color: #f59e0b; }
+.size-box-val.size-over { color: var(--danger); }
+.size-arrow-icon {
+  font-size: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.size-meta-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
 }
-.size-row:last-child { margin-bottom: 0; }
-.size-label { color: var(--muted); }
-.size-val { font-weight: 700; }
-.size-ok  { color: var(--success); }
-.size-warn { color: #f59e0b; }
-.size-over { color: var(--danger); }
-
+.size-reduction-badge {
+  background: #dbeafe;
+  color: var(--accent);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+}
+.size-reduction-badge.good { background: #dcfce7; color: #15803d; }
+.size-reduction-badge.none { background: #f3f4f6; color: var(--muted); }
+.size-gmail-status {
+  font-weight: 700;
+  font-size: 12px;
+}
+.status-ok   { color: var(--success); }
+.status-warn { color: #f59e0b; }
+.status-over { color: var(--danger); }
 .size-bar-wrap {
   height: 6px; background: #e5e7eb; border-radius: 6px;
-  overflow: hidden; margin: 8px 0;
+  overflow: hidden; margin-bottom: 5px;
 }
 .size-bar-fill {
   height: 100%; border-radius: 6px;
   transition: width .3s, background .3s;
 }
-.gmail-limit-line {
-  font-size: 10px; color: var(--muted); text-align: right;
+.size-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
 }
+/* pill内の推定サイズ */
+.pill-size {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 5px;
+  color: var(--muted);
+  transition: color .15s;
+}
+.quality-pill.selected .pill-size { color: var(--accent); }
 
 /* ---- 圧縮設定 ---- */
 .compress-row {
@@ -336,20 +391,6 @@ h1 {
     <div class="file-list" id="fileList">
       <div class="empty-msg">ファイルが選択されていません</div>
     </div>
-    <div class="size-meter" id="sizeMeter">
-      <div class="size-row">
-        <span class="size-label">元のサイズ</span>
-        <span class="size-val" id="sizeOrig">—</span>
-      </div>
-      <div class="size-row" id="sizeCompRow">
-        <span class="size-label">圧縮後（推定）</span>
-        <span class="size-val" id="sizeEst">—</span>
-      </div>
-      <div class="size-bar-wrap">
-        <div class="size-bar-fill" id="sizeBarFill" style="width:0%"></div>
-      </div>
-      <div class="gmail-limit-line">Gmailの上限: 25 MB</div>
-    </div>
   </div>
 
   <!-- 圧縮設定 -->
@@ -372,21 +413,50 @@ h1 {
         <label class="quality-pill" id="pill-high">
           <input type="radio" name="quality" value="high">
           <span class="pill-name">高画質</span>
-          <span class="pill-desc">2400px / 85%<br>メール向け</span>
+          <span class="pill-desc">2400px / 85%</span>
+          <span class="pill-size" id="pill-size-high">—</span>
         </label>
         <label class="quality-pill selected" id="pill-medium">
           <input type="radio" name="quality" value="medium" checked>
           <span class="pill-name">標準</span>
-          <span class="pill-desc">1920px / 75%<br>おすすめ</span>
+          <span class="pill-desc">1920px / 75%</span>
+          <span class="pill-size" id="pill-size-medium">—</span>
         </label>
         <label class="quality-pill" id="pill-low">
           <input type="radio" name="quality" value="low">
           <span class="pill-name">圧縮優先</span>
-          <span class="pill-desc">1280px / 60%<br>最小サイズ</span>
+          <span class="pill-desc">1280px / 60%</span>
+          <span class="pill-size" id="pill-size-low">—</span>
         </label>
       </div>
     </div>
     <div class="compress-off-msg" id="compressOffMsg">圧縮なし — 元のファイルをそのままZIP化します</div>
+
+    <!-- サイズサマリー -->
+    <div class="size-summary" id="sizeSummary">
+      <div class="size-arrow-row">
+        <div class="size-box">
+          <div class="size-box-label">元のサイズ</div>
+          <div class="size-box-val" id="sumOrig">—</div>
+        </div>
+        <div class="size-arrow-icon">→</div>
+        <div class="size-box">
+          <div class="size-box-label" id="sumEstLabel">圧縮後（推定）</div>
+          <div class="size-box-val" id="sumEst">—</div>
+        </div>
+      </div>
+      <div class="size-meta-row">
+        <span class="size-reduction-badge none" id="sumReduction">—</span>
+        <span class="size-gmail-status" id="sumStatus">—</span>
+      </div>
+      <div class="size-bar-wrap">
+        <div class="size-bar-fill" id="sizeBarFill" style="width:0%"></div>
+      </div>
+      <div class="size-bar-labels">
+        <span>0</span>
+        <span>Gmail上限 25 MB</span>
+      </div>
+    </div>
   </div>
 
   <!-- 共有 -->
@@ -458,7 +528,7 @@ document.querySelectorAll('input[name="quality"]').forEach(radio => {
     document.querySelectorAll('.quality-pill').forEach(p => p.classList.remove('selected'));
     radio.closest('.quality-pill').classList.add('selected');
     zipCache = null;
-    updateSizeMeter();
+    updateSizeDisplay();
   });
 });
 
@@ -472,9 +542,8 @@ function onCompressChange() {
   const enabled = document.getElementById('compressToggle').checked;
   document.getElementById('qualitySection').style.display = enabled ? '' : 'none';
   document.getElementById('compressOffMsg').style.display = enabled ? 'none' : 'block';
-  document.getElementById('sizeCompRow').style.display = enabled ? '' : 'none';
   zipCache = null;
-  updateSizeMeter();
+  updateSizeDisplay();
 }
 
 // ---- files ----
@@ -514,41 +583,67 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function updateSizeMeter() {
-  const meter = document.getElementById('sizeMeter');
-  if (files.length === 0) { meter.style.display = 'none'; return; }
-  meter.style.display = 'block';
+function estimateTotal(preset) {
+  let total = 0;
+  for (const f of files) {
+    total += f.type.startsWith('image/') && preset ? f.size * preset.ratio : f.size;
+  }
+  return total;
+}
+
+function updateSizeDisplay() {
+  const summary = document.getElementById('sizeSummary');
+  if (files.length === 0) { summary.style.display = 'none'; return; }
+  summary.style.display = 'block';
 
   const origTotal = files.reduce((a, f) => a + f.size, 0);
-  document.getElementById('sizeOrig').textContent = formatSize(origTotal);
-
   const { enabled, preset } = getSettings();
-  let estTotal = origTotal;
-  if (enabled && preset) {
-    for (const f of files) {
-      if (f.type.startsWith('image/')) {
-        estTotal = estTotal - f.size + f.size * preset.ratio;
-      }
-    }
+
+  // pill labels — always show all 3 even when compression is off
+  for (const [key, p] of Object.entries(PRESETS)) {
+    const el = document.getElementById('pill-size-' + key);
+    if (el) el.textContent = '約 ' + formatSize(estimateTotal(p));
   }
 
-  const fill  = document.getElementById('sizeBarFill');
-  const estEl = document.getElementById('sizeEst');
+  const estTotal = estimateTotal(enabled ? preset : null);
+  const reduction = origTotal > 0 ? Math.round((1 - estTotal / origTotal) * 100) : 0;
   const pct = Math.min(estTotal / GMAIL_LIMIT * 100, 100);
+
+  document.getElementById('sumOrig').textContent = formatSize(origTotal);
+  document.getElementById('sumEstLabel').textContent = enabled ? '圧縮後（推定）' : 'ZIP後';
+
+  const estEl = document.getElementById('sumEst');
+  const fill  = document.getElementById('sizeBarFill');
+  const badge = document.getElementById('sumReduction');
+  const status = document.getElementById('sumStatus');
+
+  estEl.textContent = formatSize(estTotal);
   fill.style.width = pct + '%';
 
   if (estTotal < GMAIL_LIMIT * 0.8) {
     fill.style.background = '#16a34a';
-    estEl.className = 'size-val size-ok';
+    estEl.className = 'size-box-val size-ok';
+    status.textContent = '✓ Gmailで送れます';
+    status.className = 'size-gmail-status status-ok';
   } else if (estTotal < GMAIL_LIMIT) {
     fill.style.background = '#f59e0b';
-    estEl.className = 'size-val size-warn';
+    estEl.className = 'size-box-val size-warn';
+    status.textContent = '△ ギリギリです';
+    status.className = 'size-gmail-status status-warn';
   } else {
     fill.style.background = '#ef4444';
-    estEl.className = 'size-val size-over';
+    estEl.className = 'size-box-val size-over';
+    status.textContent = '✗ 上限超過（' + formatSize(estTotal - GMAIL_LIMIT) + ' オーバー）';
+    status.className = 'size-gmail-status status-over';
   }
 
-  estEl.textContent = formatSize(estTotal) + (estTotal > GMAIL_LIMIT ? ' ⚠ 上限超過' : ' ✓');
+  if (reduction >= 5) {
+    badge.textContent = reduction + '% 削減';
+    badge.className = 'size-reduction-badge' + (reduction >= 50 ? ' good' : '');
+  } else {
+    badge.textContent = '圧縮なし';
+    badge.className = 'size-reduction-badge none';
+  }
 }
 
 function renderList() {
@@ -585,7 +680,7 @@ function renderList() {
   const has = files.length > 0;
   ['shareBtn','downloadBtn','mailBtn'].forEach(id => document.getElementById(id).disabled = !has);
   hintEl.style.display = (has && navigator.canShare) ? 'block' : 'none';
-  updateSizeMeter();
+  updateSizeDisplay();
 }
 
 // ---- image compression ----
