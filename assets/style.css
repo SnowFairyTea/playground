@@ -36,16 +36,17 @@ header a {
   margin-top: 1rem;
   padding: 6px 16px;
   border-radius: var(--radius-pill);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--link);
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  color: var(--accent-hover);
   font-size: 0.9rem;
   text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 header a:hover {
-  background: var(--border);
+  background: var(--accent);
+  color: #fff;
   text-decoration: none;
 }
 
@@ -94,7 +95,7 @@ h3 {
 }
 
 .apps-list li:hover {
-  background: var(--surface);
+  background: var(--accent-light);
 }
 
 ul {
