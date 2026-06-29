@@ -45,26 +45,45 @@ order: 10
 
 上記以外のタグを使うと末尾に追加される。
 
-## デザインパターン（推奨スタイル）
+## デザインシステム（Kawaii Green）
 
-新アプリは `rgb_color_picker` などと同じトークンを使うと統一感が出る。
+`assets/design-tokens.css` がグローバルに読み込まれ、全ページで以下の CSS 変数が使える。
+新アプリでは `:root` を上書きせず、これらのトークンをそのまま使うと統一感が出る。
+
+### 利用可能なトークン
+
+| 変数 | 値 | 用途 |
+|------|-----|------|
+| `--bg` | `#f0fdf4` | ページ背景（ミントグリーン） |
+| `--card` | `#ffffff` | カード・パネル背景 |
+| `--surface` | `#dcfce7` | サブ背景・ハイライト領域 |
+| `--border` | `#bbf7d0` | ボーダー・区切り線 |
+| `--accent` | `#22c55e` | メインアクセント（CTA） |
+| `--accent-hover` | `#16a34a` | ホバー時 |
+| `--accent-light` | `#86efac` | グラデーション・ハイライト |
+| `--text` | `#14532d` | 本文テキスト |
+| `--muted` | `#4b7c5a` | 補助テキスト |
+| `--link` | `#16a34a` | リンク色 |
+| `--shadow` | `0 4px 12px rgba(34,197,94,.12)` | カード影 |
+| `--shadow-sm` | `0 1px 4px rgba(34,197,94,.08)` | 薄い影 |
+| `--shadow-lg` | `0 8px 24px rgba(34,197,94,.18)` | 強い影 |
+| `--radius` | `12px` | 標準角丸 |
+| `--radius-sm` | `6px` | 小さい角丸 |
+| `--radius-lg` | `16px` | 大きい角丸 |
+| `--radius-pill` | `9999px` | ピル型（ボタン等） |
+| `--font` | system-ui + Noto Sans JP | フォント |
+| `--font-mono` | ui-monospace ... | 等幅フォント |
+
+### 新アプリの推奨スタイルテンプレート
 
 ```css
-:root {
-  --bg: #f3f4f6;
-  --card: #fff;
-  --text: #111827;
-  --muted: #6b7280;
-  --shadow: 0 4px 10px rgba(0,0,0,.08);
-  --accent: #3b82f6;
-}
-
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
-  background: var(--bg); color: var(--text);
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* ページ全体のコンテナ */
@@ -72,15 +91,34 @@ body {
 
 /* カード */
 .card {
-  background: var(--card); border-radius: 12px;
-  box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+/* ボタン（ピル型） */
+.btn {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  transform: translateY(-1px);
 }
 
 /* トースト通知 */
 .toast {
   position: fixed; top: 14px; right: 14px; z-index: 9999;
-  background: #16a34a; color: #fff;
-  padding: 10px 12px; border-radius: 10px;
+  background: var(--accent-hover); color: #fff;
+  padding: 10px 12px; border-radius: var(--radius);
   box-shadow: var(--shadow); display: none; font-size: 14px;
 }
 ```
@@ -118,11 +156,12 @@ async function copyToClipboard(text) {
 ## layout: artifacts について
 
 `_layouts/artifacts.html` が使われる。内部で以下を自動インクルード:
-- `_includes/head-base.html` — charset, `style.css`, Google Fonts
-- `/assets/style_artifacts.css` — 旧アプリ由来のグリーン系クラス群（`container`, `header`, `toggle-btn` 等）
+- `_includes/head-base.html` — charset, `design-tokens.css`, `style.css`, Google Fonts
+- `/assets/style_artifacts.css` — 旧アプリ由来のクラス群（`container`, `header`, `toggle-btn` 等）
 - `_includes/footer.html`
 
-`style_artifacts.css` のクラスは旧来のもので、新アプリでは使わなくてよい。アプリ内 `<style>` に上記デザインパターンを書けば OK。
+`style_artifacts.css` のクラスは旧来のもので、新アプリでは使わなくてよい。アプリ内 `<style>` に上記デザインテンプレートを書けば OK。
+`design-tokens.css` はグローバルに読み込まれるので、`:root` の上書きなしでトークンがそのまま使える。
 
 ## ファイル構成まとめ
 
@@ -134,8 +173,9 @@ apps/
 _layouts/
   artifacts.html ← アプリ用レイアウト
 assets/
-  style.css           ← サイト共通
-  style_artifacts.css ← 旧アプリ用（新規では不要）
+  design-tokens.css   ← Kawaii Green デザイントークン（全ページ共通）
+  style.css           ← サイト共通（ホームページ用）
+  style_artifacts.css ← 旧アプリ用クラス群（新規では不要）
 tools/
   update_index.py ← apps/ を走査してindex.htmlを再生成
 index.html       ← トップページ（AUTO-GENERATED範囲を自動更新）
