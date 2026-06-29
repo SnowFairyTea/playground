@@ -20,8 +20,8 @@ body {
 }
 
 .header {
-  background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-hover) 100%);
-  color: var(--text);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
   padding: 20px;
   text-align: center;
 }

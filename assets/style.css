@@ -114,6 +114,10 @@ a {
   text-decoration: none;
 }
 
+a:visited {
+  color: var(--muted);
+}
+
 a:hover {
   text-decoration: underline;
 }
