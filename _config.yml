@@ -13,6 +13,8 @@ logo_lines:
 description: Personal playground / demos / notes
 theme: null
 plugins: []
+exclude:
+  - apps/slides/decks
 
 google_fonts_url: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap"
 
