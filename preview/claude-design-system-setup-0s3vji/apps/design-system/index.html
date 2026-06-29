@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/preview/claude-design-system-setup-0s3vji/assets/design-tokens.css">
+<link rel="stylesheet" href="/preview/claude-design-system-setup-0s3vji/assets/style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+
+
+
+  <title>Design System — Kawaii Green</title>
+  <link rel="stylesheet" href="/preview/claude-design-system-setup-0s3vji/assets/style_artifacts.css">
+</head>
+<body>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+
+/* ---- page header ---- */
+.page-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+.page-header h1 {
+  font-size: 2rem;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+.page-header p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ---- section ---- */
+.section { margin-bottom: 56px; }
+.section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 0 0 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---- card ---- */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.card-sm {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+
+/* ---- color swatches ---- */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.swatch {
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.swatch-color {
+  height: 64px;
+}
+.swatch-info {
+  background: var(--card);
+  padding: 8px 10px;
+}
+.swatch-name {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text);
+  display: block;
+}
+.swatch-hex {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* ---- type scale ---- */
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.type-row:last-child { border-bottom: none; }
+.type-meta {
+  width: 120px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+/* ---- buttons ---- */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.btn {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font);
+  font-size: 14px;
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  padding: 8px 20px;
+}
+.btn-outline:hover {
+  background: var(--surface);
+  border-color: var(--accent-hover);
+  color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.btn-muted {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 9px 20px;
+}
+.btn-muted:hover {
+  background: var(--border);
+  transform: translateY(-1px);
+}
+.btn-danger {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 10px 22px;
+}
+.btn-danger:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.btn-lg {
+  padding: 14px 32px;
+  font-size: 16px;
+}
+
+/* ---- form ---- */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+.form-input::placeholder { color: var(--muted); opacity: 0.7; }
+.form-input.is-error { border-color: #dc2626; }
+.form-input.is-error:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+textarea.form-input { min-height: 80px; resize: vertical; }
+select.form-input { cursor: pointer; }
+
+/* ---- badges ---- */
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-green  { background: var(--surface); color: var(--accent-hover); }
+.badge-border { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); }
+.badge-dark   { background: var(--text); color: var(--bg); }
+.badge-error  { background: #fee2e2; color: #dc2626; }
+.badge-muted  { background: var(--border); color: var(--muted); }
+
+/* ---- shadow demo ---- */
+.shadow-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.shadow-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+/* ---- radius demo ---- */
+.radius-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.radius-box {
+  width: 64px; height: 64px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ---- surface demo ---- */
+.surface-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.surface-box {
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* ---- toast ---- */
+.toast {
+  position: fixed; top: 14px; right: 14px; z-index: 9999;
+  background: var(--accent-hover); color: #fff;
+  padding: 12px 16px; border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); display: none; font-size: 14px;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* ---- divider ---- */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 32px 0;
+}
+
+/* ---- code ---- */
+code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .shadow-row { grid-template-columns: 1fr; }
+  .swatch-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+
+  <div class="page-header">
+    <h1>Kawaii Green Design System</h1>
+    <p>CSS カスタムプロパティによるデザイントークン集。<code>design-tokens.css</code> で定義。</p>
+  </div>
+
+  <!-- ===== COLOR ===== -->
+  <div class="section">
+    <div class="section-title">カラー</div>
+
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--bg)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--bg</span>
+          <span class="swatch-hex">#f0fdf4</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--surface)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--surface</span>
+          <span class="swatch-hex">#dcfce7</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--border)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--border</span>
+          <span class="swatch-hex">#bbf7d0</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--accent-light)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--accent-light</span>
+          <span class="swatch-hex">#86efac</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--accent)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--accent</span>
+          <span class="swatch-hex">#22c55e</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--accent-hover)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--accent-hover</span>
+          <span class="swatch-hex">#16a34a</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--muted)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--muted</span>
+          <span class="swatch-hex">#4b7c5a</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--text)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--text</span>
+          <span class="swatch-hex">#14532d</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--error)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--error</span>
+          <span class="swatch-hex">#dc2626</span>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:var(--error-bg)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">--error-bg</span>
+          <span class="swatch-hex">#fee2e2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SURFACE ===== -->
+  <div class="section">
+    <div class="section-title">サーフェス</div>
+    <div class="surface-row">
+      <div class="surface-box" style="background:var(--bg); border:1px solid var(--border); color:var(--text)">--bg<br><span style="font-weight:400;color:var(--muted)">ページ背景</span></div>
+      <div class="surface-box" style="background:var(--surface); color:var(--text)">--surface<br><span style="font-weight:400;color:var(--muted)">パネル・ハイライト</span></div>
+      <div class="surface-box" style="background:var(--card); box-shadow:var(--shadow); color:var(--text)">--card<br><span style="font-weight:400;color:var(--muted)">カード</span></div>
+    </div>
+  </div>
+
+  <!-- ===== TYPOGRAPHY ===== -->
+  <div class="section">
+    <div class="section-title">タイポグラフィ</div>
+    <div class="card">
+      <div class="type-row">
+        <div class="type-meta">2rem / 700</div>
+        <div style="font-size:2rem;font-weight:700;letter-spacing:-0.02em">見出し大</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">1.5rem / 700</div>
+        <div style="font-size:1.5rem;font-weight:700">見出し中</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">1.1rem / 600</div>
+        <div style="font-size:1.1rem;font-weight:600">見出し小</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">1rem / 400</div>
+        <div style="font-size:1rem">本文テキスト — 桜の花びらが風に舞い散る春の午後</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">0.875rem / muted</div>
+        <div style="font-size:0.875rem;color:var(--muted)">補助テキスト — サブキャプションや注釈に使用</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">link</div>
+        <a href="#" style="color:var(--link);font-size:1rem" onclick="return false">リンクテキストのサンプル</a>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">mono</div>
+        <code>const token = "var(--accent)";</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BUTTONS ===== -->
+  <div class="section">
+    <div class="section-title">ボタン</div>
+    <div class="card">
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600">バリアント</div>
+        <div class="btn-row">
+          <button class="btn">Primary</button>
+          <button class="btn btn-outline">Outline</button>
+          <button class="btn btn-muted">Muted</button>
+          <button class="btn btn-danger">Danger</button>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600">サイズ</div>
+        <div class="btn-row">
+          <button class="btn btn-sm">Small</button>
+          <button class="btn">Default</button>
+          <button class="btn btn-lg">Large</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600">インタラクティブ（ホバーしてみて）</div>
+        <div class="btn-row">
+          <button class="btn" onclick="showToast('Primary ボタンが押されました！')">Toast を表示</button>
+          <button class="btn btn-outline" onclick="showToast('Outline ボタンが押されました！')">Toast (Outline)</button>
+          <button class="btn btn-muted" onclick="showToast('キャンセルしました', false)">Toast (Error)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FORM ===== -->
+  <div class="section">
+    <div class="section-title">フォーム要素</div>
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="form-group">
+            <label class="form-label">テキスト入力</label>
+            <input class="form-input" type="text" placeholder="フォーカスすると緑リングが出ます">
+          </div>
+          <div class="form-group">
+            <label class="form-label">エラー状態</label>
+            <input class="form-input is-error" type="text" value="無効な入力値">
+          </div>
+          <div class="form-group">
+            <label class="form-label">セレクト</label>
+            <select class="form-input">
+              <option>オプション 1</option>
+              <option>オプション 2</option>
+              <option>オプション 3</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="form-group">
+            <label class="form-label">テキストエリア</label>
+            <textarea class="form-input" placeholder="複数行のテキストを入力…"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">無効</label>
+            <input class="form-input" type="text" placeholder="disabled" disabled style="opacity:0.5;cursor:not-allowed">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BADGE ===== -->
+  <div class="section">
+    <div class="section-title">バッジ</div>
+    <div class="card">
+      <div class="badge-row">
+        <span class="badge badge-green">Green</span>
+        <span class="badge badge-border">Outline</span>
+        <span class="badge badge-dark">Dark</span>
+        <span class="badge badge-error">Error</span>
+        <span class="badge badge-muted">Muted</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SHADOW ===== -->
+  <div class="section">
+    <div class="section-title">シャドウ</div>
+    <div class="shadow-row">
+      <div class="shadow-box" style="box-shadow:var(--shadow-sm)">
+        --shadow-sm<br>
+        <span style="font-size:10px;opacity:0.6">0 1px 4px rgba(34,197,94,.08)</span>
+      </div>
+      <div class="shadow-box" style="box-shadow:var(--shadow)">
+        --shadow<br>
+        <span style="font-size:10px;opacity:0.6">0 4px 12px rgba(34,197,94,.12)</span>
+      </div>
+      <div class="shadow-box" style="box-shadow:var(--shadow-lg)">
+        --shadow-lg<br>
+        <span style="font-size:10px;opacity:0.6">0 8px 24px rgba(34,197,94,.18)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RADIUS ===== -->
+  <div class="section">
+    <div class="section-title">角丸</div>
+    <div class="card">
+      <div class="radius-row">
+        <div>
+          <div class="radius-box" style="border-radius:var(--radius-sm)">sm<br>6px</div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius:var(--radius)">md<br>12px</div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius:var(--radius-lg)">lg<br>16px</div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius:var(--radius-pill);width:100px">pill<br>9999px</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CARD EXAMPLE ===== -->
+  <div class="section">
+    <div class="section-title">カードのバリエーション</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div style="font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">標準カード</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">コンテンツタイトル</div>
+        <div style="font-size:13px;color:var(--muted)">白背景・緑のグロー影。ページの主要なコンテンツを収めるコンテナ。</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+        <div style="font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Surface カード</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">ハイライト領域</div>
+        <div style="font-size:13px;color:var(--muted)">--surface 背景。ヒント・サブ情報・強調ゾーンに。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOKEN TABLE ===== -->
+  <div class="section">
+    <div class="section-title">トークン一覧</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface)">
+            <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em">変数名</th>
+            <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em">値</th>
+            <th style="padding:10px 16px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em">用途</th>
+          </tr>
+        </thead>
+        <tbody id="tokenTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showToast(msg, ok = true) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.background = ok ? "var(--accent-hover)" : "#dc2626";
+  el.style.display = "block";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.style.display = "none"; }, 2500);
+}
+
+const tokens = [
+  ["--bg",           "#f0fdf4",  "ページ背景"],
+  ["--card",         "#ffffff",  "カード背景"],
+  ["--surface",      "#dcfce7",  "サブ背景・ハイライト"],
+  ["--border",       "#bbf7d0",  "ボーダー・区切り線"],
+  ["--accent",       "#22c55e",  "メインアクセント（CTA）"],
+  ["--accent-hover", "#16a34a",  "ホバー時"],
+  ["--accent-light", "#86efac",  "グラデーション・ハイライト"],
+  ["--text",         "#14532d",  "本文テキスト"],
+  ["--muted",        "#4b7c5a",  "補助テキスト"],
+  ["--link",         "#16a34a",  "リンク色"],
+  ["--error",        "#dc2626",  "エラーテキスト"],
+  ["--error-bg",     "#fee2e2",  "エラー背景"],
+  ["--shadow",       "0 4px 12px rgba(34,197,94,.12)",  "カード影"],
+  ["--shadow-sm",    "0 1px 4px rgba(34,197,94,.08)",   "薄い影"],
+  ["--shadow-lg",    "0 8px 24px rgba(34,197,94,.18)",  "強い影"],
+  ["--radius",       "12px",     "標準角丸"],
+  ["--radius-sm",    "6px",      "小さい角丸"],
+  ["--radius-lg",    "16px",     "大きい角丸"],
+  ["--radius-pill",  "9999px",   "ピル型"],
+  ["--font",         "system-ui + Noto Sans JP", "本文フォント"],
+  ["--font-mono",    "ui-monospace ...",          "等幅フォント"],
+];
+
+const tbody = document.getElementById("tokenTable");
+tokens.forEach(([name, val, desc], i) => {
+  const tr = document.createElement("tr");
+  tr.style.borderTop = "1px solid var(--border)";
+  if (i % 2 === 0) tr.style.background = "";
+  tr.innerHTML = `
+    <td style="padding:9px 16px"><code style="font-size:12px">${name}</code></td>
+    <td style="padding:9px 16px;font-family:var(--font-mono);font-size:11px;color:var(--muted)">${val}</td>
+    <td style="padding:9px 16px;color:var(--muted);font-size:13px">${desc}</td>
+  `;
+  tbody.appendChild(tr);
+});
+</script>
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+        <a href="/preview/claude-design-system-setup-0s3vji/" class="footer-text-logo">
+            
+            <span class="logo-line logo-large">SnowFairyTea</span>
+            
+            <span class="logo-line logo-small">Playground</span>
+            
+        </a>
+    </div>
+
+
+
+    <div class="footer-right">
+      
+        <a href="https://github.com/SnowFairyTea" target="_blank" rel="noopener">GitHub</a>
+      
+      
+        <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
+      
+      
+    </div>
+      <a href="/preview/claude-design-system-setup-0s3vji/about/">About</a>
+  </div>
+</footer>
+
+
+</body>
+</html>
