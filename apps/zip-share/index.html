@@ -2,9 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/assets/design-tokens.css">
 <link rel="stylesheet" href="/assets/style.css">
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 
 
 
@@ -15,12 +17,6 @@
 
 <style>
 :root {
-  --bg: #f3f4f6;
-  --card: #fff;
-  --text: #111827;
-  --muted: #6b7280;
-  --shadow: 0 4px 10px rgba(0,0,0,.08);
-  --accent: #3b82f6;
   --danger: #ef4444;
   --success: #16a34a;
 }
@@ -29,7 +25,7 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+  font-family: var(--font);
   background: var(--bg);
   color: var(--text);
 }
@@ -77,9 +73,9 @@ h1 {
   justify-content: center;
   gap: 8px;
   padding: 20px 10px;
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  background: #f9fafb;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
   cursor: pointer;
   font-size: 13px;
   color: var(--muted);
@@ -90,14 +86,14 @@ h1 {
   user-select: none;
 }
 .pick-btn:hover, .pick-btn:focus-visible {
-  border-color: var(--accent); background: #eff6ff; color: var(--accent); outline: none;
+  border-color: var(--accent); background: var(--surface); color: var(--accent); outline: none;
 }
-.pick-btn:active { background: #dbeafe; }
+.pick-btn:active { background: var(--border); }
 .pick-btn svg { width: 28px; height: 28px; }
 
 .drop-zone {
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
   padding: 16px;
   text-align: center;
   color: var(--muted);
@@ -105,7 +101,7 @@ h1 {
   margin-top: 12px;
   transition: border-color .15s, background .15s, color .15s;
 }
-.drop-zone.drag-over { border-color: var(--accent); background: #eff6ff; color: var(--accent); }
+.drop-zone.drag-over { border-color: var(--accent); background: var(--surface); color: var(--accent); }
 
 /* ---- ファイルリスト ---- */
 .file-list { display: flex; flex-direction: column; gap: 8px; }
@@ -115,9 +111,9 @@ h1 {
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-radius: 10px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
   animation: fadeIn .15s ease;
 }
 @keyframes fadeIn {
@@ -131,7 +127,7 @@ h1 {
 }
 .file-icon {
   width: 48px; height: 48px;
-  border-radius: 8px; background: #e5e7eb;
+  border-radius: var(--radius-sm); background: var(--border);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-size: 22px;
 }
@@ -159,9 +155,9 @@ h1 {
 .size-summary {
   margin-top: 14px;
   padding: 14px;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
   display: none;
 }
 .size-arrow-row {
@@ -204,15 +200,15 @@ h1 {
   font-size: 12px;
 }
 .size-reduction-badge {
-  background: #dbeafe;
+  background: var(--surface);
   color: var(--accent);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 99px;
   font-size: 11px;
 }
-.size-reduction-badge.good { background: #dcfce7; color: #15803d; }
-.size-reduction-badge.none { background: #f3f4f6; color: var(--muted); }
+.size-reduction-badge.good { background: var(--border); color: var(--accent-hover); }
+.size-reduction-badge.none { background: var(--surface); color: var(--muted); }
 .size-gmail-status {
   font-weight: 700;
   font-size: 12px;
@@ -221,7 +217,7 @@ h1 {
 .status-warn { color: #f59e0b; }
 .status-over { color: var(--danger); }
 .size-bar-wrap {
-  height: 6px; background: #e5e7eb; border-radius: 6px;
+  height: 6px; background: var(--border); border-radius: 6px;
   overflow: hidden; margin-bottom: 5px;
 }
 .size-bar-fill {
@@ -261,7 +257,7 @@ h1 {
 .toggle-track {
   display: block;
   width: 44px; height: 26px;
-  background: #d1d5db;
+  background: var(--border);
   border-radius: 99px;
   cursor: pointer;
   transition: background .2s;
@@ -290,9 +286,9 @@ h1 {
   flex: 1;
   min-width: 0;
   padding: 10px 8px;
-  border-radius: 10px;
-  border: 2px solid #e5e7eb;
-  background: #f9fafb;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--bg);
   cursor: pointer;
   text-align: center;
   transition: border-color .15s, background .15s;
@@ -301,7 +297,7 @@ h1 {
 .quality-pill input { display: none; }
 .quality-pill.selected {
   border-color: var(--accent);
-  background: #eff6ff;
+  background: var(--surface);
 }
 .pill-name { font-size: 13px; font-weight: 700; color: var(--text); display: block; }
 .pill-desc { font-size: 10px; color: var(--muted); margin-top: 2px; display: block; line-height: 1.3; }
@@ -345,7 +341,7 @@ h1 {
 /* Progress */
 .progress-wrap { margin-bottom: 14px; display: none; }
 .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
-.progress-bar { height: 6px; background: #e5e7eb; border-radius: 6px; overflow: hidden; }
+.progress-bar { height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width .1s; width: 0%; }
 
 .share-hint {
@@ -867,8 +863,8 @@ function showToast(msg, ok = true) {
         <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
       
       
-    </div>
       <a href="/about/">About</a>
+    </div>
   </div>
 </footer>
 

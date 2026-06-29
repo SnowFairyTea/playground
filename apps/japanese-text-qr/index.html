@@ -2,9 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/assets/design-tokens.css">
 <link rel="stylesheet" href="/assets/style.css">
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 
 
 
@@ -14,18 +16,10 @@
 <body>
 
 <style>
-  :root {
-    --bg: #f3f4f6;
-    --card: #fff;
-    --text: #111827;
-    --muted: #6b7280;
-    --shadow: 0 4px 10px rgba(0,0,0,.08);
-    --accent: #3b82f6;
-  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+    font-family: var(--font);
     background: var(--bg); color: var(--text);
   }
   .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
@@ -48,18 +42,19 @@
     font-size: 0.85rem; font-weight: 600; margin-bottom: 14px;
   }
   .view-text {
-    background: #f9fafb; border-radius: 8px; padding: 16px;
+    background: var(--surface); border-radius: var(--radius); padding: 16px;
     font-size: 1.05rem; line-height: 1.8;
     white-space: pre-wrap; word-break: break-all;
     max-height: 55vh; overflow-y: auto;
-    border: 1.5px solid #e5e7eb; margin-bottom: 20px;
+    border: 1.5px solid var(--border); margin-bottom: 20px;
     color: var(--text);
   }
   .btn-copy-large {
-    width: 100%; padding: 16px; border: none; border-radius: 8px;
-    background: var(--accent); color: #fff;
+    width: 100%; padding: 16px; border: none; border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: var(--text);
     font-size: 1.1rem; font-family: inherit; cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
   }
   .btn-copy-large:hover { opacity: 0.85; }
   .back-link {
@@ -78,11 +73,12 @@
   .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
   textarea {
     width: 100%; min-height: 120px; padding: 12px;
-    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
     font-size: 1rem; font-family: inherit; resize: vertical;
+    background: var(--bg); color: var(--text);
     transition: border-color 0.2s; outline: none;
   }
-  textarea:focus { border-color: var(--accent); }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
   .controls {
     display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
     align-items: center;
@@ -93,7 +89,7 @@
     transition: opacity 0.2s;
   }
   button:hover { opacity: 0.85; }
-  .btn-secondary { background: #e5e7eb; color: var(--text); }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   .char-count { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
   .size-control {
     display: flex; align-items: center; gap: 10px; margin-top: 12px;
@@ -111,8 +107,9 @@
     padding: 40px 0; margin: 0;
   }
   .hint {
-    background: #eff6ff; border-radius: 8px; padding: 14px 16px;
-    font-size: 0.875rem; color: #1d4ed8; line-height: 1.6;
+    background: var(--surface); border-radius: var(--radius); padding: 14px 16px;
+    font-size: 0.875rem; color: var(--text); line-height: 1.6;
+    border: 1px solid var(--border);
   }
   .hint strong { display: block; margin-bottom: 6px; font-size: 0.95rem; }
   .hint ul { margin: 0; padding-left: 1.2em; }
@@ -436,8 +433,8 @@
         <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
       
       
-    </div>
       <a href="/about/">About</a>
+    </div>
   </div>
 </footer>
 

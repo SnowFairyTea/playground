@@ -2,9 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/assets/design-tokens.css">
 <link rel="stylesheet" href="/assets/style.css">
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 
 
 
@@ -15,7 +17,12 @@
 
 <!-- 追加: 座標表示用スタイル（大きく・クリック可能・成功フィードバック） -->
 <style>
-	/* ...既存のスタイルがあればそのまま... */
+	/* style_artifacts.css の変更前の見た目を維持 */
+	body { background-color: #f5f5f5; color: #333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+	.container { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,.1); border: none; }
+	.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+	.controls { background: #fff; border-bottom: 1px solid #eee; }
+	.status-info { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
 	.coordinate-display {
 		display: flex;
 		align-items: center;
@@ -1090,8 +1097,8 @@
         <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
       
       
-    </div>
       <a href="/about/">About</a>
+    </div>
   </div>
 </footer>
 
