@@ -1,8 +1,8 @@
 /* ===== Green Accent Design System — tokens ===== */
 :root {
   /* Neutral base */
-  --bg:           #ffffff;   /* page background               */
-  --card:         #ffffff;   /* card / panel surface          */
+  --bg:           #f5f7fa;   /* page background (light grey)  */
+  --card:         #ffffff;   /* card / panel surface (white)  */
   --surface:      #f8fafb;   /* subtle grey surface           */
   --border:       #e5e7eb;   /* neutral grey border           */
 
