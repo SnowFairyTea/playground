@@ -1,0 +1,462 @@
+---
+layout: artifacts
+title: "仕込みパスワードジェネレーター"
+permalink: /apps/embed-password-gen/
+---
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+h1 { font-size: 24px; margin: 0 0 8px; }
+h2 { font-size: 17px; margin: 0 0 14px; }
+
+.lead { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0; }
+.lead b { color: var(--text); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.field .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+
+input[type="text"], input[type="number"], select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--card);
+  color: var(--text);
+}
+
+input[type="text"].mono { font-family: var(--font-mono); }
+
+input:focus, select:focus {
+  outline: 2px solid var(--accent-light);
+  border-color: var(--accent);
+}
+
+.checks { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.checks label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 400; cursor: pointer;
+}
+.checks input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.btn {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  font-family: var(--font);
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  transform: translateY(-1px);
+}
+
+.btn-area { text-align: center; margin: 4px 0; }
+
+.toggle-reveal {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 6px; font-size: 13px; color: var(--muted); margin-bottom: 6px;
+  cursor: pointer;
+}
+.toggle-reveal input { accent-color: var(--accent); }
+
+.result-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+
+.pw-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pw {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 600;
+  word-break: break-all;
+  flex: 1;
+  min-width: 200px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.pw:hover { color: var(--accent-hover); }
+
+.pw .embed { color: inherit; transition: all 0.15s ease; }
+.pw.revealed .embed {
+  color: var(--accent-hover);
+  background: var(--accent-light);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.copy-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  transition: all 0.15s ease;
+}
+.copy-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
+.meta { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 8px; }
+
+.empty { color: var(--muted); font-size: 14px; text-align: center; padding: 12px 0; }
+
+.disclaimer { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+
+.toast {
+  position: fixed; top: 14px; right: 14px; z-index: 9999;
+  background: var(--accent-hover); color: #fff;
+  padding: 10px 12px; border-radius: var(--radius);
+  box-shadow: var(--shadow); display: none; font-size: 14px;
+}
+</style>
+
+<div class="wrap">
+
+  <div class="card">
+    <h1>仕込みパスワードジェネレーター</h1>
+    <p class="lead">
+      一見ランダムなパスワードの中に、<b>指定した任意の文字列</b>をそっと紛れ込ませます。
+      覚えておきたい合言葉やマーカーを埋め込みつつ、残りは暗号論的乱数で埋めるので、見た目はただのランダム文字列。
+      どこに何を仕込んだかは自分だけが知っている、という使い方ができます。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>設定</h2>
+    <div class="grid">
+      <div class="field">
+        <label>仕込む文字列 <span class="hint">（この文字が必ず含まれます）</span></label>
+        <input type="text" id="embedStr" class="mono" placeholder="例: neko2024" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label>全体の文字数</label>
+        <input type="number" id="length" min="4" max="128" value="20">
+      </div>
+
+      <div class="field">
+        <label>配置モード</label>
+        <select id="mode">
+          <option value="scatter">バラバラに散らす（順序も崩す）</option>
+          <option value="ordered" selected>順序は保つ・位置はランダム</option>
+          <option value="block">かたまりのまま・位置だけランダム</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>埋め草（フィラー）の文字種</label>
+        <div class="checks">
+          <label><input type="checkbox" id="useUpper" checked> 大文字</label>
+          <label><input type="checkbox" id="useLower" checked> 小文字</label>
+          <label><input type="checkbox" id="useDigit" checked> 数字</label>
+          <label><input type="checkbox" id="useSymbol"> 記号</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>カモフラージュ</label>
+        <div class="checks">
+          <label><input type="checkbox" id="blend" checked> 仕込み文字と同じ文字種でフィラーを寄せる</label>
+        </div>
+        <div class="hint" style="margin-top:6px;">ONにすると、仕込んだ文字が浮かないようフィラーの種類を自動で合わせます。</div>
+      </div>
+
+      <div class="field">
+        <label>一度に生成する数</label>
+        <input type="number" id="genCount" min="1" max="20" value="5">
+      </div>
+    </div>
+
+    <div class="btn-area" style="margin-top: 18px;">
+      <button class="btn" id="generateBtn">パスワードを生成する</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>生成結果</h2>
+    <label class="toggle-reveal">
+      <input type="checkbox" id="revealToggle"> 仕込んだ文字をハイライト表示
+    </label>
+    <div id="results"><div class="empty">「パスワードを生成する」を押すと、ここに結果が並びます。</div></div>
+    <div class="disclaimer">
+      ※ 仕込んだ文字列はあなたが知っている前提の「既知の情報」なので、パスワード全体の強度は主にフィラー部分の乱数量で決まります。強度が必要な場合は仕込み文字を短めに、全体の文字数を長めにしてください。生成はすべてブラウザ内で完結し（crypto.getRandomValues 使用）、どこにも送信されません。
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const LOWER = "abcdefghijklmnopqrstuvwxyz";
+  const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const DIGIT = "0123456789";
+  const SYMBOL = "!#$%&*+-=?@^_";
+
+  const $ = (id) => document.getElementById(id);
+
+  // 暗号論的乱数。消費した選択肢数から乱数ビット量を積算する。
+  function makeRng() {
+    let bits = 0;
+    const buf = new Uint32Array(1);
+    function rand(n) {
+      if (n <= 1) return 0;
+      bits += Math.log2(n);
+      const limit = Math.floor(0x100000000 / n) * n;
+      let x;
+      do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= limit);
+      return x % n;
+    }
+    return { rand, bits: () => bits };
+  }
+
+  function showToast(msg, ok = true) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.style.background = ok ? "#16a34a" : "#dc2626";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = "none"; }, 2000);
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("コピーしました！");
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+      showToast("コピーしました！");
+    }
+  }
+
+  function readSettings() {
+    return {
+      embed: Array.from($("embedStr").value),
+      length: Math.max(1, Math.min(128, parseInt($("length").value, 10) || 20)),
+      mode: $("mode").value,
+      useUpper: $("useUpper").checked,
+      useLower: $("useLower").checked,
+      useDigit: $("useDigit").checked,
+      useSymbol: $("useSymbol").checked,
+      blend: $("blend").checked,
+      genCount: Math.max(1, Math.min(20, parseInt($("genCount").value, 10) || 5))
+    };
+  }
+
+  // 仕込み文字が使っている文字種だけを集める（カモフラージュ用）
+  function embedCharsetPool(embed) {
+    let pool = "";
+    if (embed.some(c => /[a-z]/.test(c))) pool += LOWER;
+    if (embed.some(c => /[A-Z]/.test(c))) pool += UPPER;
+    if (embed.some(c => /[0-9]/.test(c))) pool += DIGIT;
+    if (embed.some(c => /[^A-Za-z0-9]/.test(c))) pool += SYMBOL;
+    return pool;
+  }
+
+  function fillerPool(s) {
+    let pool = "";
+    if (s.useUpper) pool += UPPER;
+    if (s.useLower) pool += LOWER;
+    if (s.useDigit) pool += DIGIT;
+    if (s.useSymbol) pool += SYMBOL;
+
+    if (s.blend && s.embed.length > 0) {
+      const embedPool = embedCharsetPool(s.embed);
+      // 仕込み文字と共通する種類があればそこに寄せる。なければフィラー設定のまま。
+      const intersect = Array.from(new Set(embedPool)).filter(c => pool.includes(c)).join("");
+      if (intersect.length > 0) pool = intersect;
+      else if (embedPool.length > 0) pool = embedPool;
+    }
+    return pool;
+  }
+
+  // Fisher-Yates（配置も rng を消費する = 乱数ビットに算入される）
+  function shuffle(arr, rng) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = rng.rand(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function generateOne(s) {
+    const rng = makeRng();
+    const fillerCount = s.length - s.embed.length;
+    if (fillerCount < 0) return null; // 仕込み文字が長さを超過
+
+    const pool = fillerPool(s);
+    if (pool.length === 0 && fillerCount > 0) return null;
+
+    const filler = [];
+    for (let i = 0; i < fillerCount; i++) filler.push(pool[rng.rand(pool.length)]);
+
+    const chars = new Array(s.length);
+    const embedIdx = new Set(); // 仕込み文字が入った位置
+
+    if (s.mode === "scatter") {
+      // 仕込み文字＋フィラーを混ぜて全体シャッフル（順序も崩れる）
+      const tagged = [
+        ...s.embed.map(c => ({ c, embed: true })),
+        ...filler.map(c => ({ c, embed: false }))
+      ];
+      shuffle(tagged, rng);
+      tagged.forEach((t, i) => { chars[i] = t.c; if (t.embed) embedIdx.add(i); });
+
+    } else if (s.mode === "ordered") {
+      // 仕込み文字の順序は保ち、位置だけランダムに選ぶ
+      const positions = [];
+      const avail = Array.from({ length: s.length }, (_, i) => i);
+      for (let k = 0; k < s.embed.length; k++) {
+        const pick = rng.rand(avail.length);
+        positions.push(avail.splice(pick, 1)[0]);
+      }
+      positions.sort((a, b) => a - b);
+      positions.forEach((pos, k) => { chars[pos] = s.embed[k]; embedIdx.add(pos); });
+      let f = 0;
+      for (let i = 0; i < s.length; i++) if (chars[i] === undefined) chars[i] = filler[f++];
+
+    } else { // block
+      // 仕込み文字をひとかたまりのまま、開始位置だけランダム
+      const offset = rng.rand(fillerCount + 1);
+      let f = 0;
+      for (let i = 0; i < s.length; i++) {
+        if (i >= offset && i < offset + s.embed.length) {
+          chars[i] = s.embed[i - offset];
+          embedIdx.add(i);
+        } else {
+          chars[i] = filler[f++];
+        }
+      }
+    }
+
+    return { chars, embedIdx, bits: rng.bits(), poolSize: pool.length };
+  }
+
+  function render(items, reveal) {
+    const box = $("results");
+    box.innerHTML = "";
+    for (const it of items) {
+      const item = document.createElement("div");
+      item.className = "result-item";
+
+      const row = document.createElement("div");
+      row.className = "pw-row";
+
+      const pwEl = document.createElement("span");
+      pwEl.className = "pw" + (reveal ? " revealed" : "");
+      const plain = it.chars.join("");
+      it.chars.forEach((ch, i) => {
+        if (it.embedIdx.has(i)) {
+          const em = document.createElement("span");
+          em.className = "embed";
+          em.textContent = ch;
+          pwEl.appendChild(em);
+        } else {
+          pwEl.appendChild(document.createTextNode(ch));
+        }
+      });
+      pwEl.title = "クリックでコピー";
+      pwEl.addEventListener("click", () => copyToClipboard(plain));
+
+      const btn = document.createElement("button");
+      btn.className = "copy-btn";
+      btn.textContent = "コピー";
+      btn.addEventListener("click", () => copyToClipboard(plain));
+      row.append(pwEl, btn);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent =
+        `${it.chars.length}文字（うち仕込み ${it.embedIdx.size}文字）` +
+        `｜フィラー文字種 ${it.poolSize}種｜配置＋乱数エントロピー 約${it.bits.toFixed(1)} bit`;
+
+      item.append(row, meta);
+      box.appendChild(item);
+    }
+  }
+
+  let lastItems = [];
+
+  function generate() {
+    const s = readSettings();
+
+    if (s.embed.length === 0) {
+      showToast("仕込む文字列を入力してください。", false);
+      return;
+    }
+    if (s.embed.length > s.length) {
+      showToast("仕込む文字列が全体の文字数を超えています。文字数を増やしてください。", false);
+      return;
+    }
+    if (!s.useUpper && !s.useLower && !s.useDigit && !s.useSymbol && s.length > s.embed.length) {
+      showToast("フィラーの文字種を最低ひとつ選んでください。", false);
+      return;
+    }
+
+    lastItems = [];
+    for (let i = 0; i < s.genCount; i++) {
+      const r = generateOne(s);
+      if (r) lastItems.push(r);
+    }
+
+    if (lastItems.length === 0) {
+      showToast("生成できませんでした。設定を見直してください。", false);
+      return;
+    }
+    render(lastItems, $("revealToggle").checked);
+  }
+
+  $("generateBtn").addEventListener("click", generate);
+  $("revealToggle").addEventListener("change", () => {
+    if (lastItems.length) render(lastItems, $("revealToggle").checked);
+  });
+})();
+</script>
