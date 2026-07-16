@@ -1,0 +1,575 @@
+---
+layout: artifacts
+title: "PPAP供養パスワードジェネレーター"
+permalink: /apps/ppap-password-gen/
+---
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+h1 { font-size: 24px; margin: 0 0 8px; }
+h2 { font-size: 17px; margin: 0 0 14px; }
+
+.lead { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0; }
+.lead b { color: var(--text); }
+
+.ppap-chant {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.field .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+
+input[type="number"], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--card);
+  color: var(--text);
+}
+
+textarea {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input[type="number"]:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--accent-light);
+  border-color: var(--accent);
+}
+
+.range-row { display: flex; align-items: center; gap: 10px; }
+.range-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+.level-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-hover);
+  min-width: 9em;
+  text-align: right;
+}
+
+.level-desc { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+.checks { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.checks label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 400; cursor: pointer;
+}
+.checks input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.minmax { display: flex; align-items: center; gap: 8px; }
+.minmax input { width: 90px; }
+.minmax span { color: var(--muted); }
+
+.btn {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  font-family: var(--font);
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  transform: translateY(-1px);
+}
+
+.btn-area { text-align: center; margin: 4px 0; }
+
+.result-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+
+.pw-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pw {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  word-break: break-all;
+  flex: 1;
+  min-width: 200px;
+  cursor: pointer;
+}
+.pw:hover { color: var(--accent-hover); }
+
+.copy-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  transition: all 0.15s ease;
+}
+.copy-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
+.meter {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  margin: 10px 0 6px;
+  overflow: hidden;
+}
+.meter > div { height: 100%; border-radius: var(--radius-pill); transition: width 0.3s ease; }
+
+.meta { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.meta .verdict { font-weight: 600; }
+
+.empty { color: var(--muted); font-size: 14px; text-align: center; padding: 12px 0; }
+
+.warn {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #713f12;
+  margin-top: 14px;
+  line-height: 1.7;
+}
+
+.disclaimer { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+
+.toast {
+  position: fixed; top: 14px; right: 14px; z-index: 9999;
+  background: var(--accent-hover); color: #fff;
+  padding: 10px 12px; border-radius: var(--radius);
+  box-shadow: var(--shadow); display: none; font-size: 14px;
+}
+</style>
+
+<div class="wrap">
+
+  <div class="card">
+    <h1>🍍 PPAP供養パスワードジェネレーター</h1>
+    <p class="lead">
+      <b>PPAP</b> とは —— <b>P</b>asswordつきzipファイルを送ります、<b>P</b>asswordを送ります、
+      <b>A</b>んごうか（暗号化）、<b>P</b>rotocol。
+      暗号化したファイルとそのパスワードを<b>同じ経路</b>で送るという、日本が誇る伝統芸能です。
+      このジェネレーターは、PPAPを皮肉る単語から「見た目はふざけているのに辞書攻撃には堅い」パスワードを錬成します。
+    </p>
+    <div class="ppap-chant">
+      ✒️ I have a Password... 🍍 I have a Zip... 🎵 Ah! <b>PasswordつきZip別送りProtocol!</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ 設定</h2>
+    <div class="grid">
+      <div class="field" style="grid-row: span 3;">
+        <label>皮肉り用単語リスト <span class="hint">（1行1単語・自由に編集可）</span></label>
+        <textarea id="wordlist"></textarea>
+      </div>
+
+      <div class="field">
+        <label>使用単語数</label>
+        <input type="number" id="wordCount" min="1" max="8" value="3">
+      </div>
+
+      <div class="field">
+        <label>文字数の下限 / 上限</label>
+        <div class="minmax">
+          <input type="number" id="minLen" min="4" max="128" value="12">
+          <span>〜</span>
+          <input type="number" id="maxLen" min="4" max="128" value="32">
+          <span>文字</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>区切り文字</label>
+        <select id="separator">
+          <option value="">なし（密着）</option>
+          <option value="-" selected>-（ハイフン）</option>
+          <option value="_">_（アンダースコア）</option>
+          <option value=".">.（ドット）</option>
+          <option value="random">ランダム記号（毎回変わる）</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>必須の文字種 <span class="hint">（足りなければランダム挿入で補完）</span></label>
+        <div class="checks">
+          <label><input type="checkbox" id="reqUpper" checked> 大文字</label>
+          <label><input type="checkbox" id="reqLower" checked> 小文字</label>
+          <label><input type="checkbox" id="reqDigit" checked> 数字</label>
+          <label><input type="checkbox" id="reqSymbol"> 記号</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>辞書耐性ランダム化レベル</label>
+        <div class="range-row">
+          <input type="range" id="level" min="0" max="3" value="2">
+          <span class="level-label" id="levelLabel"></span>
+        </div>
+        <div class="level-desc" id="levelDesc"></div>
+      </div>
+
+      <div class="field">
+        <label>一度に生成する数</label>
+        <input type="number" id="genCount" min="1" max="20" value="5">
+      </div>
+    </div>
+
+    <div class="btn-area" style="margin-top: 18px;">
+      <button class="btn" id="generateBtn">🎵 パスワードを錬成する</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔐 錬成結果</h2>
+    <div id="results"><div class="empty">「パスワードを錬成する」を押すと、ここにPPAP供養の成果が並びます。</div></div>
+    <div class="warn">
+      ⚠️ ここで作ったパスワードを、zipファイルと<b>同じメールで別送</b>した瞬間、あなたも立派なPPAPの継承者です。パスワードは別経路（電話・チャット・パスワードマネージャー共有など）で。というかそもそもzip添付をやめてストレージ共有を使いましょう。
+    </div>
+    <div class="disclaimer">
+      ※ エントロピーは生成時に消費した乱数量（crypto.getRandomValues 使用）からの概算です。解読時間は毎秒100億回試行のオフライン総当たりを仮定した理論値であり、実際の安全性を保証するものではありません。生成処理はすべてブラウザ内で完結し、どこにも送信されません。
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const DEFAULT_WORDS = [
+    "Password", "Tsuki", "Zip", "Angouka", "Okurimasu", "Protocol",
+    "BetsuMail", "GoKakunin", "Anshin", "Anzen", "JouhouRouei",
+    "DentouGeinou", "Torishimariyaku", "Soumubu", "Keshikaran",
+    "Pen", "Pineapple", "Apple", "DenshoBato", "FaxNoJidai"
+  ];
+
+  const LEVELS = [
+    { name: "PPAP級（そのまま）", desc: "単語をつなぐだけ。zipと同じメールでパスワードを送るのと同等の安心感。" },
+    { name: "気休め級", desc: "単語ごとに大文字/小文字/先頭大文字をランダム化。やった感はある。" },
+    { name: "Leet級", desc: "気休め級に加えて a→@ / e→3 / s→$ などの置換をランダム適用。辞書攻撃が嫌がり始める。" },
+    { name: "原型崩壊級", desc: "Leet級に加えてランダム文字を複数挿入。皮肉の面影を残しつつ辞書はほぼ無力化。" }
+  ];
+
+  const LEET = {
+    a: ["@", "4"], e: ["3"], i: ["1", "!"], o: ["0"],
+    s: ["$", "5"], t: ["7"], b: ["8"], g: ["9"], l: ["1"]
+  };
+
+  const LOWER = "abcdefghijklmnopqrstuvwxyz";
+  const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const DIGIT = "0123456789";
+  const SYMBOL = "!#$%&*+-=?@^_";
+
+  const $ = (id) => document.getElementById(id);
+
+  // --- 乱数（消費した選択肢数からエントロピーを積算する） ---
+  function makeRng() {
+    let bits = 0;
+    const buf = new Uint32Array(1);
+    function rand(n) {
+      if (n <= 1) return 0;
+      bits += Math.log2(n);
+      const limit = Math.floor(0x100000000 / n) * n;
+      let x;
+      do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= limit);
+      return x % n;
+    }
+    return { rand, bits: () => bits };
+  }
+
+  function showToast(msg, ok = true) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.style.background = ok ? "#16a34a" : "#dc2626";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = "none"; }, 2000);
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("パスワードをコピーしました！ zipに添えて別送……はしないでね");
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+      showToast("パスワードをコピーしました！ zipに添えて別送……はしないでね");
+    }
+  }
+
+  function readSettings() {
+    const words = $("wordlist").value.split("\n").map(w => w.trim()).filter(Boolean);
+    return {
+      words,
+      wordCount: Math.max(1, Math.min(8, parseInt($("wordCount").value, 10) || 3)),
+      minLen: Math.max(4, parseInt($("minLen").value, 10) || 12),
+      maxLen: Math.max(4, parseInt($("maxLen").value, 10) || 32),
+      separator: $("separator").value,
+      level: parseInt($("level").value, 10),
+      reqUpper: $("reqUpper").checked,
+      reqLower: $("reqLower").checked,
+      reqDigit: $("reqDigit").checked,
+      reqSymbol: $("reqSymbol").checked,
+      genCount: Math.max(1, Math.min(20, parseInt($("genCount").value, 10) || 5))
+    };
+  }
+
+  // 1回分の生成試行。長さ制約を満たせなければ null を返す。
+  function tryGenerate(s) {
+    const rng = makeRng();
+
+    // ① 単語を選ぶ（足りるなら重複なし、足りなければ重複あり）
+    const pool = s.words.slice();
+    const picked = [];
+    const noRepeat = pool.length >= s.wordCount;
+    for (let i = 0; i < s.wordCount; i++) {
+      const idx = rng.rand(pool.length);
+      picked.push(noRepeat ? pool.splice(idx, 1)[0] : pool[idx]);
+    }
+
+    // ② レベル1以上: 単語ごとにケースをランダム化
+    const cased = picked.map(w => {
+      if (s.level < 1) return w;
+      const mode = rng.rand(3);
+      if (mode === 0) return w.toLowerCase();
+      if (mode === 1) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    });
+
+    // ③ 区切り文字で結合
+    let pw;
+    if (s.separator === "random") {
+      pw = cased.reduce((acc, w, i) =>
+        i === 0 ? w : acc + SYMBOL[rng.rand(SYMBOL.length)] + w, "");
+    } else {
+      pw = cased.join(s.separator);
+    }
+
+    // ④ レベル2以上: Leet置換（対象文字ごとに 原文 or 置換候補 から等確率で選択）
+    if (s.level >= 2) {
+      pw = Array.from(pw).map(ch => {
+        const variants = LEET[ch.toLowerCase()];
+        if (!variants) return ch;
+        const options = [ch, ...variants];
+        return options[rng.rand(options.length)];
+      }).join("");
+    }
+
+    // ⑤ レベル3: ランダム文字を2〜4個、ランダム位置に挿入
+    if (s.level >= 3) {
+      const ALL = LOWER + UPPER + DIGIT + SYMBOL;
+      const n = 2 + rng.rand(3);
+      for (let i = 0; i < n; i++) {
+        const pos = rng.rand(pw.length + 1);
+        pw = pw.slice(0, pos) + ALL[rng.rand(ALL.length)] + pw.slice(pos);
+      }
+    }
+
+    // ⑥ 必須文字種の補完（欠けている種類をランダム位置に挿入）
+    const requirements = [
+      [s.reqUpper, /[A-Z]/, UPPER],
+      [s.reqLower, /[a-z]/, LOWER],
+      [s.reqDigit, /[0-9]/, DIGIT],
+      [s.reqSymbol, /[^A-Za-z0-9]/, SYMBOL]
+    ];
+    for (const [required, re, set] of requirements) {
+      if (required && !re.test(pw)) {
+        const pos = rng.rand(pw.length + 1);
+        pw = pw.slice(0, pos) + set[rng.rand(set.length)] + pw.slice(pos);
+      }
+    }
+
+    // ⑦ 下限に満たなければ許可文字でパディング挿入
+    let padPool = "";
+    if (s.reqLower || (!s.reqUpper && !s.reqDigit && !s.reqSymbol)) padPool += LOWER;
+    if (s.reqUpper) padPool += UPPER;
+    if (s.reqDigit) padPool += DIGIT;
+    if (s.reqSymbol) padPool += SYMBOL;
+    while (pw.length < s.minLen) {
+      const pos = rng.rand(pw.length + 1);
+      pw = pw.slice(0, pos) + padPool[rng.rand(padPool.length)] + pw.slice(pos);
+    }
+
+    // ⑧ 上限超過ならこの試行は失敗
+    if (pw.length > s.maxLen) return null;
+
+    return { pw, bits: rng.bits() };
+  }
+
+  function generateOne(s) {
+    for (let attempt = 0; attempt < 300; attempt++) {
+      const result = tryGenerate(s);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  function verdict(bits) {
+    if (bits < 30) return { label: "🗑 PPAP級", text: "総当たりに一晩も持ちません。zipと同じメールでパスワードを送るのと同じ安心感です。", color: "#dc2626", pct: 15 };
+    if (bits < 50) return { label: "📠 別送メール級", text: "やった感はあります。攻撃者もにっこり。", color: "#f59e0b", pct: 35 };
+    if (bits < 70) return { label: "🐣 脱PPAP見習い級", text: "まあまあ堅い。そろそろzip添付を卒業しましょう。", color: "#84cc16", pct: 60 };
+    if (bits < 90) return { label: "🛡 脱PPAP級", text: "辞書攻撃にも堅牢。あとは「別送り」さえしなければ完璧です。", color: "#22c55e", pct: 80 };
+    return { label: "🏰 要塞級", text: "パスワード自体は要塞。運用（PPAP）で台無しにしないでください。", color: "#16a34a", pct: 100 };
+  }
+
+  function crackTime(bits) {
+    const seconds = Math.pow(2, bits - 1) / 1e10; // 平均試行回数 ÷ 100億回/秒
+    if (seconds < 1) return "1秒未満";
+    const units = [
+      [60, "秒"], [60, "分"], [24, "時間"], [365, "日"], [10000, "年"], [1e8, "万年"]
+    ];
+    let v = seconds;
+    for (const [div, name] of units) {
+      if (v < div) return `約${v.toFixed(v < 10 ? 1 : 0)}${name}`;
+      v /= div;
+    }
+    return `約${v.toExponential(1)}億年`;
+  }
+
+  function render(items) {
+    const box = $("results");
+    box.innerHTML = "";
+    for (const { pw, bits } of items) {
+      const v = verdict(bits);
+      const item = document.createElement("div");
+      item.className = "result-item";
+
+      const row = document.createElement("div");
+      row.className = "pw-row";
+      const pwEl = document.createElement("span");
+      pwEl.className = "pw";
+      pwEl.textContent = pw;
+      pwEl.title = "クリックでコピー";
+      pwEl.addEventListener("click", () => copyToClipboard(pw));
+      const btn = document.createElement("button");
+      btn.className = "copy-btn";
+      btn.textContent = "📋 コピー";
+      btn.addEventListener("click", () => copyToClipboard(pw));
+      row.append(pwEl, btn);
+
+      const meter = document.createElement("div");
+      meter.className = "meter";
+      const bar = document.createElement("div");
+      bar.style.width = v.pct + "%";
+      bar.style.background = v.color;
+      meter.appendChild(bar);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const verdictEl = document.createElement("span");
+      verdictEl.className = "verdict";
+      verdictEl.style.color = v.color;
+      verdictEl.textContent = v.label;
+      meta.append(
+        verdictEl,
+        `｜${pw.length}文字｜エントロピー 約${bits.toFixed(1)} bit｜総当たり解読 ${crackTime(bits)} — ${v.text}`
+      );
+
+      item.append(row, meter, meta);
+      box.appendChild(item);
+    }
+  }
+
+  function updateLevelLabel() {
+    const lv = LEVELS[parseInt($("level").value, 10)];
+    $("levelLabel").textContent = lv.name;
+    $("levelDesc").textContent = lv.desc;
+  }
+
+  function generate() {
+    const s = readSettings();
+
+    if (s.words.length === 0) {
+      showToast("単語リストが空です。皮肉る対象を入力してください。", false);
+      return;
+    }
+    if (s.minLen > s.maxLen) {
+      showToast("文字数の下限が上限を超えています。", false);
+      return;
+    }
+    if (!s.reqUpper && !s.reqLower && !s.reqDigit && !s.reqSymbol) {
+      showToast("必須文字種を最低ひとつは選んでください。", false);
+      return;
+    }
+
+    const items = [];
+    for (let i = 0; i < s.genCount; i++) {
+      const result = generateOne(s);
+      if (result) items.push(result);
+    }
+
+    if (items.length === 0) {
+      showToast("上限文字数が厳しすぎて生成できません。上限を増やすか単語数を減らしてください。", false);
+      $("results").innerHTML = '<div class="empty">条件を満たすパスワードを錬成できませんでした。上限文字数・単語数を見直してください。</div>';
+      return;
+    }
+    if (items.length < s.genCount) {
+      showToast(`条件が厳しく ${items.length}/${s.genCount} 件のみ生成できました。`, false);
+    }
+
+    render(items);
+  }
+
+  // --- 初期化 ---
+  $("wordlist").value = DEFAULT_WORDS.join("\n");
+  $("level").addEventListener("input", updateLevelLabel);
+  $("generateBtn").addEventListener("click", generate);
+  updateLevelLabel();
+})();
+</script>
