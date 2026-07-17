@@ -1,0 +1,415 @@
+---
+layout: artifacts
+title: "税込で絶対存在しない金額計算機"
+permalink: /apps/tax-impossible-calc/
+---
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+  h1 { font-size: 26px; margin: 8px 0 6px; text-align: center; }
+  .lead { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 14px; }
+
+  .field-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; }
+  .field-label:first-child { margin-top: 0; }
+
+  .amount-row { display: flex; align-items: center; gap: 8px; }
+  .amount-row input {
+    flex: 1; font-size: 22px; font-weight: 700; text-align: right;
+    padding: 10px 14px; border: 2px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); color: var(--text); outline: none; min-width: 0;
+    font-family: var(--font-mono);
+  }
+  .amount-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+  .amount-row .yen { font-size: 20px; font-weight: 700; }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seg button {
+    padding: 8px 18px; border-radius: var(--radius-pill);
+    border: 2px solid var(--border); background: var(--card); color: var(--text);
+    cursor: pointer; font-weight: 600; font-size: 14px; transition: all .15s ease;
+  }
+  .seg button:hover { border-color: var(--accent); background: var(--accent-light); }
+  .seg button.on {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  }
+  .seg input.custom-rate {
+    width: 90px; padding: 8px 10px; border: 2px solid var(--border);
+    border-radius: var(--radius-pill); font-size: 14px; font-weight: 600;
+    text-align: right; background: var(--bg); color: var(--text); outline: none;
+  }
+  .seg input.custom-rate:focus { border-color: var(--accent); }
+
+  /* 判定パネル */
+  .verdict {
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    text-align: center;
+    margin-top: 16px;
+  }
+  .verdict.ok { background: var(--accent-light); border: 2px solid var(--accent); }
+  .verdict.ng { background: #fee2e2; border: 2px solid #dc2626; }
+  .verdict .big { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .verdict.ok .big { color: var(--accent-hover); }
+  .verdict.ng .big { color: #dc2626; }
+  .verdict .detail { font-size: 14px; color: var(--text); line-height: 1.8; }
+  .verdict .detail .mono { font-family: var(--font-mono); font-weight: 700; }
+  .verdict .skip { color: #dc2626; font-weight: 700; }
+
+  /* 比較表 */
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: center; }
+  th { background: var(--surface); font-weight: 600; }
+  td.exists { background: var(--accent-light); }
+  td.missing { background: #fee2e2; color: #dc2626; font-weight: 700; }
+  td .sub { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+
+  /* 一覧 */
+  .range-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .range-row input {
+    width: 110px; padding: 8px 10px; border: 2px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; text-align: right;
+    background: var(--bg); color: var(--text); outline: none;
+    font-family: var(--font-mono);
+  }
+  .range-row input:focus { border-color: var(--accent); }
+
+  .btn {
+    padding: 10px 22px; border-radius: var(--radius-pill); border: none;
+    cursor: pointer; font-weight: 600; font-size: 14px;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: var(--text); transition: all .2s ease;
+  }
+  .btn:hover {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    transform: translateY(-1px);
+  }
+
+  .stats { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .stats b { color: var(--text); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 4px 10px; border-radius: var(--radius-pill);
+    background: #fee2e2; color: #b91c1c; font-weight: 600; font-size: 13px;
+    font-family: var(--font-mono); cursor: pointer; border: 1px solid #fecaca;
+    transition: all .15s ease;
+  }
+  .chip:hover { background: #fecaca; transform: translateY(-1px); }
+  .chips .more { align-self: center; color: var(--muted); font-size: 13px; }
+
+  .note { font-size: 13.5px; line-height: 1.9; color: var(--text); }
+  .note p { margin: 0 0 10px; }
+  .note .mono { font-family: var(--font-mono); background: var(--surface); padding: 1px 6px; border-radius: var(--radius-sm); }
+
+  .toast {
+    position: fixed; top: 14px; right: 14px; z-index: 9999;
+    background: var(--accent-hover); color: #fff;
+    padding: 10px 12px; border-radius: var(--radius);
+    box-shadow: var(--shadow); display: none; font-size: 14px;
+  }
+</style>
+
+<div class="wrap">
+  <h1>🚫 税込で絶対存在しない金額計算機</h1>
+  <p class="lead">消費税の端数処理では、どんな税抜価格からも作れない「存在しない税込金額」があります</p>
+
+  <div class="card">
+    <h2>判定する</h2>
+
+    <div class="field-label">税込金額(円)</div>
+    <div class="amount-row">
+      <span class="yen">¥</span>
+      <input type="number" id="amount" min="1" max="100000000" step="1" value="10" inputmode="numeric">
+    </div>
+
+    <div class="field-label">税率</div>
+    <div class="seg" id="rateSeg">
+      <button data-rate="10" class="on">10%(標準)</button>
+      <button data-rate="8">8%(軽減)</button>
+      <input type="number" class="custom-rate" id="customRate" min="0.01" max="99.99" step="0.01" placeholder="任意%">
+    </div>
+
+    <div class="field-label">端数処理</div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="floor" class="on">切り捨て</button>
+      <button data-mode="round">四捨五入</button>
+      <button data-mode="ceil">切り上げ</button>
+    </div>
+
+    <div id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <h2>端数処理 × 税率の比較</h2>
+    <div class="table-scroll">
+      <table id="compareTable"></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>存在しない金額の一覧</h2>
+    <div class="range-row">
+      <span>1 〜</span>
+      <input type="number" id="listMax" min="10" max="100000" step="1" value="1000">
+      <span>円</span>
+      <button class="btn" id="listBtn">一覧を生成</button>
+    </div>
+    <div class="stats" id="listStats"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="card">
+    <h2>なぜ存在しない金額があるの?</h2>
+    <div class="note">
+      <p>
+        税抜価格を1円ずつ増やすと、税込価格(10%なら1.1倍)は約1.1円ずつ増えます。
+        1円より大きく増えるため、ときどき整数が1つ<b>飛ばされます</b>。
+      </p>
+      <p>
+        例えば10%・切り捨てでは、税抜9円 → <span class="mono">9.9 → 9円</span>、
+        税抜10円 → <span class="mono">11.0 → 11円</span> となり、
+        <b>税込10円はどうやっても作れません</b>。
+        10%・切り捨ての場合、存在しない金額は「11で割って10余る数」(10, 21, 32, …)で、11円ごとに1つ現れます。
+      </p>
+      <p>
+        飛ばされる金額は端数処理の方式ごとに異なります(10%の場合、切り捨ては 10, 21, 32…、四捨五入は 5, 16, 27…、切り上げは 1, 12, 23…)。
+        8%では27円の周期の中に2つ、存在しない金額が現れます。
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  // ---- 整数演算で税込金額を計算(浮動小数点誤差を回避) ----
+  // 税率 p% を rateNum/DENOM で表す。例: 10% → 11000/10000
+  const DENOM = 10000;
+
+  function rateToNum(percent) {
+    return DENOM + Math.round(percent * 100);
+  }
+
+  // 税抜 m 円 → 税込金額(mode: floor / round / ceil)
+  function taxIncluded(m, rateNum, mode) {
+    const x = m * rateNum;
+    if (mode === "floor") return Math.floor(x / DENOM);
+    if (mode === "round") return Math.floor((x + DENOM / 2) / DENOM);
+    return Math.floor((x + DENOM - 1) / DENOM); // ceil
+  }
+
+  // 税込 n 円になる税抜価格を探す。見つかれば税抜価格、なければ null
+  function findPretax(n, rateNum, mode) {
+    const m0 = Math.floor((n * DENOM) / rateNum);
+    for (let m = Math.max(1, m0 - 3); m <= m0 + 3; m++) {
+      if (taxIncluded(m, rateNum, mode) === n) return m;
+    }
+    return null;
+  }
+
+  const MODES = [
+    { key: "floor", label: "切り捨て" },
+    { key: "round", label: "四捨五入" },
+    { key: "ceil",  label: "切り上げ" },
+  ];
+
+  const state = { rate: 10, mode: "floor" };
+
+  const amountEl = document.getElementById("amount");
+  const verdictEl = document.getElementById("verdict");
+  const tableEl = document.getElementById("compareTable");
+  const customRateEl = document.getElementById("customRate");
+
+  function fmt(n) { return n.toLocaleString("ja-JP"); }
+
+  function currentAmount() {
+    const n = Math.floor(Number(amountEl.value));
+    if (!Number.isFinite(n) || n < 1 || n > 100000000) return null;
+    return n;
+  }
+
+  function modeLabel(key) {
+    return MODES.find(m => m.key === key).label;
+  }
+
+  // ---- 判定パネル ----
+  function renderVerdict() {
+    const n = currentAmount();
+    if (n === null) {
+      verdictEl.innerHTML = '<div class="verdict ng"><div class="big">1〜1億円の整数を入力してください</div></div>';
+      return;
+    }
+    const rateNum = rateToNum(state.rate);
+    const pretax = findPretax(n, rateNum, state.mode);
+    const setting = `税率${state.rate}%・${modeLabel(state.mode)}`;
+
+    if (pretax !== null) {
+      verdictEl.innerHTML =
+        '<div class="verdict ok">' +
+          `<div class="big">✅ 税込${fmt(n)}円は存在できます</div>` +
+          '<div class="detail">' +
+            `${setting}: 税抜 <span class="mono">${fmt(pretax)}円</span> → 税込 <span class="mono">${fmt(n)}円</span>` +
+          '</div>' +
+        '</div>';
+    } else {
+      // 飛ばされる瞬間を見せる: n 未満になる最大の税抜価格とその次
+      let mBelow = Math.floor((n * DENOM) / rateNum) + 3;
+      while (mBelow >= 1 && taxIncluded(mBelow, rateNum, state.mode) >= n) mBelow--;
+      const before = taxIncluded(mBelow, rateNum, state.mode);
+      const after = taxIncluded(mBelow + 1, rateNum, state.mode);
+      verdictEl.innerHTML =
+        '<div class="verdict ng">' +
+          `<div class="big">🚫 税込${fmt(n)}円は絶対に存在しません!</div>` +
+          '<div class="detail">' +
+            `${setting}では、税抜 <span class="mono">${fmt(mBelow)}円</span> → 税込 <span class="mono">${fmt(before)}円</span>、` +
+            `税抜 <span class="mono">${fmt(mBelow + 1)}円</span> → 税込 <span class="mono">${fmt(after)}円</span><br>` +
+            `<span class="skip">${fmt(n)}円はちょうど飛ばされてしまいます</span>` +
+          '</div>' +
+        '</div>';
+    }
+  }
+
+  // ---- 比較表 ----
+  function renderTable() {
+    const n = currentAmount();
+    if (n === null) { tableEl.innerHTML = ""; return; }
+
+    const rates = [10, 8];
+    if (state.rate !== 10 && state.rate !== 8) rates.push(state.rate);
+
+    let html = "<thead><tr><th>端数処理</th>";
+    for (const r of rates) html += `<th>税率${r}%</th>`;
+    html += "</tr></thead><tbody>";
+
+    for (const mode of MODES) {
+      html += `<tr><th>${mode.label}</th>`;
+      for (const r of rates) {
+        const pretax = findPretax(n, rateToNum(r), mode.key);
+        if (pretax !== null) {
+          html += `<td class="exists">存在する<span class="sub">税抜${fmt(pretax)}円</span></td>`;
+        } else {
+          html += '<td class="missing">存在しない</td>';
+        }
+      }
+      html += "</tr>";
+    }
+    html += "</tbody>";
+    tableEl.innerHTML = html;
+  }
+
+  // ---- 一覧生成 ----
+  const CHIP_LIMIT = 300;
+
+  function renderList() {
+    const max = Math.floor(Number(document.getElementById("listMax").value));
+    const statsEl = document.getElementById("listStats");
+    const chipsEl = document.getElementById("chips");
+    if (!Number.isFinite(max) || max < 10 || max > 100000) {
+      statsEl.textContent = "10〜100,000円の範囲で指定してください";
+      chipsEl.innerHTML = "";
+      return;
+    }
+    const rateNum = rateToNum(state.rate);
+
+    // 税抜価格を走査して到達できる税込金額をマーク
+    const reachable = new Uint8Array(max + 1);
+    for (let m = 1; ; m++) {
+      const t = taxIncluded(m, rateNum, state.mode);
+      if (t > max) break;
+      if (t >= 1) reachable[t] = 1;
+    }
+    const missing = [];
+    for (let n = 1; n <= max; n++) {
+      if (!reachable[n]) missing.push(n);
+    }
+
+    const pct = ((missing.length / max) * 100).toFixed(1);
+    statsEl.innerHTML =
+      `税率${state.rate}%・${modeLabel(state.mode)}: 1〜${fmt(max)}円のうち ` +
+      `<b>${fmt(missing.length)}個</b>(${pct}%)が存在しない金額です(クリックで判定欄にセット)`;
+
+    const shown = missing.slice(0, CHIP_LIMIT);
+    chipsEl.innerHTML = shown.map(n => `<span class="chip" data-n="${n}">¥${fmt(n)}</span>`).join("");
+    if (missing.length > CHIP_LIMIT) {
+      chipsEl.insertAdjacentHTML("beforeend", `<span class="more">…他 ${fmt(missing.length - CHIP_LIMIT)} 件</span>`);
+    }
+  }
+
+  function showToast(msg, ok = true) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.style.background = ok ? "#16a34a" : "#dc2626";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = "none"; }, 2000);
+  }
+
+  function refresh() {
+    renderVerdict();
+    renderTable();
+  }
+
+  // ---- イベント ----
+  amountEl.addEventListener("input", refresh);
+
+  document.getElementById("rateSeg").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-rate]");
+    if (!btn) return;
+    state.rate = Number(btn.dataset.rate);
+    customRateEl.value = "";
+    document.querySelectorAll("#rateSeg button").forEach(b => b.classList.toggle("on", b === btn));
+    refresh();
+  });
+
+  customRateEl.addEventListener("input", () => {
+    const p = Number(customRateEl.value);
+    if (!Number.isFinite(p) || p < 0.01 || p > 99.99) return;
+    state.rate = Math.round(p * 100) / 100;
+    document.querySelectorAll("#rateSeg button").forEach(b => b.classList.remove("on"));
+    refresh();
+  });
+
+  document.getElementById("modeSeg").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-mode]");
+    if (!btn) return;
+    state.mode = btn.dataset.mode;
+    document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b === btn));
+    refresh();
+  });
+
+  document.getElementById("listBtn").addEventListener("click", renderList);
+
+  document.getElementById("chips").addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    amountEl.value = chip.dataset.n;
+    refresh();
+    showToast(`¥${fmt(Number(chip.dataset.n))} をセットしました`);
+    document.getElementById("amount").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  // 初期表示
+  refresh();
+  renderList();
+</script>
