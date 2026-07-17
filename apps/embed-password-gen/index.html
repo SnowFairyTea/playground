@@ -96,15 +96,79 @@ input:focus, select:focus {
 }
 .toggle-reveal input { accent-color: var(--accent); }
 
+.results-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.results-head h2 { margin: 0; }
+
+.mini-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  transition: all 0.15s ease;
+}
+.mini-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
 .result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin-bottom: 12px;
   background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.result-item:hover { border-color: var(--accent); }
+.result-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
+.radio {
+  flex: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  margin-top: 3px;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+.result-item:hover .radio { border-color: var(--accent); }
+.result-item.selected .radio { border-color: var(--accent-hover); }
+.result-item.selected .radio::after {
+  content: "";
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  background: var(--accent-hover);
+}
+
+.result-body { flex: 1; min-width: 0; }
+
 .pw-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.selected-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  margin: 6px 0 12px;
+}
+.selected-label { font-size: 13px; font-weight: 600; color: var(--accent-hover); }
+.selected-pw {
+  flex: 1; min-width: 160px;
+  font-size: 15px; font-weight: 600; word-break: break-all;
+}
 
 .pw {
   font-family: var(--font-mono);
@@ -161,6 +225,7 @@ input:focus, select:focus {
       一見ランダムなパスワードの中に、<b>指定した任意の文字列</b>をそっと紛れ込ませます。
       覚えておきたい合言葉やマーカーを埋め込みつつ、残りは暗号論的乱数で埋めるので、見た目はただのランダム文字列。
       どこに何を仕込んだかは自分だけが知っている、という使い方ができます。
+      普通のジェネレーターのように候補が複数並びますが、<b>どれを選んでも同じ文字が仕込まれている</b>のがミソです。
     </p>
   </div>
 
@@ -205,7 +270,7 @@ input:focus, select:focus {
       </div>
 
       <div class="field">
-        <label>一度に生成する数</label>
+        <label>提示する候補の数</label>
         <input type="number" id="genCount" min="1" max="20" value="5">
       </div>
     </div>
@@ -216,11 +281,19 @@ input:focus, select:focus {
   </div>
 
   <div class="card">
-    <h2>生成結果</h2>
+    <div class="results-head">
+      <h2>候補から選ぶ</h2>
+      <button class="mini-btn" id="regenBtn" hidden>🔄 別の候補</button>
+    </div>
     <label class="toggle-reveal">
       <input type="checkbox" id="revealToggle"> 仕込んだ文字をハイライト表示
     </label>
-    <div id="results"><div class="empty">「パスワードを生成する」を押すと、ここに結果が並びます。</div></div>
+    <div id="results"><div class="empty">「パスワードを生成する」を押すと、候補がここに並びます。好きな1つを選んでコピーしてください。</div></div>
+    <div class="selected-bar" id="selectedBar" hidden>
+      <span class="selected-label">選択中：</span>
+      <span class="selected-pw mono" id="selectedPw"></span>
+      <button class="btn" id="copySelectedBtn">📋 選んだパスワードをコピー</button>
+    </div>
     <div class="disclaimer">
       ※ 仕込んだ文字列はあなたが知っている前提の「既知の情報」なので、パスワード全体の強度は主にフィラー部分の乱数量で決まります。強度が必要な場合は仕込み文字を短めに、全体の文字数を長めにしてください。生成はすべてブラウザ内で完結し（crypto.getRandomValues 使用）、どこにも送信されません。
     </div>
@@ -380,12 +453,35 @@ input:focus, select:focus {
     return { chars, embedIdx, bits: rng.bits(), poolSize: pool.length };
   }
 
+  let lastItems = [];
+  let selectedIndex = 0;
+
+  function selectCandidate(i) {
+    selectedIndex = i;
+    render(lastItems, $("revealToggle").checked);
+  }
+
+  function updateSelectedBar() {
+    const bar = $("selectedBar");
+    const it = lastItems[selectedIndex];
+    if (!it) { bar.hidden = true; return; }
+    bar.hidden = false;
+    $("selectedPw").textContent = it.chars.join("");
+  }
+
   function render(items, reveal) {
     const box = $("results");
     box.innerHTML = "";
-    for (const it of items) {
+    items.forEach((it, index) => {
       const item = document.createElement("div");
-      item.className = "result-item";
+      item.className = "result-item" + (index === selectedIndex ? " selected" : "");
+      item.addEventListener("click", () => selectCandidate(index));
+
+      const radio = document.createElement("div");
+      radio.className = "radio";
+
+      const body = document.createElement("div");
+      body.className = "result-body";
 
       const row = document.createElement("div");
       row.className = "pw-row";
@@ -403,13 +499,15 @@ input:focus, select:focus {
           pwEl.appendChild(document.createTextNode(ch));
         }
       });
-      pwEl.title = "クリックでコピー";
-      pwEl.addEventListener("click", () => copyToClipboard(plain));
 
       const btn = document.createElement("button");
       btn.className = "copy-btn";
       btn.textContent = "コピー";
-      btn.addEventListener("click", () => copyToClipboard(plain));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectCandidate(index);
+        copyToClipboard(plain);
+      });
       row.append(pwEl, btn);
 
       const meta = document.createElement("div");
@@ -418,12 +516,12 @@ input:focus, select:focus {
         `${it.chars.length}文字（うち仕込み ${it.embedIdx.size}文字）` +
         `｜フィラー文字種 ${it.poolSize}種｜配置＋乱数エントロピー 約${it.bits.toFixed(1)} bit`;
 
-      item.append(row, meta);
+      body.append(row, meta);
+      item.append(radio, body);
       box.appendChild(item);
-    }
+    });
+    updateSelectedBar();
   }
-
-  let lastItems = [];
 
   function generate() {
     const s = readSettings();
@@ -451,10 +549,17 @@ input:focus, select:focus {
       showToast("生成できませんでした。設定を見直してください。", false);
       return;
     }
+    selectedIndex = 0;
+    $("regenBtn").hidden = false;
     render(lastItems, $("revealToggle").checked);
   }
 
   $("generateBtn").addEventListener("click", generate);
+  $("regenBtn").addEventListener("click", generate);
+  $("copySelectedBtn").addEventListener("click", () => {
+    const it = lastItems[selectedIndex];
+    if (it) copyToClipboard(it.chars.join(""));
+  });
   $("revealToggle").addEventListener("change", () => {
     if (lastItems.length) render(lastItems, $("revealToggle").checked);
   });
