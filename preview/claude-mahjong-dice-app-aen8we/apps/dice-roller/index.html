@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/preview/claude-mahjong-dice-app-aen8we/assets/design-tokens.css">
+<link rel="stylesheet" href="/preview/claude-mahjong-dice-app-aen8we/assets/style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+
+
+
+  <title>サイコロ</title>
+  <link rel="stylesheet" href="/preview/claude-mahjong-dice-app-aen8we/assets/style_artifacts.css">
+</head>
+<body>
+
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 48px; }
+
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 0.95rem; margin: 0 0 14px;
+    color: var(--muted); font-weight: 600;
+    letter-spacing: .02em;
+  }
+
+  /* --- モード切替タブ --- */
+  .tabs {
+    display: flex; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 4px; margin-bottom: 18px;
+  }
+  .tab {
+    flex: 1; padding: 9px 12px; border: none;
+    border-radius: var(--radius-pill);
+    background: transparent; color: var(--muted);
+    font-family: inherit; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all .2s ease;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+
+  /* --- フリーモードの設定 --- */
+  .opts { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 18px; }
+  .opt-group { display: flex; align-items: center; gap: 8px; }
+  .opt-label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    padding: 5px 12px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-pill); background: var(--card);
+    color: var(--muted); font-family: inherit; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; transition: all .15s ease;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-hover); }
+
+  /* --- サイコロ --- */
+  .dice-area {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 16px; min-height: 92px; align-items: center;
+    padding: 12px 0 4px;
+  }
+  .die {
+    width: 84px; height: 84px;
+    background: linear-gradient(150deg, #ffffff, #eef1f4);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow), inset 0 -3px 6px rgba(0,0,0,.06);
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 13px; gap: 3px;
+  }
+  .die.rolling { animation: tumble .42s linear infinite; }
+  @keyframes tumble {
+    0%   { transform: translateY(0)     rotate(0deg)   scale(1); }
+    25%  { transform: translateY(-14px) rotate(-13deg) scale(1.06); }
+    50%  { transform: translateY(0)     rotate(0deg)   scale(1); }
+    75%  { transform: translateY(-8px)  rotate(13deg)  scale(1.04); }
+    100% { transform: translateY(0)     rotate(0deg)   scale(1); }
+  }
+  .die.settled { animation: pop .32s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes pop {
+    0% { transform: scale(.82); } 100% { transform: scale(1); }
+  }
+  .pip {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: #1f2937; align-self: center; justify-self: center;
+  }
+  .pip.red { background: #dc2626; transform: scale(1.9); }
+  /* 3x3 グリッド上のピップ位置 */
+  .p1 { grid-area: 1/1; } .p2 { grid-area: 1/3; }
+  .p3 { grid-area: 2/1; } .p4 { grid-area: 2/2; } .p5 { grid-area: 2/3; }
+  .p6 { grid-area: 3/1; } .p7 { grid-area: 3/3; }
+
+  .die.num {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- 合計 --- */
+  .total {
+    text-align: center; margin: 14px 0 18px;
+    font-size: 0.9rem; color: var(--muted);
+  }
+  .total b {
+    display: block; font-size: 2.4rem; color: var(--text);
+    line-height: 1.1; font-variant-numeric: tabular-nums;
+  }
+  .total .breakdown { font-size: 0.85rem; }
+
+  .btn {
+    display: block; width: 100%; padding: 15px;
+    border-radius: var(--radius-pill); border: none; cursor: pointer;
+    font-family: inherit; font-size: 1.05rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: var(--text); transition: all .2s ease;
+  }
+  .btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #fff; transform: translateY(-1px); box-shadow: var(--shadow);
+  }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .hint { text-align: center; font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+
+  /* --- 席の図 --- */
+  .seats {
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    gap: 8px; max-width: 330px; margin: 0 auto 18px;
+  }
+  .seat {
+    padding: 12px 6px; border-radius: var(--radius);
+    border: 1.5px solid var(--border); background: var(--surface);
+    text-align: center; font-size: 0.85rem; font-weight: 600;
+    color: var(--muted); transition: all .25s ease;
+  }
+  .seat small { display: block; font-size: 0.7rem; font-weight: 500; opacity: .75; }
+  .seat.hit {
+    background: var(--accent); border-color: var(--accent-hover);
+    color: #fff; box-shadow: var(--shadow); transform: scale(1.04);
+  }
+  .seat.hit small { opacity: .9; }
+  .seat.toimen { grid-area: 1/2; }
+  .seat.kamicha { grid-area: 2/1; }
+  .seat.center {
+    grid-area: 2/2; border: none; background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; color: var(--border);
+  }
+  .seat.shimocha { grid-area: 2/3; }
+  .seat.jibun { grid-area: 3/2; }
+
+  .verdict {
+    text-align: center; font-size: 1.05rem; font-weight: 700;
+    margin-bottom: 16px; line-height: 1.6;
+  }
+  .verdict .num { color: var(--accent-hover); }
+  .verdict .sub { display: block; font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+
+  /* --- 山の図 --- */
+  .wall-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .wall {
+    display: flex; flex-direction: row-reverse;
+    gap: 2px; width: max-content; margin: 0 auto 8px;
+  }
+  .stack {
+    width: 15px; height: 34px; border-radius: 3px;
+    background: var(--surface); border: 1px solid var(--border);
+    flex: none; position: relative;
+  }
+  .stack.counted { background: var(--accent-light); border-color: var(--accent); }
+  .stack.cut { box-shadow: -3px 0 0 0 #dc2626; }
+  .wall-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.72rem; color: var(--muted); margin-top: 2px;
+  }
+  .wall-note {
+    font-size: 0.85rem; color: var(--muted);
+    text-align: center; line-height: 1.7; margin-top: 12px;
+  }
+  .wall-note b { color: var(--text); }
+
+  /* --- 履歴 --- */
+  .history { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist {
+    padding: 5px 11px; border-radius: var(--radius-pill);
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 0.82rem; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .hist:first-child { background: var(--accent-light); border-color: var(--accent); color: var(--accent-hover); font-weight: 600; }
+  .empty { font-size: 0.85rem; color: var(--muted); }
+
+  @media (max-width: 480px) {
+    .die { width: 70px; height: 70px; padding: 11px; border-radius: 13px; }
+    .total b { font-size: 2rem; }
+  }
+</style>
+
+<div class="wrap">
+  <h1>🎲 サイコロ</h1>
+  <p class="subtitle">麻雀の親決め・割れ目判定つき。フリーモードでは多面ダイスも振れます。</p>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-mode="mahjong">麻雀モード</button>
+      <button class="tab" data-mode="free">フリーモード</button>
+    </div>
+
+    <div class="opts" id="freeOpts" hidden>
+      <div class="opt-group">
+        <span class="opt-label">個数</span>
+        <div class="chips" id="countChips"></div>
+      </div>
+      <div class="opt-group">
+        <span class="opt-label">面数</span>
+        <div class="chips" id="sidesChips"></div>
+      </div>
+    </div>
+
+    <div class="dice-area" id="diceArea"></div>
+    <div class="total" id="total"></div>
+    <button class="btn" id="rollBtn">振る</button>
+    <p class="hint">スペースキー / サイコロをタップでも振れます</p>
+  </div>
+
+  <div class="card" id="mahjongCard">
+    <h2>判定</h2>
+    <div class="verdict" id="verdict">サイコロを振ってください</div>
+    <div class="seats">
+      <div class="seat toimen"  data-seat="2">対面<small>3人目</small></div>
+      <div class="seat kamicha" data-seat="3">上家<small>左・4人目</small></div>
+      <div class="seat center">🀄</div>
+      <div class="seat shimocha" data-seat="1">下家<small>右・2人目</small></div>
+      <div class="seat jibun"   data-seat="0">自分<small>振った人</small></div>
+    </div>
+    <div class="wall-wrap">
+      <div class="wall" id="wall"></div>
+    </div>
+    <div class="wall-labels"><span>← 取り進む方向</span><span>山の右端 →</span></div>
+    <div class="wall-note" id="wallNote">出目が決まると、山を割る位置を表示します。</div>
+  </div>
+
+  <div class="card">
+    <h2>履歴（新しい順）</h2>
+    <div class="history" id="history"><span class="empty">まだ振っていません</span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const PIPS = {
+    1: ["p4"],
+    2: ["p1", "p7"],
+    3: ["p1", "p4", "p7"],
+    4: ["p1", "p2", "p6", "p7"],
+    5: ["p1", "p2", "p4", "p6", "p7"],
+    6: ["p1", "p2", "p3", "p5", "p6", "p7"],
+  };
+  const SEATS = [
+    { name: "自分",  note: "そのまま親／自分の山を割ります" },
+    { name: "下家",  note: "右隣の人です" },
+    { name: "対面",  note: "向かいの人です" },
+    { name: "上家",  note: "左隣の人です" },
+  ];
+  const WALL_STACKS = 17; // 4人麻雀は1人あたり17幢
+
+  const el = {
+    diceArea: document.getElementById("diceArea"),
+    total: document.getElementById("total"),
+    rollBtn: document.getElementById("rollBtn"),
+    freeOpts: document.getElementById("freeOpts"),
+    countChips: document.getElementById("countChips"),
+    sidesChips: document.getElementById("sidesChips"),
+    mahjongCard: document.getElementById("mahjongCard"),
+    verdict: document.getElementById("verdict"),
+    wall: document.getElementById("wall"),
+    wallNote: document.getElementById("wallNote"),
+    history: document.getElementById("history"),
+  };
+
+  let mode = "mahjong";
+  let count = 2;
+  let sides = 6;
+  let rolling = false;
+  let history = [];
+
+  /* ---------- 描画 ---------- */
+
+  function makeDie(value, faceCount) {
+    const die = document.createElement("div");
+    die.className = "die";
+    if (faceCount === 6 && value >= 1 && value <= 6) {
+      PIPS[value].forEach((pos) => {
+        const pip = document.createElement("div");
+        pip.className = "pip " + pos + (value === 1 ? " red" : "");
+        die.appendChild(pip);
+      });
+    } else {
+      die.classList.add("num");
+      die.textContent = value;
+    }
+    return die;
+  }
+
+  function renderDice(values, faceCount, state) {
+    el.diceArea.replaceChildren();
+    values.forEach((v) => {
+      const die = makeDie(v, faceCount);
+      if (state) die.classList.add(state);
+      el.diceArea.appendChild(die);
+    });
+  }
+
+  function renderTotal(values) {
+    if (!values.length) { el.total.replaceChildren(); return; }
+    const sum = values.reduce((a, b) => a + b, 0);
+    el.total.replaceChildren();
+    const b = document.createElement("b");
+    b.textContent = sum;
+    el.total.appendChild(b);
+    if (values.length > 1) {
+      const span = document.createElement("span");
+      span.className = "breakdown";
+      span.textContent = values.join(" + ") + " = " + sum;
+      el.total.appendChild(span);
+    }
+  }
+
+  function renderSeats(seatIndex) {
+    document.querySelectorAll(".seat[data-seat]").forEach((s) => {
+      s.classList.toggle("hit", Number(s.dataset.seat) === seatIndex);
+    });
+  }
+
+  function renderWall(sum) {
+    el.wall.replaceChildren();
+    for (let i = 1; i <= WALL_STACKS; i++) {
+      const stack = document.createElement("div");
+      stack.className = "stack";
+      if (sum) {
+        if (i <= sum) stack.classList.add("counted");
+        if (i === sum) stack.classList.add("cut");
+      }
+      el.wall.appendChild(stack);
+    }
+  }
+
+  function renderMahjong(values) {
+    const sum = values.reduce((a, b) => a + b, 0);
+    const seatIndex = (sum - 1) % 4;
+    const seat = SEATS[seatIndex];
+
+    el.verdict.replaceChildren();
+    const head = document.createElement("span");
+    head.append("出目 ");
+    const num = document.createElement("span");
+    num.className = "num";
+    num.textContent = sum;
+    head.append(num, " → " + seat.name + " の山");
+    const sub = document.createElement("span");
+    sub.className = "sub";
+    sub.textContent = "自分から反時計回りに " + sum + " 人目（" + seat.note + "）";
+    el.verdict.append(head, sub);
+
+    renderSeats(seatIndex);
+    renderWall(sum);
+
+    el.wallNote.replaceChildren();
+    const b1 = document.createElement("b");
+    b1.textContent = seat.name;
+    const b2 = document.createElement("b");
+    b2.textContent = sum + " 幢目";
+    el.wallNote.append(b1, " の山の右端から ", b2, " の左で割ります。");
+    el.wallNote.append(document.createElement("br"));
+    el.wallNote.append("赤い線の左隣（緑でない側）から配牌を取り始め、右側が王牌になります。");
+  }
+
+  function renderHistory() {
+    el.history.replaceChildren();
+    if (!history.length) {
+      const s = document.createElement("span");
+      s.className = "empty";
+      s.textContent = "まだ振っていません";
+      el.history.appendChild(s);
+      return;
+    }
+    history.forEach((h) => {
+      const chip = document.createElement("span");
+      chip.className = "hist";
+      chip.textContent = h;
+      el.history.appendChild(chip);
+    });
+  }
+
+  /* ---------- 振る ---------- */
+
+  function randomInt(max) {
+    const buf = new Uint32Array(1);
+    const limit = Math.floor(0xffffffff / max) * max; // 剰余バイアスを除去
+    let v;
+    do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= limit);
+    return (v % max) + 1;
+  }
+
+  function currentSetting() {
+    return mode === "mahjong" ? { n: 2, faces: 6 } : { n: count, faces: sides };
+  }
+
+  function roll() {
+    if (rolling) return;
+    rolling = true;
+    el.rollBtn.disabled = true;
+    el.rollBtn.textContent = "振っています…";
+
+    const { n, faces } = currentSetting();
+    const shuffle = setInterval(() => {
+      renderDice(Array.from({ length: n }, () => randomInt(faces)), faces, "rolling");
+    }, 70);
+
+    setTimeout(() => {
+      clearInterval(shuffle);
+      const values = Array.from({ length: n }, () => randomInt(faces));
+      renderDice(values, faces, "settled");
+      renderTotal(values);
+
+      const sum = values.reduce((a, b) => a + b, 0);
+      if (mode === "mahjong") {
+        renderMahjong(values);
+        history.unshift(values.join("・") + " = " + sum + "（" + SEATS[(sum - 1) % 4].name + "）");
+      } else {
+        history.unshift(n + "d" + faces + ": " + values.join("・") + " = " + sum);
+      }
+      history = history.slice(0, 12);
+      renderHistory();
+
+      rolling = false;
+      el.rollBtn.disabled = false;
+      el.rollBtn.textContent = "振る";
+    }, 850);
+  }
+
+  /* ---------- 初期化 ---------- */
+
+  function buildChips(container, options, getValue, setValue) {
+    container.replaceChildren();
+    options.forEach((opt) => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = opt.label;
+      chip.addEventListener("click", () => {
+        setValue(opt.value);
+        Array.from(container.children).forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        resetDisplay();
+      });
+      if (opt.value === getValue()) chip.classList.add("active");
+      container.appendChild(chip);
+    });
+  }
+
+  function resetDisplay() {
+    const { n, faces } = currentSetting();
+    renderDice(Array.from({ length: n }, () => 1), faces, null);
+    el.total.replaceChildren();
+  }
+
+  function setMode(next) {
+    mode = next;
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.mode === next));
+    el.freeOpts.hidden = next !== "free";
+    el.mahjongCard.hidden = next !== "mahjong";
+    resetDisplay();
+    if (next === "mahjong") {
+      el.verdict.textContent = "サイコロを振ってください";
+      renderSeats(-1);
+      renderWall(0);
+      el.wallNote.textContent = "出目が決まると、山を割る位置を表示します。";
+    }
+  }
+
+  buildChips(
+    el.countChips,
+    [1, 2, 3, 4, 5, 6].map((v) => ({ label: String(v), value: v })),
+    () => count,
+    (v) => { count = v; }
+  );
+  buildChips(
+    el.sidesChips,
+    [4, 6, 8, 10, 12, 20, 100].map((v) => ({ label: "D" + v, value: v })),
+    () => sides,
+    (v) => { sides = v; }
+  );
+
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => setMode(t.dataset.mode));
+  });
+  el.rollBtn.addEventListener("click", roll);
+  el.diceArea.addEventListener("click", roll);
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && e.target.tagName !== "BUTTON") { e.preventDefault(); roll(); }
+  });
+
+  setMode("mahjong");
+  renderHistory();
+})();
+</script>
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+        <a href="/preview/claude-mahjong-dice-app-aen8we/" class="footer-text-logo">
+            
+            <span class="logo-line logo-large">SnowFairyTea</span>
+            
+            <span class="logo-line logo-small">Playground</span>
+            
+        </a>
+    </div>
+
+
+
+    <div class="footer-right">
+      
+        <a href="https://github.com/SnowFairyTea" target="_blank" rel="noopener">GitHub</a>
+      
+      
+        <a href="https://x.com/SnowFairyTea" target="_blank" rel="noopener">X</a>
+      
+      
+      <a href="/preview/claude-mahjong-dice-app-aen8we/about/">About</a>
+    </div>
+  </div>
+</footer>
+
+
+</body>
+</html>
