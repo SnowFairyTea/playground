@@ -1,0 +1,1076 @@
+---
+layout: artifacts
+title: "画像埋め込みQRスタジオ"
+permalink: /apps/image-qr-studio/
+---
+
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px;
+  }
+  h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: .95rem; margin: 0 0 4px; line-height: 1.7; }
+  h2 { font-size: 1.05rem; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  h2 .step {
+    background: var(--accent); color: #fff; width: 22px; height: 22px;
+    border-radius: var(--radius-pill); font-size: .8rem;
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+  }
+  h3 { font-size: .9rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600; }
+  h3:first-child { margin-top: 0; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 880px) { .cols { grid-template-columns: 1fr; } }
+
+  label.field { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+  .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin: 6px 0 0; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; padding: 9px 11px; font-family: inherit; font-size: .9rem;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card); color: var(--text);
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { flex: 1 1 120px; min-width: 0; }
+  .mb { margin-bottom: 14px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border); background: var(--card);
+    font-size: .82rem; cursor: pointer; user-select: none; transition: all .15s;
+  }
+  .chip:hover { border-color: var(--accent); background: var(--accent-light); }
+  .chip input { accent-color: var(--accent); margin: 0; }
+  .chip.on { border-color: var(--accent); background: var(--accent-light); }
+
+  .btn {
+    padding: 10px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+    font-family: inherit; font-weight: 600; font-size: .9rem; color: var(--text);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    transition: all .2s ease;
+  }
+  .btn:hover { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); transform: translateY(-1px); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn.sub {
+    background: var(--surface); border: 1.5px solid var(--border);
+    font-weight: 500; padding: 7px 14px; font-size: .8rem;
+  }
+  .btn.sub:hover { background: var(--accent-light); border-color: var(--accent); transform: none; }
+  .btn.big { width: 100%; padding: 14px; font-size: 1rem; }
+
+  /* 画像ドロップ */
+  .drop {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 18px; text-align: center; cursor: pointer; transition: all .2s;
+    background: var(--surface);
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-light); }
+  .drop p { margin: 6px 0 0; font-size: .82rem; color: var(--muted); }
+  .preview-pair { display: flex; gap: 14px; align-items: center; margin-top: 14px; }
+  .preview-pair figure { margin: 0; text-align: center; }
+  .preview-pair figcaption { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+  .preview-pair canvas, .preview-pair img {
+    width: 132px; height: 132px; object-fit: cover; display: block;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: #fff;
+    image-rendering: pixelated;
+  }
+
+  /* テンプレート表示 */
+  .code {
+    font-family: var(--font-mono); font-size: .82rem; background: var(--surface);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; word-break: break-all; line-height: 1.6;
+  }
+  .code .slot { background: var(--accent-light); border-radius: 4px; padding: 0 4px; font-weight: 700; }
+
+  /* 進捗 */
+  .bar { height: 8px; background: var(--surface); border-radius: var(--radius-pill); overflow: hidden; border: 1px solid var(--border); }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+  .progress-line { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+  /* 候補グリッド */
+  .cand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .cand {
+    border: 2px solid var(--border); border-radius: var(--radius); padding: 8px;
+    cursor: pointer; background: var(--card); transition: all .15s; text-align: center;
+  }
+  .cand:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .cand.sel { border-color: var(--accent); background: var(--accent-light); }
+  .cand canvas { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); background: #fff; }
+  .cand .meta { font-size: .72rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .cand .sc { font-weight: 700; color: var(--text); font-size: .85rem; }
+  .badge {
+    display: inline-block; font-size: .68rem; padding: 1px 7px; border-radius: var(--radius-pill);
+    font-weight: 600; margin-top: 4px;
+  }
+  .badge.ok { background: var(--accent-light); color: #166534; }
+  .badge.ng { background: #fee2e2; color: #991b1b; }
+  .badge.wait { background: var(--surface); color: var(--muted); }
+
+  /* 詳細 */
+  .detail { display: grid; grid-template-columns: minmax(0, 400px) 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 700px) { .detail { grid-template-columns: 1fr; } }
+  #outCanvas { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); background: #fff; border: 1.5px solid var(--border); }
+  .slider-row { margin-bottom: 12px; }
+  .slider-row label { display: flex; justify-content: space-between; align-items: baseline; font-size: .82rem; margin-bottom: 3px; }
+  .detail .slider-row { max-width: 420px; }
+  .slider-row label span { color: var(--muted); font-family: var(--font-mono); white-space: nowrap; padding-left: 8px; }
+  .result-url {
+    font-family: var(--font-mono); font-size: .8rem; background: var(--surface);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; word-break: break-all; margin-bottom: 10px;
+  }
+  .verify {
+    border-radius: var(--radius-sm); padding: 10px 12px; font-size: .82rem;
+    line-height: 1.6; margin-bottom: 12px; border: 1.5px solid var(--border); background: var(--surface);
+  }
+  .verify.ok { background: var(--accent-light); border-color: var(--accent); }
+  .verify.ng { background: #fef2f2; border-color: #fca5a5; }
+  .note {
+    background: #fefce8; border: 1.5px solid #fde68a; border-radius: var(--radius-sm);
+    padding: 12px 14px; font-size: .82rem; color: #854d0e; line-height: 1.7;
+  }
+  .note code, .hint code { font-family: var(--font-mono); background: rgba(0,0,0,.05); padding: 1px 4px; border-radius: 3px; }
+  details.help summary { cursor: pointer; font-size: .85rem; color: var(--link); font-weight: 600; }
+  details.help[open] summary { margin-bottom: 10px; }
+  .muted-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: 26px 0; }
+
+  .toast {
+    position: fixed; top: 14px; right: 14px; z-index: 9999;
+    background: var(--accent-hover); color: #fff;
+    padding: 10px 14px; border-radius: var(--radius);
+    box-shadow: var(--shadow); display: none; font-size: 14px;
+  }
+</style>
+
+<div id="toast" class="toast"></div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h1>画像埋め込みQRスタジオ</h1>
+    <p class="subtitle">
+      写真・イラスト・モチーフを QRコードの見た目に溶け込ませます。<br>
+      「絶対に必要な文字列（リンク先URL）」と「自由に変えていい部分の制約」を指定すると、
+      その制約の中で <b>元画像に一番近い模様になる文字列</b> を総当たりで探し、候補を並べます。
+      すべてブラウザ内で完結し、画像はどこにも送信されません。
+    </p>
+  </div>
+
+  <div class="cols">
+    <!-- ============ 左カラム：入力 ============ -->
+    <div>
+      <div class="card">
+        <h2><span class="step">1</span>元画像・モチーフ</h2>
+
+        <div class="drop" id="drop">
+          <b style="font-size:.9rem">画像をドロップ / クリックして選択</b>
+          <p>PNG・JPEG・SVG など。輪郭がはっきりした画像ほどキレイに出ます</p>
+          <input type="file" id="file" accept="image/*" hidden>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <div style="flex:2 1 160px">
+            <label class="field" for="motifText">文字・絵文字から作る</label>
+            <input type="text" id="motifText" placeholder="例: ★ / 🐧 / 雪" maxlength="8">
+          </div>
+          <div style="flex:0 0 auto">
+            <button class="btn sub" id="motifBtn">モチーフ化</button>
+          </div>
+        </div>
+
+        <div class="preview-pair">
+          <figure>
+            <canvas id="srcPreview" width="132" height="132"></canvas>
+            <figcaption>元画像</figcaption>
+          </figure>
+          <figure>
+            <canvas id="targetPreview" width="132" height="132"></canvas>
+            <figcaption>目標パターン（白黒化）</figcaption>
+          </figure>
+        </div>
+
+        <h3>白黒化の調整</h3>
+        <div class="slider-row">
+          <label for="thr">しきい値 <span id="thrV">0.50</span></label>
+          <input type="range" id="thr" min="0.1" max="0.9" step="0.01" value="0.5">
+        </div>
+        <div class="slider-row">
+          <label for="contrast">コントラスト <span id="contrastV">1.4</span></label>
+          <input type="range" id="contrast" min="0.5" max="4" step="0.1" value="1.4">
+        </div>
+        <div class="slider-row">
+          <label for="imgScale">画像の大きさ <span id="imgScaleV">0.92</span></label>
+          <input type="range" id="imgScale" min="0.5" max="1" step="0.01" value="0.92">
+        </div>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="invert">白黒を反転</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">2</span>リンク先と自由部分の制約</h2>
+
+        <label class="field" for="destUrl">リンク先URL（絶対に必要な文字列）</label>
+        <input type="text" id="destUrl" value="https://snowfairytea.dev/" placeholder="https://example.com/page">
+
+        <h3>自由部分の入れ方</h3>
+        <div class="chips mb">
+          <label class="chip on"><input type="radio" name="mode" value="query" checked>末尾にクエリを足す（推奨）</label>
+          <label class="chip"><input type="radio" name="mode" value="template">テンプレートを自分で書く</label>
+        </div>
+
+        <div id="queryOpts">
+          <label class="field" for="paramName">パラメータ名</label>
+          <input type="text" id="paramName" value="qr" maxlength="12">
+          <p class="hint">
+            ほとんどのサイトは知らないクエリパラメータを無視するので、
+            <code>?qr=xxxx</code> を足しても同じページが開きます。
+            サーバーを持たなくても「任意のページに飛ぶ・見た目は自由」を両立できます。
+          </p>
+        </div>
+
+        <div id="templateOpts" style="display:none">
+          <label class="field" for="template">URLテンプレート（<code>{}</code> が自由部分）</label>
+          <input type="text" id="template" value="https://snowfairytea.dev/r/{}">
+          <p class="hint">リダイレクタを自分で持っている場合はこちら。<code>{}</code> の位置が探索対象になります。</p>
+        </div>
+
+        <div class="code mb" style="margin-top:12px" id="templatePreview"></div>
+
+        <h3>自由部分に使える文字</h3>
+        <div class="chips mb" id="charsetChips">
+          <label class="chip on"><input type="checkbox" data-set="lower" checked>英小文字 a-z</label>
+          <label class="chip"><input type="checkbox" data-set="upper">英大文字 A-Z</label>
+          <label class="chip on"><input type="checkbox" data-set="digit" checked>数字 0-9</label>
+          <label class="chip"><input type="checkbox" data-set="mark">記号 - . _ ~</label>
+        </div>
+        <label class="field" for="customChars">追加で使う文字（任意）</label>
+        <input type="text" id="customChars" placeholder="例: +!*">
+        <p class="hint">URLとして安全な文字だけを推奨。大文字＋数字だけにすると英数字モードになり、同じ長さでも余裕が生まれます。</p>
+
+        <div class="row" style="margin-top:14px">
+          <div>
+            <label class="field" for="minLen">最短の長さ</label>
+            <input type="number" id="minLen" value="6" min="1" max="30">
+          </div>
+          <div>
+            <label class="field" for="maxLen">最長の長さ</label>
+            <input type="number" id="maxLen" value="10" min="1" max="30">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">3</span>探索の設定</h2>
+
+        <h3>誤り訂正レベル（複数選択可）</h3>
+        <div class="chips mb" id="eccChips">
+          <label class="chip"><input type="checkbox" data-ecc="L">L (7%)</label>
+          <label class="chip"><input type="checkbox" data-ecc="M">M (15%)</label>
+          <label class="chip"><input type="checkbox" data-ecc="Q">Q (25%)</label>
+          <label class="chip on"><input type="checkbox" data-ecc="H" checked>H (30%)</label>
+        </div>
+        <p class="hint">画像を重ねるなら H が有利です。L に近いほどモジュール数が減って絵は粗くなります。</p>
+
+        <div class="row" style="margin-top:14px">
+          <div>
+            <label class="field" for="verBoost">QRの細かさ</label>
+            <select id="verBoost">
+              <option value="0">自動（最小）</option>
+              <option value="1">自動 +1</option>
+              <option value="2" selected>自動 +2</option>
+              <option value="3">自動 +3</option>
+              <option value="4">自動 +4</option>
+              <option value="6">自動 +6</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="tries">試行回数</label>
+            <select id="tries">
+              <option value="500">500</option>
+              <option value="2000" selected>2,000</option>
+              <option value="5000">5,000</option>
+              <option value="12000">12,000</option>
+              <option value="30000">30,000</option>
+            </select>
+          </div>
+        </div>
+        <div class="chips" style="margin-top:12px">
+          <label class="chip on"><input type="checkbox" id="allMasks" checked>マスク8種すべて試す</label>
+        </div>
+        <p class="hint">細かくするほど絵の解像度は上がりますが、印刷サイズが小さいと読み取りづらくなります。</p>
+
+        <button class="btn big" id="runBtn" style="margin-top:16px">候補を探す</button>
+        <button class="btn sub" id="stopBtn" style="width:100%;margin-top:8px;display:none">中断</button>
+
+        <div id="progressWrap" style="display:none;margin-top:14px">
+          <div class="bar"><i id="barFill"></i></div>
+          <div class="progress-line">
+            <span id="progText">準備中…</span>
+            <span id="progScore"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 右カラム：結果 ============ -->
+    <div>
+      <div class="card">
+        <h2><span class="step">4</span>候補</h2>
+        <div id="candGrid" class="cand-grid"></div>
+        <div id="candEmpty" class="muted-empty">まだ探索していません。左の「候補を探す」を押してください。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="detailCard" style="display:none">
+    <h2><span class="step">5</span>仕上げと書き出し</h2>
+    <div class="detail">
+      <div>
+        <canvas id="outCanvas"></canvas>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn sub" id="dlBtn" style="flex:1">PNG保存</button>
+          <button class="btn sub" id="copyBtn" style="flex:1">URLをコピー</button>
+        </div>
+      </div>
+      <div>
+        <div class="result-url" id="resultUrl"></div>
+        <div class="verify" id="verifyBox">検証中…</div>
+
+        <h3>見た目の調整</h3>
+        <div class="slider-row">
+          <label for="dotScale">ドットの大きさ <span id="dotScaleV">0.60</span></label>
+          <input type="range" id="dotScale" min="0.2" max="1" step="0.02" value="0.6">
+        </div>
+        <div class="slider-row">
+          <label for="agreeAlpha">合っている所を薄く <span id="agreeAlphaV">0.60</span></label>
+          <input type="range" id="agreeAlpha" min="0" max="1" step="0.05" value="0.6">
+        </div>
+        <div class="slider-row">
+          <label for="wash">画像の明暗補正 <span id="washV">0.55</span></label>
+          <input type="range" id="wash" min="0" max="1" step="0.05" value="0.55">
+        </div>
+        <div class="slider-row">
+          <label for="imgAlpha">画像の濃さ <span id="imgAlphaV">1.00</span></label>
+          <input type="range" id="imgAlpha" min="0" max="1" step="0.05" value="1">
+        </div>
+        <div class="slider-row">
+          <label for="logo">中央のロゴ穴 <span id="logoV">0.00</span></label>
+          <input type="range" id="logo" min="0" max="0.3" step="0.01" value="0">
+        </div>
+        <div class="slider-row">
+          <label for="cell">出力サイズ <span id="cellV">12 px/モジュール</span></label>
+          <input type="range" id="cell" min="6" max="24" step="1" value="12">
+        </div>
+        <div class="chips">
+          <label class="chip on"><input type="checkbox" id="roundFinder" checked>ファインダーを丸く</label>
+          <label class="chip on"><input type="checkbox" id="roundDot" checked>ドットを丸く</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <details class="help">
+      <summary>仕組みと注意点</summary>
+      <p class="hint" style="font-size:.84rem">
+        QRコードは、同じリンク先でも <b>末尾に付けるゴミ文字列</b>・<b>誤り訂正レベル</b>・<b>マスクパターン</b> を変えると
+        模様がまったく変わります。このツールはその組み合わせを大量に試し、
+        元画像を白黒化した「目標パターン」との一致率が高いものを選びます。<br><br>
+        さらに描画側では、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して写真を透けさせ、
+        食い違うモジュールだけをはっきり描くことで、読み取りやすさと見た目を両立しています。
+        誤り訂正の余力（H なら約30%）があるので、中央のロゴ穴もある程度なら耐えます。<br><br>
+        なお、ランダムな文字列の一致率は平均50%前後です。探索で積み増せるのは数ポイント程度なので、
+        <b>見た目を大きく左右するのは「仕上げ」側の設定</b>（ドットの大きさ・合っている所を薄く・明暗補正）です。
+        候補は「一致率」よりも<b>実際の見た目とマスクの雰囲気</b>で選ぶのがおすすめです。
+      </p>
+      <div class="note" style="margin-top:10px">
+        画面下の判定は jsQR による自動デコード結果です。OK でも、印刷サイズ・紙質・カメラによっては読めないことがあります。
+        <b>配布前に必ず実機で読み取りテストをしてください。</b>
+        余白（クワイエットゾーン）は削らないこと、暗い部分と明るい部分のコントラストを保つことが重要です。
+      </div>
+    </details>
+  </div>
+</div>
+
+<script src="/assets/qrcode.min.js"></script>
+<script src="/assets/jsqr.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+  /* ============ 共通UI ============ */
+  function showToast(msg, ok = true) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.style.background = ok ? "#16a34a" : "#dc2626";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = "none"; }, 2200);
+  }
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
+    showToast("URLをコピーしました！");
+  }
+  // チップの見た目をチェック状態に追従させる
+  document.querySelectorAll(".chip").forEach((chip) => {
+    const input = chip.querySelector("input");
+    if (!input) return;
+    const sync = () => {
+      if (input.type === "radio") {
+        document.querySelectorAll('input[name="' + input.name + '"]').forEach((o) =>
+          o.closest(".chip").classList.toggle("on", o.checked));
+      } else {
+        chip.classList.toggle("on", input.checked);
+      }
+    };
+    input.addEventListener("change", sync);
+    sync();
+  });
+
+  /* ============ 定数 ============ */
+  const ALIGN = [
+    [], [6,18], [6,22], [6,26], [6,30], [6,34], [6,22,38], [6,24,42], [6,26,46],
+    [6,28,50], [6,30,54], [6,32,58], [6,34,62], [6,26,46,66], [6,26,48,70],
+    [6,26,50,74], [6,30,54,78], [6,30,56,82], [6,30,58,86], [6,34,62,90],
+    [6,28,50,72,94], [6,26,50,74,98], [6,30,54,78,102], [6,28,54,80,106],
+    [6,32,58,84,110], [6,30,58,86,114], [6,34,62,90,118], [6,26,50,74,98,122],
+    [6,30,54,78,102,126], [6,26,52,78,104,130], [6,30,56,82,108,134],
+    [6,34,60,86,112,138], [6,30,58,86,114,142], [6,34,62,90,118,146],
+    [6,30,54,78,102,126,150], [6,24,50,76,102,128,154], [6,28,54,80,106,132,158],
+    [6,32,58,84,110,136,162], [6,26,54,82,110,138,166], [6,30,58,86,114,142,170]
+  ];
+  const CHARSETS = {
+    lower: "abcdefghijklmnopqrstuvwxyz",
+    upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    digit: "0123456789",
+    mark: "-._~"
+  };
+  const QUIET = 4;      // クワイエットゾーン（モジュール数）
+  const TOP_K = 8;      // 一致率の上位として保持する数
+  const MAX_CARDS = 16; // 表示する候補の上限
+
+  /* ============ 状態 ============ */
+  const state = {
+    img: null,          // HTMLImageElement / HTMLCanvasElement
+    size: 0, version: 0,
+    target: null,       // {bit, weight, lum}
+    fmask: null,
+    cands: [], sel: -1,
+    running: false, abort: false
+  };
+
+  /* ============ 元画像 ============ */
+  function drawSource(ctx, w, h) {
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    const img = state.img;
+    if (img) {
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if (iw && ih) {
+        const s = Math.max(w / iw, h / ih) * (+$("imgScale").value);
+        const dw = iw * s, dh = ih * s;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      }
+    }
+    ctx.restore();
+  }
+
+  function makeMotif(text) {
+    const S = 512;
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const x = c.getContext("2d");
+    x.fillStyle = "#fff"; x.fillRect(0, 0, S, S);
+    x.fillStyle = "#000";
+    x.textAlign = "center"; x.textBaseline = "middle";
+    let fs = 420;
+    for (; fs > 20; fs -= 8) {
+      x.font = fs + 'px "Noto Sans JP", system-ui, sans-serif';
+      const m = x.measureText(text);
+      if (m.width <= S * 0.86) break;
+    }
+    x.fillText(text, S / 2, S / 2 + fs * 0.04);
+    return c;
+  }
+
+  function setImage(img) {
+    state.img = img;
+    refreshPreviews();
+  }
+
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type)) { showToast("画像ファイルを選んでください", false); return; }
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { setImage(im); showToast("画像を読み込みました！"); };
+    im.onerror = () => showToast("画像を読み込めませんでした", false);
+    im.src = url;
+  }
+
+  $("drop").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", (e) => loadFile(e.target.files[0]));
+  ["dragenter", "dragover"].forEach((ev) =>
+    $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) =>
+    $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.remove("over"); }));
+  $("drop").addEventListener("drop", (e) => loadFile(e.dataTransfer.files[0]));
+  $("motifBtn").addEventListener("click", () => {
+    const t = $("motifText").value.trim();
+    if (!t) { showToast("文字や絵文字を入力してください", false); return; }
+    setImage(makeMotif(t));
+    showToast("モチーフを作りました！");
+  });
+  $("motifText").addEventListener("keydown", (e) => { if (e.key === "Enter") $("motifBtn").click(); });
+
+  /* ============ 目標パターン ============ */
+  function computeTarget(size) {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    drawSource(ctx, size, size);
+    const d = ctx.getImageData(0, 0, size, size).data;
+    const n = size * size;
+    const lum = new Float32Array(n), bit = new Uint8Array(n), weight = new Float32Array(n);
+    const thr = +$("thr").value, con = +$("contrast").value, inv = $("invert").checked;
+    for (let i = 0; i < n; i++) {
+      let L = (0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]) / 255;
+      L = clamp((L - 0.5) * con + 0.5, 0, 1);
+      if (inv) L = 1 - L;
+      lum[i] = L;
+      bit[i] = L < thr ? 1 : 0;               // 1 = 黒モジュールにしたい
+      weight[i] = 0.15 + Math.min(1, Math.abs(L - thr) * 3);
+    }
+    return { size, lum, bit, weight };
+  }
+
+  function buildFunctionMask(size, version) {
+    const m = new Uint8Array(size * size);
+    const set = (x, y) => { if (x >= 0 && y >= 0 && x < size && y < size) m[y * size + x] = 1; };
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      set(x, y); set(size - 1 - x, y); set(x, size - 1 - y);      // ファインダ＋分離パターン
+    }
+    for (let i = 0; i < size; i++) { set(i, 6); set(6, i); }       // タイミングパターン
+    const pos = ALIGN[version - 1] || [];
+    for (const py of pos) for (const px of pos) {
+      if ((px <= 8 && py <= 8) || (px <= 8 && py >= size - 9) || (px >= size - 9 && py <= 8)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(px + dx, py + dy);
+    }
+    for (let i = 0; i < 9; i++) { set(8, i); set(i, 8); }           // 形式情報
+    for (let i = 0; i < 8; i++) { set(size - 1 - i, 8); set(8, size - 1 - i); }
+    set(8, size - 8);                                              // 常に黒のモジュール
+    if (version >= 7) {
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) {
+        set(i, size - 11 + j); set(size - 11 + j, i);              // 型番情報
+      }
+    }
+    return m;
+  }
+
+  function drawTargetPreview() {
+    const cv = $("targetPreview"), ctx = cv.getContext("2d");
+    const W = cv.width;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
+    const size = state.size || 33;
+    const t = computeTarget(size);
+    const fm = state.fmask && state.size === size ? state.fmask : null;
+    const cell = W / size;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const i = y * size + x;
+      if (fm && fm[i]) ctx.fillStyle = t.bit[i] ? "#9ca3af" : "#f3f4f6";
+      else ctx.fillStyle = t.bit[i] ? "#111827" : "#ffffff";
+      ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+    }
+    return t;
+  }
+
+  function refreshPreviews() {
+    const p = $("srcPreview"), ctx = p.getContext("2d");
+    drawSource(ctx, p.width, p.height);
+    drawTargetPreview();
+    updateTemplatePreview();
+  }
+
+  ["thr", "contrast", "imgScale"].forEach((id) =>
+    $(id).addEventListener("input", () => {
+      $(id + "V").textContent = (+$(id).value).toFixed(2);
+      refreshPreviews();
+    }));
+  $("invert").addEventListener("change", refreshPreviews);
+
+  /* ============ URLテンプレート ============ */
+  function currentCharset() {
+    let s = "";
+    document.querySelectorAll("#charsetChips input").forEach((i) => {
+      if (i.checked) s += CHARSETS[i.dataset.set];
+    });
+    s += ($("customChars").value || "").replace(/\s/g, "");
+    return Array.from(new Set(Array.from(s))).join("");
+  }
+  function currentTemplate() {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    if (mode === "template") return $("template").value.trim();
+    const url = $("destUrl").value.trim();
+    const p = ($("paramName").value.trim() || "qr").replace(/[^\w.\-~]/g, "");
+    if (!url) return "";
+    const sep = url.includes("?") ? "&" : "?";
+    return url + sep + p + "={}";
+  }
+  function fillTemplate(tpl, free) { return tpl.split("{}").join(free); }
+  function sampleFree() {
+    const cs = currentCharset() || "abcdefghijklmnopqrstuvwxyz0123456789";
+    const len = clamp(+$("maxLen").value || 8, 1, 30);
+    let s = ""; for (let i = 0; i < len; i++) s += cs[i % cs.length];
+    return s;
+  }
+  function updateTemplatePreview() {
+    const tpl = currentTemplate();
+    const box = $("templatePreview");
+    if (!tpl) { box.textContent = "リンク先URLを入力してください"; return; }
+    if (!tpl.includes("{}")) {
+      box.innerHTML = "⚠ テンプレートに <b>{}</b> が含まれていません（自由部分なし＝候補は1通りだけ）";
+      return;
+    }
+    const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    box.innerHTML = esc(tpl).split("{}").join('<span class="slot">' + esc(sampleFree()) + "</span>");
+  }
+  ["destUrl", "paramName", "template", "customChars", "maxLen", "minLen"].forEach((id) =>
+    $(id).addEventListener("input", updateTemplatePreview));
+  document.querySelectorAll("#charsetChips input").forEach((i) =>
+    i.addEventListener("change", updateTemplatePreview));
+  document.querySelectorAll('input[name="mode"]').forEach((r) =>
+    r.addEventListener("change", () => {
+      const q = document.querySelector('input[name="mode"]:checked').value === "query";
+      $("queryOpts").style.display = q ? "" : "none";
+      $("templateOpts").style.display = q ? "none" : "";
+      updateTemplatePreview();
+    }));
+
+  /* ============ 探索 ============ */
+  function selectedEcc() {
+    const list = [];
+    document.querySelectorAll("#eccChips input").forEach((i) => { if (i.checked) list.push(i.dataset.ecc); });
+    return list.length ? list : ["H"];
+  }
+  function detectVersion(tpl, eccList) {
+    let v = 1;
+    const text = fillTemplate(tpl, sampleFree());
+    for (const ecc of eccList) {
+      try { v = Math.max(v, QRCode.create(text, { errorCorrectionLevel: ecc }).version); }
+      catch (e) { return -1; }
+    }
+    return Math.min(40, v + (+$("verBoost").value));
+  }
+  function scoreMatrix(data) {
+    const { bit, weight } = state.target, fm = state.fmask, n = data.length;
+    let s = 0, w = 0;
+    for (let i = 0; i < n; i++) {
+      if (fm[i]) continue;
+      const wt = weight[i]; w += wt;
+      if ((data[i] ? 1 : 0) === bit[i]) s += wt;
+    }
+    return w > 0 ? s / w : 0;
+  }
+  function pushTop(list, cand) {
+    let i = list.length;
+    while (i > 0 && list[i - 1].score < cand.score) i--;
+    if (i >= TOP_K) return;
+    list.splice(i, 0, cand);
+    if (list.length > TOP_K) list.length = TOP_K;
+  }
+  function randStr(cs, min, max) {
+    const len = min + Math.floor(Math.random() * (max - min + 1));
+    let s = "";
+    for (let i = 0; i < len; i++) s += cs[(Math.random() * cs.length) | 0];
+    return s;
+  }
+
+  async function runSearch() {
+    if (state.running) return;
+    const tpl = currentTemplate();
+    if (!tpl) { showToast("リンク先URLを入力してください", false); return; }
+    const cs = currentCharset();
+    if (!cs) { showToast("自由部分に使う文字を1種類以上選んでください", false); return; }
+    let minL = clamp(+$("minLen").value || 1, 1, 30);
+    let maxL = clamp(+$("maxLen").value || minL, 1, 30);
+    if (maxL < minL) { const t = minL; minL = maxL; maxL = t; }
+    const eccList = selectedEcc();
+    const version = detectVersion(tpl, eccList);
+    if (version < 0) { showToast("URLが長すぎてQRコードに収まりません", false); return; }
+
+    state.version = version;
+    state.size = version * 4 + 17;
+    state.fmask = buildFunctionMask(state.size, version);
+    state.target = computeTarget(state.size);
+    drawTargetPreview();
+
+    const hasSlot = tpl.includes("{}");
+    const masks = $("allMasks").checked ? [0, 1, 2, 3, 4, 5, 6, 7] : [null];
+    const tries = hasSlot ? +$("tries").value : 1;
+    let space = 0;
+    for (let L = minL; L <= maxL; L++) space += Math.pow(cs.length, L);
+
+    state.running = true; state.abort = false;
+    $("runBtn").disabled = true;
+    $("stopBtn").style.display = "";
+    $("progressWrap").style.display = "";
+    $("candEmpty").style.display = "none";
+
+    const list = [];
+    const bestByKey = new Map();   // ECC×マスクごとのベスト（見た目のバリエーション用）
+    const seen = new Set();
+    let done = 0, skipped = 0, dup = 0;
+    const t0 = performance.now();
+
+    while (done < tries && !state.abort) {
+      const end = Math.min(tries, done + 120);
+      for (; done < end; done++) {
+        const free = hasSlot ? randStr(cs, minL, maxL) : "";
+        if (seen.has(free)) { dup++; if (dup > 400 && seen.size >= space) { done = tries; break; } continue; }
+        seen.add(free); dup = 0;
+        const text = fillTemplate(tpl, free);
+        for (const ecc of eccList) {
+          for (const mk of masks) {
+            let qr;
+            try {
+              const opt = { errorCorrectionLevel: ecc, version };
+              if (mk !== null) opt.maskPattern = mk;
+              qr = QRCode.create(text, opt);
+            } catch (e) { skipped++; continue; }
+            if (qr.modules.size !== state.size) { skipped++; continue; }
+            const cand = {
+              text, free, ecc, mask: qr.maskPattern,
+              score: scoreMatrix(qr.modules.data),
+              modules: qr.modules.data
+            };
+            pushTop(list, cand);
+            const key = ecc + "/" + cand.mask;
+            const prev = bestByKey.get(key);
+            if (!prev || prev.score < cand.score) bestByKey.set(key, cand);
+          }
+        }
+      }
+      const pct = Math.round((done / tries) * 100);
+      $("barFill").style.width = pct + "%";
+      $("progText").textContent = done.toLocaleString() + " / " + tries.toLocaleString() + " 通り";
+      $("progScore").textContent = list.length ? "最高一致率 " + (list[0].score * 100).toFixed(1) + "%" : "";
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    state.running = false;
+    $("runBtn").disabled = false;
+    $("stopBtn").style.display = "none";
+    $("barFill").style.width = "100%";
+    $("progText").textContent =
+      "完了（" + sec + "秒 / 型番 " + version + "・" + state.size + "×" + state.size + " モジュール" +
+      (skipped ? " / 長さ超過で除外 " + skipped : "") + "）";
+
+    // 上位候補＋（ECC×マスク）ごとのベストを合わせて一覧にする
+    const merged = list.slice();
+    const has = new Set(merged.map((c) => c.text + c.ecc + c.mask));
+    Array.from(bestByKey.values())
+      .sort((a, b) => b.score - a.score)
+      .forEach((c) => {
+        const k = c.text + c.ecc + c.mask;
+        if (!has.has(k) && merged.length < MAX_CARDS) { has.add(k); merged.push(c); }
+      });
+    merged.sort((a, b) => b.score - a.score);
+
+    state.cands = merged;
+    state.sel = -1;
+    if (!merged.length) {
+      $("candEmpty").style.display = "";
+      $("candEmpty").textContent = "条件に合う候補が見つかりませんでした。自由部分を短くするか、QRの細かさを上げてみてください。";
+      $("candGrid").innerHTML = "";
+      return;
+    }
+    renderCandidates();
+    selectCandidate(0);
+  }
+
+  $("runBtn").addEventListener("click", runSearch);
+  $("stopBtn").addEventListener("click", () => { state.abort = true; });
+
+  /* ============ 描画 ============ */
+  function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function renderOpts(cell) {
+    return {
+      cell,
+      dotScale: +$("dotScale").value,
+      agreeAlpha: +$("agreeAlpha").value,
+      wash: +$("wash").value,
+      imgAlpha: +$("imgAlpha").value,
+      logo: +$("logo").value,
+      roundFinder: $("roundFinder").checked,
+      roundDot: $("roundDot").checked
+    };
+  }
+
+  function renderQR(canvas, cand, opt) {
+    const size = state.size, cell = opt.cell, W = (size + QUIET * 2) * cell;
+    canvas.width = canvas.height = W;
+    const ctx = canvas.getContext("2d");
+    const off = QUIET * cell, inner = size * cell;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, W);
+
+    // 元画像を敷く
+    if (opt.imgAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = opt.imgAlpha;
+      ctx.beginPath(); ctx.rect(off, off, inner, inner); ctx.clip();
+      ctx.translate(off, off);
+      drawSource(ctx, inner, inner);
+      ctx.restore();
+    }
+
+    const data = cand.modules, lum = state.target.lum, fm = state.fmask;
+    // 角のファインダ領域（丸く描くときはモジュール単位の描画をスキップ）
+    const corners = [[0, 0], [size - 7, 0], [0, size - 7]];
+    const inFinder = (x, y) => corners.some(([cx, cy]) =>
+      x >= cx - 1 && x <= cx + 7 && y >= cy - 1 && y <= cy + 7);
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (opt.roundFinder && inFinder(x, y)) continue;
+        const i = y * size + x;
+        const dark = !!data[i];
+        const px = off + x * cell, py = off + y * cell;
+
+        if (fm[i]) {                      // 機能パターンはベタ塗り（読み取り優先）
+          ctx.fillStyle = dark ? "#000000" : "#ffffff";
+          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
+          continue;
+        }
+        const L = lum[i];
+        // 画像の明暗が逆のところだけ、下地を目標の色に寄せる
+        const wrong = dark ? L : 1 - L;
+        const a = opt.wash * Math.max(0, wrong - 0.15);
+        if (a > 0.01) {
+          ctx.fillStyle = dark ? "rgba(0,0,0," + a.toFixed(3) + ")" : "rgba(255,255,255," + a.toFixed(3) + ")";
+          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
+        }
+        // ドット（画像と一致している所は薄く＝写真が透ける）
+        const agree = dark ? L < 0.5 : L >= 0.5;
+        const alpha = agree ? 1 - opt.agreeAlpha : 1;
+        if (alpha <= 0.02) continue;
+        const r = (cell * opt.dotScale) / 2;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = dark ? "#000000" : "#ffffff";
+        if (opt.roundDot) {
+          ctx.beginPath();
+          ctx.arc(px + cell / 2, py + cell / 2, r, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(px + cell / 2 - r, py + cell / 2 - r, r * 2, r * 2);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    if (opt.roundFinder) {
+      for (const [cx, cy] of corners) {
+        const x = off + (cx - 1) * cell, y = off + (cy - 1) * cell;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x, y, cell * 9, cell * 9);
+        ctx.fillStyle = "#000000";
+        roundRectPath(ctx, x + cell, y + cell, cell * 7, cell * 7, cell * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        roundRectPath(ctx, x + cell * 2, y + cell * 2, cell * 5, cell * 5, cell * 1.4);
+        ctx.fill();
+        ctx.fillStyle = "#000000";
+        roundRectPath(ctx, x + cell * 3, y + cell * 3, cell * 3, cell * 3, cell * 0.9);
+        ctx.fill();
+      }
+    }
+
+    // 中央のロゴ穴（誤り訂正の余力で読める範囲まで）
+    if (opt.logo > 0.001) {
+      const side = Math.round(inner * opt.logo);
+      const x = off + (inner - side) / 2, y = off + (inner - side) / 2;
+      const pad = cell * 0.6;
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      roundRectPath(ctx, x - pad, y - pad, side + pad * 2, side + pad * 2, cell);
+      ctx.fill();
+      roundRectPath(ctx, x, y, side, side, cell * 0.6);
+      ctx.clip();
+      ctx.translate(off, off);
+      drawSource(ctx, inner, inner);
+      ctx.restore();
+    }
+    return canvas;
+  }
+
+  /* ============ 読み取り検証（jsQR） ============ */
+  function decodeAt(srcCanvas, pxPerModule) {
+    const total = state.size + QUIET * 2;
+    const W = Math.max(64, Math.round(total * pxPerModule));
+    const c = document.createElement("canvas");
+    c.width = c.height = W;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    x.fillStyle = "#fff"; x.fillRect(0, 0, W, W);
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = "high";
+    x.drawImage(srcCanvas, 0, 0, W, W);
+    const d = x.getImageData(0, 0, W, W);
+    try {
+      const r = jsQR(d.data, W, W, { inversionAttempts: "dontInvert" });
+      return r ? r.data : null;
+    } catch (e) { return null; }
+  }
+  function verifyCandidate(canvas, cand) {
+    const normal = decodeAt(canvas, 8) === cand.text;
+    const strict = normal ? decodeAt(canvas, 3) === cand.text : false;
+    return { normal, strict };
+  }
+
+  /* ============ 候補一覧 ============ */
+  function renderCandidates() {
+    const grid = $("candGrid");
+    grid.innerHTML = "";
+    $("candEmpty").style.display = "none";
+    const opt = renderOpts(6);
+    state.cands.forEach((cand, idx) => {
+      const el = document.createElement("div");
+      el.className = "cand";
+      el.dataset.idx = idx;
+      const cv = document.createElement("canvas");
+      renderQR(cv, cand, opt);
+      el.appendChild(cv);
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML =
+        '<span class="sc">' + (cand.score * 100).toFixed(1) + "%</span><br>" +
+        "…" + escapeHtml(cand.free) + "<br>" +
+        "ECC " + cand.ecc + " / mask " + cand.mask +
+        '<br><span class="badge wait" data-badge>検証中…</span>';
+      el.appendChild(meta);
+      el.addEventListener("click", () => selectCandidate(idx));
+      grid.appendChild(el);
+    });
+    verifyAll();
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+  async function verifyAll() {
+    const token = (verifyAll._t = Symbol());
+    const cards = Array.from($("candGrid").children);
+    const opt = renderOpts(10);
+    const cv = document.createElement("canvas");
+    for (let i = 0; i < cards.length; i++) {
+      if (verifyAll._t !== token) return;
+      const cand = state.cands[i];
+      renderQR(cv, cand, opt);
+      const v = verifyCandidate(cv, cand);
+      cand.verify = v;
+      const badge = cards[i].querySelector("[data-badge]");
+      if (badge) {
+        badge.className = "badge " + (v.normal ? "ok" : "ng");
+        badge.textContent = v.normal ? (v.strict ? "読取OK（余裕あり）" : "読取OK") : "読み取れず";
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+
+  /* ============ 詳細 ============ */
+  function selectCandidate(idx) {
+    state.sel = idx;
+    Array.from($("candGrid").children).forEach((el, i) => el.classList.toggle("sel", i === idx));
+    $("detailCard").style.display = "";
+    renderDetail();
+  }
+
+  let detailTimer = null;
+  function renderDetail() {
+    if (state.sel < 0) return;
+    const cand = state.cands[state.sel];
+    renderQR($("outCanvas"), cand, renderOpts(+$("cell").value));
+    $("resultUrl").textContent = cand.text;
+    const box = $("verifyBox");
+    box.className = "verify";
+    box.textContent = "読み取り検証中…";
+    clearTimeout(detailTimer);
+    detailTimer = setTimeout(() => {
+      const v = verifyCandidate($("outCanvas"), cand);
+      box.className = "verify " + (v.normal ? "ok" : "ng");
+      box.innerHTML = v.normal
+        ? "✅ <b>読み取りOK</b>（自動デコードで一致）" +
+          (v.strict ? "<br>小さく印刷しても余裕がありそうです。" : "<br>やや余裕は少なめ。大きめに出力するのがおすすめです。")
+        : "⚠️ <b>この設定では読み取れませんでした</b><br>ドットを大きく／画像の明暗補正を強く／ロゴ穴を小さく してみてください。";
+      $("verifyBox").insertAdjacentHTML("beforeend",
+        '<br><span style="color:var(--muted);font-size:.78rem">一致率 ' + (cand.score * 100).toFixed(1) +
+        "% ・ 型番 " + state.version + " ・ ECC " + cand.ecc + " ・ mask " + cand.mask + "</span>");
+    }, 60);
+  }
+
+  ["dotScale", "agreeAlpha", "wash", "imgAlpha", "logo"].forEach((id) =>
+    $(id).addEventListener("input", () => {
+      $(id + "V").textContent = (+$(id).value).toFixed(2);
+      renderDetail();
+    }));
+  $("cell").addEventListener("input", () => {
+    $("cellV").textContent = $("cell").value + " px/モジュール";
+    renderDetail();
+  });
+  ["roundFinder", "roundDot"].forEach((id) => $(id).addEventListener("change", renderDetail));
+
+  $("dlBtn").addEventListener("click", () => {
+    if (state.sel < 0) return;
+    $("outCanvas").toBlob((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "image-qr-" + state.cands[state.sel].free + ".png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      showToast("PNGを保存しました！");
+    }, "image/png");
+  });
+  $("copyBtn").addEventListener("click", () => {
+    if (state.sel < 0) return;
+    copyToClipboard(state.cands[state.sel].text);
+  });
+
+  /* ============ 初期化 ============ */
+  setImage(makeMotif("❄"));
+  refreshPreviews();
+})();
+</script>
