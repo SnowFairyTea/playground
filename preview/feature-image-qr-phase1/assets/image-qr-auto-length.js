@@ -37,29 +37,64 @@
       <div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:6px">
           <input id="auto-variable-lengths" type="checkbox" style="width:auto" checked>
-          可変長を 1〜最大まで自動比較
+          可変長を範囲探索
         </label>
-        <div class="tiny">各長さは別々の固定QR問題として M0 / Di を再構築します。</div>
+        <div class="tiny">各可変部の「開始〜終了」を粗いStepで調べ、必要なら上位周辺だけ細かく再探索します。</div>
       </div>
       <div>
-        <label>長さ組合せ数</label>
+        <label>推定試行数</label>
         <div id="auto-length-combination-count" class="pill">—</div>
-        <div class="tiny">複数可変セグメントでは全直積を試します。隠れた上限は設けません。</div>
+        <div id="auto-length-count-detail" class="tiny">—</div>
       </div>
       <div>
         <label>探索操作</label>
         <button id="cancel-auto-length" class="secondary" type="button" disabled>現在の長さ探索を中断</button>
       </div>
     </div>
-    <div class="tiny" style="margin-top:8px">QR VersionがAutoで長さにより行列サイズが変わる場合、重要度・絶対制約は最大長問題の正規化座標を基準に最近傍で移送します。</div>
-    <div id="auto-length-status" class="status">最大長を設定し、通常どおり「画像目標へ最適化」を押してください。</div>
+
+    <h3>Step設定</h3>
+    <div class="grid-3">
+      <div>
+        <label for="auto-length-target-points">粗探索のAuto目標点数 / 軸</label>
+        <input id="auto-length-target-points" type="number" min="2" step="1" value="20">
+        <div class="tiny">各可変部の粗Stepが0（Auto）のとき、範囲を概ねこの点数で割るようStepを決めます。暫定既定20。</div>
+      </div>
+      <div>
+        <label for="auto-length-refine-top">細探索する上位組合せ数</label>
+        <input id="auto-length-refine-top" type="number" min="1" step="1" value="3">
+        <div class="tiny">粗探索スコア上位の長さ組合せだけを再探索します。暫定既定3。</div>
+      </div>
+      <div>
+        <label for="auto-length-final-step">細探索Step</label>
+        <input id="auto-length-final-step" type="number" min="1" step="1" value="1">
+        <div class="tiny">上位周辺で使う最終Step。1なら最後だけ1刻みです。</div>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:26px">
+          <input id="auto-length-refine" type="checkbox" style="width:auto" checked>
+          粗探索後に上位周辺を細探索
+        </label>
+      </div>
+    </div>
+
+    <div class="tiny" style="margin-top:8px">
+      「粗探索Step=0」はAutoです。数値を入れればそのStepを厳密に使用します。
+      QR VersionがAutoで長さにより行列サイズが変わる場合、重要度・絶対制約は基準問題の正規化座標を最近傍で移送します。
+      これらのStep既定値はQR規格値ではなく計算時間とのトレードオフです。
+    </div>
+    <div id="auto-length-status" class="status">各可変部の探索範囲とStepを設定し、「画像目標へ最適化」を押してください。</div>
   `;
   optimizerCard.insertBefore(controls, optimizeButton.parentElement);
 
   const autoToggle = $('auto-variable-lengths');
   const comboCount = $('auto-length-combination-count');
+  const countDetail = $('auto-length-count-detail');
   const cancelButton = $('cancel-auto-length');
   const status = $('auto-length-status');
+  const targetPointsInput = $('auto-length-target-points');
+  const refineToggle = $('auto-length-refine');
+  const refineTopInput = $('auto-length-refine-top');
+  const finalStepInput = $('auto-length-final-step');
 
   const aggregateCard = document.createElement('div');
   aggregateCard.className = 'card';
@@ -67,55 +102,173 @@
   aggregateCard.style.display = 'none';
   aggregateCard.innerHTML = `
     <h2>可変長をまたいだ候補比較</h2>
-    <p class="muted">各可変長を独立したQR問題として求解した後、重要度付き一致スコアでまとめて比較しています。</p>
+    <p class="muted">粗探索と細探索で評価した各固定QR問題の候補を、重要度付き一致スコアでまとめて比較します。</p>
     <div id="auto-length-candidates"></div>
   `;
   (phase2Card || optimizerCard).insertAdjacentElement('afterend', aggregateCard);
   const aggregateRoot = $('auto-length-candidates');
 
-  function variableSegmentInputs() {
+  function ensureSegmentSearchUi(seg, number) {
+    if (seg.querySelector('.length-search-axis')) return;
+
+    const label = number.parentElement?.querySelector('label');
+    if (label) label.textContent = '可変部分の探索終了 / 最大長（ASCII文字数 = バイト数）';
+
+    const axis = document.createElement('div');
+    axis.className = 'length-search-axis';
+    axis.style.marginTop = '10px';
+    axis.innerHTML = `
+      <div class="grid-3">
+        <div>
+          <label>探索開始</label>
+          <input class="length-search-start" type="number" min="1" step="1" value="1">
+        </div>
+        <div>
+          <label>粗探索Step（0 = Auto）</label>
+          <input class="length-search-step" type="number" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label>細探索の ±幅</label>
+          <input class="length-search-radius" type="number" min="0" step="1" value="20">
+        </div>
+      </div>
+      <div class="tiny length-search-summary" style="margin-top:5px">—</div>
+    `;
+    number.parentElement?.appendChild(axis);
+  }
+
+  function variableSegmentEntries() {
     const out = [];
+    let index = 0;
     for (const seg of segmentsRoot.querySelectorAll('.segment')) {
       const typeSelect = seg.querySelector('select');
       if (!typeSelect || typeSelect.value !== 'variable') continue;
       const number = seg.querySelector('input[type="number"]');
       if (!number) continue;
-      const label = number.parentElement?.querySelector('label');
-      if (label && !label.dataset.autoLengthRelabeled) {
-        label.textContent = '可変部分の最大長（ASCII文字数 = バイト数）';
-        label.dataset.autoLengthRelabeled = '1';
-        const note = document.createElement('div');
-        note.className = 'tiny';
-        note.textContent = 'Auto比較ON時は 1, 2, …, この最大長を個別に検証します。';
-        number.insertAdjacentElement('afterend', note);
-      }
-      out.push(number);
+      ensureSegmentSearchUi(seg, number);
+      out.push({
+        index: index++,
+        seg,
+        endInput: number,
+        startInput: seg.querySelector('.length-search-start'),
+        stepInput: seg.querySelector('.length-search-step'),
+        radiusInput: seg.querySelector('.length-search-radius'),
+        summary: seg.querySelector('.length-search-summary')
+      });
     }
     return out;
   }
 
-  function maxLengths() {
-    return variableSegmentInputs().map(input => Math.max(1, Math.floor(Number(input.value) || 1)));
+  function readSearchConfig() {
+    const targetPoints = Math.max(2, Math.floor(Number(targetPointsInput.value) || 20));
+    const finalStep = Math.max(1, Math.floor(Number(finalStepInput.value) || 1));
+    const axes = variableSegmentEntries().map(entry => {
+      const end = Math.max(1, Math.floor(Number(entry.endInput.value) || 1));
+      const startRaw = Math.max(1, Math.floor(Number(entry.startInput?.value) || 1));
+      if (startRaw > end) throw new Error(`可変部 ${entry.index + 1}: 探索開始 ${startRaw} が終了 ${end} を超えています。`);
+      const manualStep = Math.max(0, Math.floor(Number(entry.stepInput?.value) || 0));
+      const autoStep = Math.max(1, Math.ceil(Math.max(1, end - startRaw) / Math.max(1, targetPoints - 1)));
+      const coarseStep = manualStep > 0 ? manualStep : autoStep;
+      const radius = Math.max(0, Math.floor(Number(entry.radiusInput?.value) || 0));
+      return { entry, start: startRaw, end, coarseStep, manualStep, radius };
+    });
+    return {
+      axes,
+      targetPoints,
+      refine: refineToggle.checked,
+      refineTop: Math.max(1, Math.floor(Number(refineTopInput.value) || 3)),
+      finalStep
+    };
   }
 
-  function combinationCount(maxes) {
-    if (!autoToggle.checked) return maxes.length ? 1n : 0n;
-    return maxes.reduce((n, m) => n * BigInt(m), 1n);
+  function axisValues(start, end, step, force = []) {
+    const values = [];
+    for (let v = start; v <= end; v += step) values.push(v);
+    if (!values.includes(end)) values.push(end);
+    for (const v of force) {
+      if (v >= start && v <= end && !values.includes(v)) values.push(v);
+    }
+    values.sort((a, b) => a - b);
+    return values;
+  }
+
+  function coarseAxes(config) {
+    return config.axes.map(a => axisValues(a.start, a.end, a.coarseStep));
+  }
+
+  function refinementAxes(config, center) {
+    return config.axes.map((a, i) => {
+      const lo = Math.max(a.start, center[i] - a.radius);
+      const hi = Math.min(a.end, center[i] + a.radius);
+      return axisValues(lo, hi, config.finalStep, [center[i]]);
+    });
+  }
+
+  function productCount(axes) {
+    return axes.reduce((n, arr) => n * BigInt(arr.length), 1n);
+  }
+
+  function* product(axes, index = 0, prefix = []) {
+    if (index >= axes.length) {
+      yield prefix.slice();
+      return;
+    }
+    for (const v of axes[index]) {
+      prefix.push(v);
+      yield* product(axes, index + 1, prefix);
+      prefix.pop();
+    }
   }
 
   function updateCombinationCount() {
-    const maxes = maxLengths();
-    const n = combinationCount(maxes);
-    comboCount.textContent = maxes.length ? n.toString() : '0';
-    comboCount.classList.toggle('warn-pill', n > 64n);
-    if (!running) aggregateCard.style.display = 'none';
+    try {
+      const config = readSearchConfig();
+      if (!config.axes.length) {
+        comboCount.textContent = '0';
+        countDetail.textContent = '可変セグメントなし';
+        return;
+      }
+      if (!autoToggle.checked) {
+        comboCount.textContent = '1';
+        countDetail.textContent = '範囲探索OFF';
+        return;
+      }
+      const coarse = coarseAxes(config);
+      const coarseN = productCount(coarse);
+      let refineMax = 0n;
+      if (config.refine) {
+        const perTop = config.axes.map(a => {
+          const span = Math.min(a.end - a.start, a.radius * 2);
+          return Math.floor(span / config.finalStep) + 2;
+        });
+        refineMax = BigInt(config.refineTop) * perTop.reduce((n, x) => n * BigInt(Math.max(1, x)), 1n);
+      }
+      comboCount.textContent = config.refine ? `${coarseN.toString()} + ≤${refineMax.toString()}` : coarseN.toString();
+      countDetail.textContent = config.refine
+        ? `粗探索 ${coarseN.toString()} 件 + 上位${config.refineTop}組合せ周辺（重複は除外）`
+        : `粗探索 ${coarseN.toString()} 件のみ`;
+      comboCount.classList.toggle('warn-pill', coarseN + refineMax > 128n);
+
+      for (const a of config.axes) {
+        if (!a.entry.summary) continue;
+        const mode = a.manualStep > 0 ? '手動' : 'Auto';
+        a.entry.summary.textContent =
+          `範囲 ${a.start}〜${a.end} / 粗Step ${a.coarseStep} (${mode}) / 細探索 ±${a.radius} / 最終Step ${config.finalStep}`;
+      }
+      if (!running) aggregateCard.style.display = 'none';
+    } catch (e) {
+      comboCount.textContent = '範囲エラー';
+      comboCount.classList.add('warn-pill');
+      countDetail.textContent = e?.message || String(e);
+    }
   }
 
   const segmentObserver = new MutationObserver(updateCombinationCount);
   segmentObserver.observe(segmentsRoot, { childList: true, subtree: true });
   segmentsRoot.addEventListener('input', updateCombinationCount, true);
   segmentsRoot.addEventListener('change', updateCombinationCount, true);
-  autoToggle.addEventListener('change', updateCombinationCount);
+  controls.addEventListener('input', updateCombinationCount, true);
+  controls.addEventListener('change', updateCombinationCount, true);
   updateCombinationCount();
 
   cancelButton.addEventListener('click', () => {
@@ -127,8 +280,7 @@
   function canvasSize(canvas) {
     const scale = Number(canvas.dataset.scale);
     if (!Number.isFinite(scale) || scale <= 0 || !canvas.width) return null;
-    const size = Math.round(canvas.width / scale);
-    return { size, scale };
+    return { size: Math.round(canvas.width / scale), scale };
   }
 
   function capturePaintState() {
@@ -154,8 +306,7 @@
       let alpha;
       if (green < 150) alpha = green / 197;
       else alpha = (255 - red) / 221;
-      const w = clamp((alpha - 0.08) / 0.34, 0, 1);
-      weights[j] = Math.round(w * 20) / 20;
+      weights[j] = Math.round(clamp((alpha - 0.08) / 0.34, 0, 1) * 20) / 20;
 
       let found = -1;
       for (let yy = r * scale; yy < Math.min((r + 1) * scale, r * scale + 4) && found < 0; yy++) {
@@ -244,7 +395,7 @@
     return '';
   }
 
-  function captureCandidates(lengths) {
+  function captureCandidates(lengths, stage) {
     const items = [];
     for (const card of phase2Candidates?.querySelectorAll('.candidate') || []) {
       const weighted = parseFloat(tableValue(card, '重要度付き一致スコア')) || 0;
@@ -265,16 +416,19 @@
       }
       const table = clone.querySelector('.summary-table');
       if (table) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<th>可変部分の長さ</th><td>${escapeHtml(lengths.join(' / '))}</td>`;
-        table.insertBefore(tr, table.firstChild);
+        const tr1 = document.createElement('tr');
+        tr1.innerHTML = `<th>可変部分の長さ</th><td>${escapeHtml(lengths.join(' / '))}</td>`;
+        table.insertBefore(tr1, table.firstChild);
+        const tr2 = document.createElement('tr');
+        tr2.innerHTML = `<th>長さ探索段階</th><td>${escapeHtml(stage)}</td>`;
+        table.insertBefore(tr2, table.firstChild);
       }
-      items.push({ weighted, raw, lengths: lengths.slice(), node: clone });
+      items.push({ weighted, raw, lengths: lengths.slice(), stage, node: clone });
     }
     return items;
   }
 
-  function renderAggregate(items, attempted, failed, cancelled) {
+  function renderAggregate(items, attempted, failed, cancelled, coarseAttempted, refineAttempted) {
     const limit = Math.max(1, Math.floor(Number($('phase2-candidate-count')?.value) || 12));
     items.sort((a, b) => b.weighted - a.weighted || b.raw - a.raw ||
       b.lengths.reduce((x, y) => x + y, 0) - a.lengths.reduce((x, y) => x + y, 0));
@@ -290,52 +444,68 @@
     aggregateCard.style.display = 'block';
     if (phase2Card) phase2Card.style.display = 'none';
     status.className = 'status ' + (selected.length ? 'ok' : 'error');
-    status.textContent = `${cancelled ? '中断。' : '完了。'} 長さ組合せ ${attempted} 件を処理、失敗 ${failed} 件。` +
+    status.textContent =
+      `${cancelled ? '中断。' : '完了。'} 粗探索 ${coarseAttempted} 件 / 細探索 ${refineAttempted} 件 / 合計 ${attempted} 件、失敗 ${failed} 件。` +
       ` 全候補 ${items.length} 件から重要度付き一致スコア上位 ${selected.length} 件を表示しています。`;
   }
 
-  function* combinations(maxes, index = 0, prefix = []) {
-    if (index >= maxes.length) { yield prefix.slice(); return; }
-    if (!autoToggle.checked) {
-      prefix.push(maxes[index]);
-      yield* combinations(maxes, index + 1, prefix);
-      prefix.pop();
-      return;
-    }
-    for (let v = 1; v <= maxes[index]; v++) {
-      prefix.push(v);
-      yield* combinations(maxes, index + 1, prefix);
-      prefix.pop();
-    }
-  }
-
-  function setLengths(inputs, lengths) {
-    for (let i = 0; i < inputs.length; i++) {
-      inputs[i].value = String(lengths[i]);
-      inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+  function setLengths(entries, lengths) {
+    for (let i = 0; i < entries.length; i++) {
+      entries[i].endInput.value = String(lengths[i]);
+      entries[i].endInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }
 
   function hasError(id) { return $(id)?.classList.contains('error'); }
 
+  async function evaluateLengths(entries, lengths, paintSnapshot, stage) {
+    setLengths(entries, lengths);
+
+    await analyzeButton.onclick.call(analyzeButton);
+    if (hasError('charset-status')) return { ok: false, items: [], score: -Infinity };
+
+    await buildButton.onclick.call(buildButton);
+    if (hasError('problem-status')) return { ok: false, items: [], score: -Infinity };
+
+    replayPaintState(paintSnapshot);
+    await optimizeButton.onclick.call(optimizeButton);
+    if (hasError('optimize-status')) return { ok: false, items: [], score: -Infinity };
+
+    const items = captureCandidates(lengths, stage);
+    const score = items.reduce((m, item) => Math.max(m, item.weighted), -Infinity);
+    return { ok: true, items, score };
+  }
+
   async function runLengthSearch() {
     if (running) return;
-    const inputs = variableSegmentInputs();
-    if (!inputs.length || !autoToggle.checked) {
-      return optimizeButton.onclick?.call(optimizeButton);
-    }
+    const entries = variableSegmentEntries();
+    if (!entries.length || !autoToggle.checked) return optimizeButton.onclick?.call(optimizeButton);
     if (typeof analyzeButton.onclick !== 'function' || typeof buildButton.onclick !== 'function' || typeof optimizeButton.onclick !== 'function') {
       status.className = 'status error';
-      status.textContent = '内部ハンドラを取得できないため、自動長探索を開始できません。';
+      status.textContent = '内部ハンドラを取得できないため、可変長探索を開始できません。';
       return;
     }
 
-    const maxes = maxLengths();
-    const total = combinationCount(maxes);
+    let config;
+    try {
+      config = readSearchConfig();
+    } catch (e) {
+      status.className = 'status error';
+      status.textContent = e?.message || String(e);
+      return;
+    }
+
+    const originalEnds = config.axes.map(a => a.end);
+    const coarse = coarseAxes(config);
+    const coarseTotal = productCount(coarse);
     const paintSnapshot = capturePaintState();
     const aggregate = [];
+    const comboScores = [];
+    const attemptedKeys = new Set();
     let attempted = 0;
     let failed = 0;
+    let coarseAttempted = 0;
+    let refineAttempted = 0;
     cancelRequested = false;
     running = true;
     cancelButton.disabled = false;
@@ -344,44 +514,67 @@
     aggregateCard.style.display = 'none';
 
     try {
-      for (const lengths of combinations(maxes)) {
+      for (const lengths of product(coarse)) {
         if (cancelRequested) break;
+        const key = lengths.join(',');
+        attemptedKeys.add(key);
         attempted++;
+        coarseAttempted++;
         status.className = 'status';
-        status.textContent = `長さ組合せ ${attempted}/${total.toString()} を処理中: ${lengths.join(' / ')}\n` +
+        status.textContent =
+          `粗探索 ${coarseAttempted}/${coarseTotal.toString()} : ${lengths.join(' / ')}\n` +
           '文字集合解析 → M0/Di再構築 → 画像最適化を独立に実行しています。';
 
-        setLengths(inputs, lengths);
-
-        await analyzeButton.onclick.call(analyzeButton);
-        if (hasError('charset-status')) {
+        const result = await evaluateLengths(entries, lengths, paintSnapshot, '粗探索');
+        if (!result.ok) {
           failed++;
-          continue;
+        } else {
+          aggregate.push(...result.items);
+          comboScores.push({ lengths: lengths.slice(), score: result.score });
         }
-
-        await buildButton.onclick.call(buildButton);
-        if (hasError('problem-status')) {
-          failed++;
-          continue;
-        }
-
-        replayPaintState(paintSnapshot);
-        await optimizeButton.onclick.call(optimizeButton);
-        if (hasError('optimize-status')) {
-          failed++;
-          continue;
-        }
-
-        aggregate.push(...captureCandidates(lengths));
         await new Promise(requestAnimationFrame);
       }
+
+      if (!cancelRequested && config.refine && comboScores.length) {
+        comboScores.sort((a, b) => b.score - a.score);
+        const centers = comboScores.slice(0, config.refineTop);
+        const refineQueue = [];
+        const queued = new Set();
+
+        for (const center of centers) {
+          for (const lengths of product(refinementAxes(config, center.lengths))) {
+            const key = lengths.join(',');
+            if (attemptedKeys.has(key) || queued.has(key)) continue;
+            queued.add(key);
+            refineQueue.push(lengths);
+          }
+        }
+
+        for (let i = 0; i < refineQueue.length; i++) {
+          if (cancelRequested) break;
+          const lengths = refineQueue[i];
+          const key = lengths.join(',');
+          attemptedKeys.add(key);
+          attempted++;
+          refineAttempted++;
+          status.className = 'status';
+          status.textContent =
+            `細探索 ${refineAttempted}/${refineQueue.length} : ${lengths.join(' / ')}\n` +
+            `粗探索上位 ${centers.length} 組合せの周辺を Step ${config.finalStep} で再探索しています。`;
+
+          const result = await evaluateLengths(entries, lengths, paintSnapshot, '細探索');
+          if (!result.ok) failed++;
+          else aggregate.push(...result.items);
+          await new Promise(requestAnimationFrame);
+        }
+      }
     } finally {
-      if (cancelRequested) setLengths(inputs, maxes);
+      setLengths(entries, originalEnds);
       running = false;
       cancelButton.disabled = true;
       autoToggle.disabled = false;
       optimizeButton.disabled = false;
-      renderAggregate(aggregate, attempted, failed, cancelRequested);
+      renderAggregate(aggregate, attempted, failed, cancelRequested, coarseAttempted, refineAttempted);
       updateCombinationCount();
     }
   }
