@@ -1,0 +1,23 @@
+<h1 id="画像埋め込みqrコード最適化">画像埋め込みQRコード最適化</h1>
+
+<p>QR生成後のモジュール改変や誤り訂正への依存ではなく、QRエンコーダに入力する可変ペイロードだけを操作して、画像に似た正しいQR符号を探索するツールです。</p>
+
+<h2 id="phase-1-実装済み">Phase 1 実装済み</h2>
+
+<ul>
+  <li>Byte Modeを明示したQR生成</li>
+  <li>Version / ECC / Maskの固定</li>
+  <li>固定・可変ペイロードセグメント（複数対応）</li>
+  <li>可変ASCII文字集合に完全包含される最大次元アフィン部分空間 <code class="language-plaintext highlighter-rouge">A = b xor V</code> の厳密探索</li>
+  <li>基準QR <code class="language-plaintext highlighter-rouge">M0</code> と、各自由変数を1つ変更してQRエンコーダを再実行した差分 <code class="language-plaintext highlighter-rouge">Di</code> の構築</li>
+  <li>QR構造上固定 / 現在の条件で固定 / 可変モジュールの分類</li>
+  <li>GF(2)ガウス消去による絶対黒・絶対白モジュール制約の求解</li>
+  <li>一般解 <code class="language-plaintext highlighter-rouge">x = xp xor N z</code> の残存自由度からのみ候補を生成</li>
+  <li>ランダム点での <code class="language-plaintext highlighter-rouge">M0 xor Σ xi Di</code> と実エンコーダ行列のセルフテスト</li>
+</ul>
+
+<h2 id="未実装">未実装</h2>
+
+<p>Phase 2以降の画像二値化、重要度マップ、ソフト制約、複数固定QR問題の画像一致比較、Phase 2.5の独立エンコーダ/デコーダ/RS検証、Phase 3の最終PNG/SVG出力は未実装です。</p>
+
+<p>Phase 1では既存の <code class="language-plaintext highlighter-rouge">/assets/qrcode.min.js</code> をQRエンコーダとして使用し、生成されたモジュール行列を後から変更しません。</p>
