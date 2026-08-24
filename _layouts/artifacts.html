@@ -11,5 +11,9 @@
 
 {% include footer.html %}
 
+{% if page.permalink == '/apps/image-qr-optimizer/' %}
+<script src="{{ '/assets/image-qr-target-inset.js' | relative_url }}"></script>
+{% endif %}
+
 </body>
 </html>
