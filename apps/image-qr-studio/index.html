@@ -396,29 +396,18 @@ permalink: /apps/image-qr-studio/
         <div class="verify" id="verifyBox">検証中…</div>
 
         <h3>見た目の調整</h3>
+        <p class="hint">
+          描画は<b>1モジュールも壊さない範囲</b>で行います。写真の明暗は「黒モジュールなら十分黒い範囲、
+          白モジュールなら十分白い範囲」に圧縮して下地に敷くので、<b>誤り訂正の余力は消費しません</b>。
+        </p>
         <div class="slider-row">
-          <label for="dotScale">ドットの大きさ <span id="dotScaleV">0.60</span></label>
-          <input type="range" id="dotScale" min="0.2" max="1" step="0.02" value="0.6">
+          <label for="photo">写真の強さ <span id="photoV">0.85</span></label>
+          <input type="range" id="photo" min="0" max="1" step="0.05" value="0.85">
         </div>
         <div class="slider-row">
-          <label for="agreeAlpha">合っている所を薄く <span id="agreeAlphaV">0.60</span></label>
-          <input type="range" id="agreeAlpha" min="0" max="1" step="0.05" value="0.6">
-        </div>
-        <div class="slider-row">
-          <label for="markFade">強調範囲のはみ出しを薄く <span id="markFadeV">0.50</span></label>
-          <input type="range" id="markFade" min="0" max="1" step="0.05" value="0.5">
-        </div>
-        <div class="slider-row">
-          <label for="wash">画像の明暗補正 <span id="washV">0.55</span></label>
-          <input type="range" id="wash" min="0" max="1" step="0.05" value="0.55">
-        </div>
-        <div class="slider-row">
-          <label for="imgAlpha">画像の濃さ <span id="imgAlphaV">1.00</span></label>
-          <input type="range" id="imgAlpha" min="0" max="1" step="0.05" value="1">
-        </div>
-        <div class="slider-row">
-          <label for="logo">中央のロゴ穴 <span id="logoV">0.00</span></label>
-          <input type="range" id="logo" min="0" max="0.3" step="0.01" value="0">
+          <label for="dotScale">食い違うドットの大きさ <span id="dotScaleV">0.60</span></label>
+          <input type="range" id="dotScale" min="0" max="1" step="0.02" value="0.6">
+          <span class="hint" style="grid-column:1/-1">画像と一致するモジュールはベタ塗り、食い違うモジュールだけこの大きさで描きます</span>
         </div>
         <div class="slider-row">
           <label for="cell">出力サイズ <span id="cellV">12 px/モジュール</span></label>
@@ -430,7 +419,24 @@ permalink: /apps/image-qr-studio/
         </div>
         <p class="hint" id="finderHint"></p>
         <div class="chips">
-          <label class="chip on"><input type="checkbox" id="roundDot" checked>ドットを丸く</label>
+          <label class="chip"><input type="checkbox" id="roundDot">ドットを丸く</label>
+        </div>
+        <p class="hint">
+          ※丸ドットは、厳しめのデコーダ（OpenCV/ZXing系）で<b>QRの検出率が落ちる</b>ことがあります。
+          読み取り判定を見ながら使ってください。
+        </p>
+
+        <h3>誤り訂正の余力を使う装飾（任意）</h3>
+        <p class="hint">
+          この2つだけは<b>わざとモジュールを壊します</b>。使った量は下の「余力 使用率」に出ます。
+        </p>
+        <div class="slider-row">
+          <label for="logo">中央のロゴ穴 <span id="logoV">0.00</span></label>
+          <input type="range" id="logo" min="0" max="0.3" step="0.01" value="0">
+        </div>
+        <div class="slider-row">
+          <label for="markFade">強調範囲のはみ出しを消す <span id="markFadeV">0.00</span></label>
+          <input type="range" id="markFade" min="0" max="1" step="0.05" value="0">
         </div>
       </div>
     </div>
@@ -464,10 +470,13 @@ permalink: /apps/image-qr-studio/
         このツールは<b>1ビットも書き換えていません</b>（選んでいるのは文字列・誤り訂正レベル・マスクだけ）。
         独立実装（Python の qrcode）と行列がビット単位で一致することを確認済みです。
         マスクは仕様上どれを使ってもよく、どれを使ったかは形式情報に記録されます。<br><br>
-        いっぽう<b>絵として加工した画像</b>は、誤り訂正の余力を意図的に使って読ませています。
-        そこで出力画像を1モジュールずつ読み直し、RSブロックごとに誤り語を数えて
-        <b>「誤り訂正の余力 使用率」</b>を表示します。90%を超えると、画面上でデコードできても
-        印刷やカメラ越しでは読めない可能性が高いです（実測で確認しました）。
+        <b>描画も行列を壊しません</b>。黒モジュールは 0〜70、白モジュールは 186〜255 の明度しか使わず、
+        その帯の中で写真の明暗を再現します。セルのどこをサンプルされても読み違えないので、
+        <b>誤り訂正の余力は構成上ゼロ消費</b>です（絵の見え方は、モジュールの並びそのものと、
+        画像と一致するモジュールをベタ塗り・食い違うモジュールを小さく描く差で作ります）。
+        わざと壊すのは「ロゴ穴」と「強調範囲のはみ出しを消す」だけで、これらは描く前に
+        RSブロックごとの訂正能力の25%までに絞り込みます。
+        実際の消費量は<b>「誤り訂正の余力 使用率」</b>として表示します。
         ファインダーの角丸やロゴ穴が<b>誤り訂正の効かない機能パターン</b>を壊している場合も警告します。<br><br>
         描画はどちらのモードでも共通で、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して
         写真を透けさせ、食い違うモジュールだけをはっきり描きます。
@@ -1283,15 +1292,63 @@ permalink: /apps/image-qr-studio/
   function renderOpts(cell) {
     return {
       cell,
+      photo: +$("photo").value,
       dotScale: +$("dotScale").value,
-      agreeAlpha: +$("agreeAlpha").value,
       markFade: +$("markFade").value,
-      wash: +$("wash").value,
-      imgAlpha: +$("imgAlpha").value,
       logo: +$("logo").value,
       finderRound: +$("finderRound").value,
       roundDot: $("roundDot").checked
     };
+  }
+
+  /* ============ 描画（行列を壊さない構成） ============ *
+   * 黒モジュールは 0〜DARK_MAX、白モジュールは LIGHT_MIN〜255 の明度しか使わない。
+   * その範囲の中で写真の明暗を再現するので、セルのどこをサンプルされても
+   * 読み違えは起きず、誤り訂正の余力を1語も消費しない。
+   * わざと壊すのは「ロゴ穴」と「強調範囲のはみ出し消し」だけで、
+   * これらは描く前にRSブロックごとの上限まで絞り込む。                     */
+  const DARK_MAX = 70, LIGHT_MIN = 186;
+  const EC_BREAK_LIMIT = 0.25;          // 1ブロックの訂正能力のうち、わざと壊してよい割合
+
+  function planBreaks(cand, opt) {
+    const size = state.size, mark = state.target.mark, fm = state.fmask, data = cand.modules;
+    const half = opt.logo > 0.001 ? (size * opt.logo) / 2 + 0.8 : -1;
+    const mid = size / 2;
+    const list = [];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = y * size + x;
+        if (fm[i]) continue;
+        const inLogo = half > 0 && Math.abs(x + 0.5 - mid) <= half && Math.abs(y + 0.5 - mid) <= half;
+        const painted = opt.markFade > 0.01 && (mark[i] === 1 || mark[i] === 2) &&
+                        (mark[i] === 2) !== !!data[i];
+        if (inLogo || painted) list.push({ i, x, y, d: Math.hypot(x + 0.5 - mid, y + 0.5 - mid) });
+      }
+    }
+    const allow = new Set();
+    if (!list.length) return allow;
+    const lay = blockLayout(state.version, cand.ecc);
+    const byCw = new Map();
+    for (const it of list) {
+      const cw = lay.cwOf[it.i];
+      if (cw < 0) continue;
+      if (!byCw.has(cw)) byCw.set(cw, []);
+      byCw.get(cw).push(it);
+    }
+    const byBlock = new Map();
+    byCw.forEach((items, cw) => {
+      const b = lay.owner[cw];
+      if (!byBlock.has(b)) byBlock.set(b, []);
+      byBlock.get(b).push(cw);
+    });
+    byBlock.forEach((cws, b) => {
+      const limit = Math.max(0, Math.floor(lay.cap[b] * EC_BREAK_LIMIT));
+      // 中心に近い符号語から優先して壊す（見た目の中心を残す）
+      cws.sort((p, q) => Math.min.apply(null, byCw.get(p).map((t) => t.d)) -
+                         Math.min.apply(null, byCw.get(q).map((t) => t.d)));
+      cws.slice(0, limit).forEach((cw) => byCw.get(cw).forEach((it) => allow.add(it.i)));
+    });
+    return allow;
   }
 
   function renderQR(canvas, cand, opt) {
@@ -1303,56 +1360,34 @@ permalink: /apps/image-qr-studio/
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, W);
 
-    // 元画像を敷く
-    if (opt.imgAlpha > 0) {
-      ctx.save();
-      ctx.globalAlpha = opt.imgAlpha;
-      ctx.beginPath(); ctx.rect(off, off, inner, inner); ctx.clip();
-      ctx.translate(off, off);
-      drawSource(ctx, inner, inner);
-      ctx.restore();
-    }
-
     const data = cand.modules, lum = state.target.lum, fm = state.fmask, mark = state.target.mark;
-    // 角のファインダ領域（丸く描くときはモジュール単位の描画をスキップ）
     const corners = [[0, 0], [size - 7, 0], [0, size - 7]];
     const inFinder = (x, y) => corners.some(([cx, cy]) =>
       x >= cx - 1 && x <= cx + 7 && y >= cy - 1 && y <= cy + 7);
+    const breaks = planBreaks(cand, opt);
 
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        if (opt.finderRound > 0.01 && inFinder(x, y)) continue;
-        const i = y * size + x;
-        const dark = !!data[i];
-        const px = off + x * cell, py = off + y * cell;
-
-        if (fm[i]) {                      // 機能パターンはベタ塗り（読み取り優先）
-          ctx.fillStyle = dark ? "#000000" : "#ffffff";
-          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
-          continue;
-        }
-        if (mark[i] === 1 || mark[i] === 2) {   // 「絶対白／絶対黒」は下地をベタ塗り（写真を消す）
-          ctx.fillStyle = mark[i] === 2 ? "#000000" : "#ffffff";
-          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
-        }
-        const L = lum[i];
-        // 画像の明暗が逆のところだけ、下地を目標の色に寄せる
-        const wrong = dark ? L : 1 - L;
-        let a = opt.wash * Math.max(0, wrong - 0.15);
-        // 強調範囲は下地をベタ塗り済みなので、はみ出しを薄くするときは補正も外す
-        if (mark[i] === 1 || mark[i] === 2) a *= 1 - opt.markFade;
-        if (a > 0.01) {
-          ctx.fillStyle = dark ? "rgba(0,0,0," + a.toFixed(3) + ")" : "rgba(255,255,255," + a.toFixed(3) + ")";
-          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
-        }
-        // ドット（画像と一致している所は薄く＝写真が透ける）
-        const agree = dark ? L < 0.5 : L >= 0.5;
-        let alpha = agree ? 1 - opt.agreeAlpha : 1;
-        // 「絶対白／絶対黒」からはみ出したモジュールは、誤り訂正の余力を使って薄くできる
-        if (!agree && (mark[i] === 1 || mark[i] === 2)) alpha *= 1 - opt.markFade;
-        if (alpha <= 0.02) continue;
-        const r = (cell * opt.dotScale) / 2;
-        ctx.globalAlpha = alpha;
+    // 1モジュールを「読み違えない範囲で」描く
+    const drawModule = (x, y) => {
+      const i = y * size + x, dark = !!data[i];
+      const px = off + x * cell, py = off + y * cell;
+      if (fm[i]) {                       // 機能パターンはベタ塗り（読み取り優先）
+        ctx.fillStyle = dark ? "#000000" : "#ffffff";
+        ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
+        return;
+      }
+      // 写真の明暗を、そのモジュールが取れる安全な明度帯に圧縮して下地にする
+      const t = clamp(lum[i], 0, 1), p = opt.photo;
+      const bg = dark ? Math.round(DARK_MAX * t * p)
+                      : Math.round(255 - (255 - LIGHT_MIN) * (1 - t) * p);
+      ctx.fillStyle = "rgb(" + bg + "," + bg + "," + bg + ")";
+      ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
+      // 純色のドット。下地と同じ極性なので、大きさをいくら変えても読み取りは壊れない。
+      // 画像と色が一致しているモジュールは大きく（＝絵の面を作る）、
+      // 食い違うモジュールは小さく描いて、絵の邪魔を最小限にする。
+      const agree = dark ? t < 0.5 : t >= 0.5;
+      const ds = agree ? 1 : opt.dotScale;
+      if (ds > 0.02) {
+        const r = (cell * ds) / 2;
         ctx.fillStyle = dark ? "#000000" : "#ffffff";
         if (opt.roundDot) {
           ctx.beginPath();
@@ -1361,7 +1396,13 @@ permalink: /apps/image-qr-studio/
         } else {
           ctx.fillRect(px + cell / 2 - r, py + cell / 2 - r, r * 2, r * 2);
         }
-        ctx.globalAlpha = 1;
+      }
+    };
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (opt.finderRound > 0.01 && inFinder(x, y)) continue;
+        drawModule(x, y);
       }
     }
 
@@ -1385,7 +1426,7 @@ permalink: /apps/image-qr-studio/
       }
     }
 
-    // 中央のロゴ穴（誤り訂正の余力で読める範囲まで）
+    // ---- ここからは「わざと壊す」装飾（上限まで絞り込み済み） ----
     if (opt.logo > 0.001) {
       const side = Math.round(inner * opt.logo);
       const x = off + (inner - side) / 2, y = off + (inner - side) / 2;
@@ -1399,6 +1440,27 @@ permalink: /apps/image-qr-studio/
       ctx.translate(off, off);
       drawSource(ctx, inner, inner);
       ctx.restore();
+      // 上限を超えて壊せないモジュールは、穴の上から描き直して元に戻す
+      const half = (size * opt.logo) / 2 + 0.8, mid = size / 2;
+      for (let my = 0; my < size; my++) {
+        for (let mx = 0; mx < size; mx++) {
+          if (Math.abs(mx + 0.5 - mid) > half || Math.abs(my + 0.5 - mid) > half) continue;
+          const i = my * size + mx;
+          if (breaks.has(i)) continue;
+          drawModule(mx, my);
+        }
+      }
+    }
+    if (opt.markFade > 0.01) {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const i = y * size + x;
+          if (!breaks.has(i) || (mark[i] !== 1 && mark[i] !== 2)) continue;
+          ctx.fillStyle = (mark[i] === 2 ? "rgba(0,0,0," : "rgba(255,255,255,") +
+                          opt.markFade.toFixed(2) + ")";
+          ctx.fillRect(off + x * cell, off + y * cell, cell + 0.5, cell + 0.5);
+        }
+      }
     }
     return canvas;
   }
@@ -1441,6 +1503,26 @@ permalink: /apps/image-qr-studio/
     const ecPer = blocks[0].total - blocks[0].data;
     for (let i = 0; i < ecPer; i++) blocks.forEach((b, bi) => owner.push(bi));
     return owner;
+  }
+  // 「モジュール → 符号語番号 / ブロック番号」の対応。版とECCごとに1回だけ作る。
+  const blockLayoutCache = new Map();
+  function blockLayout(version, ecc) {
+    const key = version + ecc;
+    if (blockLayoutCache.has(key)) return blockLayoutCache.get(key);
+    const size = version * 4 + 17;
+    const fm = buildFunctionMask(size, version);
+    const blocks = rsBlocks(version, ecc);
+    const owner = codewordOwners(blocks);
+    const order = placementOrder(size, fm);
+    const cwOf = new Int32Array(size * size).fill(-1);
+    for (let bit = 0; bit < order.length; bit++) {
+      const cw = bit >> 3;
+      if (cw < owner.length) cwOf[order[bit]] = cw;
+    }
+    const cap = blocks.map((b) => ((b.total - b.data) / 2) | 0);
+    const out = { cwOf, owner, cap };
+    blockLayoutCache.set(key, out);
+    return out;
   }
   function measureEcBudget(canvas, cand) {
     const size = state.size, W = canvas.width, cell = W / (size + QUIET * 2);
@@ -1586,7 +1668,7 @@ permalink: /apps/image-qr-studio/
       const level = !v.normal || ec.worst >= 1 ? "ng" : ec.worst >= 0.85 ? "warn" : "ok";
       box.className = "verify " + (level === "ok" ? "ok" : "ng");
       const head = !v.normal
-        ? "⚠️ <b>この設定では読み取れませんでした</b><br>ドットを大きく／画像の明暗補正を強く／ロゴ穴を小さく してみてください。"
+        ? "⚠️ <b>この設定では読み取れませんでした</b><br>写真の強さを下げる／食い違うドットを大きくする／ロゴ穴を小さくする を試してください。"
         : ec.worst >= 1
           ? "🚨 <b>誤り訂正の限界を超えています</b><br>画面上のデコードは通っても、印刷やカメラ越しでは読めない可能性が高いです。"
           : ec.worst >= 0.85
@@ -1612,7 +1694,7 @@ permalink: /apps/image-qr-studio/
     }, 60);
   }
 
-  ["dotScale", "agreeAlpha", "markFade", "wash", "imgAlpha", "logo", "finderRound"].forEach((id) =>
+  ["photo", "dotScale", "markFade", "logo", "finderRound"].forEach((id) =>
     $(id).addEventListener("input", () => {
       $(id + "V").textContent = (+$(id).value).toFixed(2);
       renderDetail();
@@ -1621,7 +1703,7 @@ permalink: /apps/image-qr-studio/
     $("cellV").textContent = $("cell").value + " px/モジュール";
     renderDetail();
   });
-  $("roundDot").addEventListener("change", renderDetail);
+  $("roundDot").addEventListener("change", () => { renderDetail(); renderCandidates(); });
   $("finderRound").addEventListener("input", () => {
     const v = +$("finderRound").value;
     $("finderHint").textContent = v > 0.5
