@@ -16,8 +16,29 @@
   <li>ランダム点での <code class="language-plaintext highlighter-rouge">M0 xor Σ xi Di</code> と実エンコーダ行列のセルフテスト</li>
 </ul>
 
+<h2 id="phase-2-実装済み">Phase 2 実装済み</h2>
+
+<ul>
+  <li>元画像読み込み、二値化、しきい値、明るさ、コントラスト、反転</li>
+  <li>Crop / fit / zoom / 位置調整</li>
+  <li>目標画像を四隅のQR構造から内側へ縮小する設定</li>
+  <li>重要度マップ、絶対黒・絶対白ブラシ</li>
+  <li>重要度順に両立する独立条件を追加するヒューリスティック</li>
+  <li>残存零空間からの複数候補生成とスコア比較</li>
+  <li>同一VersionでMask 0〜7を独立問題として比較</li>
+  <li>可変部分の長さを 1〜ユーザー指定最大長まで自動比較</li>
+  <li>複数可変セグメントでは各長さ範囲の直積をすべて独立問題として比較</li>
+  <li>長さごとに文字集合解析、M0 / Di構築、画像最適化をやり直し、総合候補を重要度付き一致スコアで比較</li>
+</ul>
+
+<p>可変長自動比較では、異なるペイロード長を同じ線形写像へ混ぜません。各長さ（複数可変部では各長さ組合せ）を別々の固定QR問題として扱います。QR VersionがAutoで長さによって行列サイズが変わる場合、重要度・絶対制約は最大長問題の正規化座標を基準に最近傍で移送します。</p>
+
 <h2 id="未実装">未実装</h2>
 
-<p>Phase 2以降の画像二値化、重要度マップ、ソフト制約、複数固定QR問題の画像一致比較、Phase 2.5の独立エンコーダ/デコーダ/RS検証、Phase 3の最終PNG/SVG出力は未実装です。</p>
+<ul>
+  <li>Version範囲をまたいだ明示的な複数Version比較</li>
+  <li>Phase 2.5の独立エンコーダ比較、独立デコーダ復号、モジュール再読込、RSブロック検証</li>
+  <li>Phase 3の最終PNG/SVG出力・装飾</li>
+</ul>
 
-<p>Phase 1では既存の <code class="language-plaintext highlighter-rouge">/assets/qrcode.min.js</code> をQRエンコーダとして使用し、生成されたモジュール行列を後から変更しません。</p>
+<p>既存の <code class="language-plaintext highlighter-rouge">/assets/qrcode.min.js</code> をQRエンコーダとして使用し、生成されたモジュール行列を後から変更しません。</p>
