@@ -424,8 +424,12 @@ permalink: /apps/image-qr-studio/
           <label for="cell">出力サイズ <span id="cellV">12 px/モジュール</span></label>
           <input type="range" id="cell" min="6" max="24" step="1" value="12">
         </div>
+        <div class="slider-row">
+          <label for="finderRound">ファインダーの角丸 <span id="finderRoundV">0.35</span></label>
+          <input type="range" id="finderRound" min="0" max="1" step="0.05" value="0.35">
+        </div>
+        <p class="hint" id="finderHint"></p>
         <div class="chips">
-          <label class="chip on"><input type="checkbox" id="roundFinder" checked>ファインダーを丸く</label>
           <label class="chip on"><input type="checkbox" id="roundDot" checked>ドットを丸く</label>
         </div>
       </div>
@@ -456,6 +460,15 @@ permalink: /apps/image-qr-studio/
         実行後に「強調範囲 何/何モジュール一致」と、動かせなかった数を表示します。
         固定URLを短くする・誤り訂正レベルを Q 前後にすると動かせる割合が増えます。
         残ったはみ出しは「強調範囲のはみ出しを薄く」で誤り訂正の余力を使って消せます（読み取り判定を見ながら調整）。<br><br>
+        <b>QRとしての正しさ</b>：モジュールの行列は node-qrcode がそのまま生成したもので、
+        このツールは<b>1ビットも書き換えていません</b>（選んでいるのは文字列・誤り訂正レベル・マスクだけ）。
+        独立実装（Python の qrcode）と行列がビット単位で一致することを確認済みです。
+        マスクは仕様上どれを使ってもよく、どれを使ったかは形式情報に記録されます。<br><br>
+        いっぽう<b>絵として加工した画像</b>は、誤り訂正の余力を意図的に使って読ませています。
+        そこで出力画像を1モジュールずつ読み直し、RSブロックごとに誤り語を数えて
+        <b>「誤り訂正の余力 使用率」</b>を表示します。90%を超えると、画面上でデコードできても
+        印刷やカメラ越しでは読めない可能性が高いです（実測で確認しました）。
+        ファインダーの角丸やロゴ穴が<b>誤り訂正の効かない機能パターン</b>を壊している場合も警告します。<br><br>
         描画はどちらのモードでも共通で、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して
         写真を透けさせ、食い違うモジュールだけをはっきり描きます。
         誤り訂正の余力があるので、中央のロゴ穴もある程度なら耐えます。
@@ -1276,7 +1289,7 @@ permalink: /apps/image-qr-studio/
       wash: +$("wash").value,
       imgAlpha: +$("imgAlpha").value,
       logo: +$("logo").value,
-      roundFinder: $("roundFinder").checked,
+      finderRound: +$("finderRound").value,
       roundDot: $("roundDot").checked
     };
   }
@@ -1308,7 +1321,7 @@ permalink: /apps/image-qr-studio/
 
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
-        if (opt.roundFinder && inFinder(x, y)) continue;
+        if (opt.finderRound > 0.01 && inFinder(x, y)) continue;
         const i = y * size + x;
         const dark = !!data[i];
         const px = off + x * cell, py = off + y * cell;
@@ -1352,19 +1365,22 @@ permalink: /apps/image-qr-studio/
       }
     }
 
-    if (opt.roundFinder) {
+    if (opt.finderRound > 0.01) {
+      // 角丸を強くしすぎると 1:1:3:1:1 の比率が崩れ、厳しめのデコーダ（OpenCV/ZXing系）が
+      // ファインダを検出できなくなる。強さで半径を絞る。
+      const rf = opt.finderRound;
       for (const [cx, cy] of corners) {
         const x = off + (cx - 1) * cell, y = off + (cy - 1) * cell;
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(x, y, cell * 9, cell * 9);
         ctx.fillStyle = "#000000";
-        roundRectPath(ctx, x + cell, y + cell, cell * 7, cell * 7, cell * 2);
+        roundRectPath(ctx, x + cell, y + cell, cell * 7, cell * 7, cell * 2 * rf);
         ctx.fill();
         ctx.fillStyle = "#ffffff";
-        roundRectPath(ctx, x + cell * 2, y + cell * 2, cell * 5, cell * 5, cell * 1.4);
+        roundRectPath(ctx, x + cell * 2, y + cell * 2, cell * 5, cell * 5, cell * 1.4 * rf);
         ctx.fill();
         ctx.fillStyle = "#000000";
-        roundRectPath(ctx, x + cell * 3, y + cell * 3, cell * 3, cell * 3, cell * 0.9);
+        roundRectPath(ctx, x + cell * 3, y + cell * 3, cell * 3, cell * 3, cell * 0.9 * rf);
         ctx.fill();
       }
     }
@@ -1385,6 +1401,86 @@ permalink: /apps/image-qr-studio/
       ctx.restore();
     }
     return canvas;
+  }
+
+  /* ============ 誤り訂正の余力を実測する ============ *
+   * 出力画像を1モジュールずつ2値化し、正しい行列との食い違いを
+   * 符号語 → RSブロックへ割り当てて、ブロックごとの訂正能力と比べる。
+   * jsQR の合否だけでは「ぎりぎり読めている」状態が分からないため。   */
+  // 版ごとの RSブロック構成 "個数x総語数,データ語数(+…)" を L/M/Q/H の順に並べたもの
+  const RS_TABLE = ["1x26,19/1x26,16/1x26,13/1x26,9","1x44,34/1x44,28/1x44,22/1x44,16","1x70,55/1x70,44/2x35,17/2x35,13","1x100,80/2x50,32/2x50,24/4x25,9","1x134,108/2x67,43/2x33,15+2x34,16/2x33,11+2x34,12","2x86,68/4x43,27/4x43,19/4x43,15","2x98,78/4x49,31/2x32,14+4x33,15/4x39,13+1x40,14","2x121,97/2x60,38+2x61,39/4x40,18+2x41,19/4x40,14+2x41,15","2x146,116/3x58,36+2x59,37/4x36,16+4x37,17/4x36,12+4x37,13","2x86,68+2x87,69/4x69,43+1x70,44/6x43,19+2x44,20/6x43,15+2x44,16","4x101,81/1x80,50+4x81,51/4x50,22+4x51,23/3x36,12+8x37,13","2x116,92+2x117,93/6x58,36+2x59,37/4x46,20+6x47,21/7x42,14+4x43,15","4x133,107/8x59,37+1x60,38/8x44,20+4x45,21/12x33,11+4x34,12","3x145,115+1x146,116/4x64,40+5x65,41/11x36,16+5x37,17/11x36,12+5x37,13","5x109,87+1x110,88/5x65,41+5x66,42/5x54,24+7x55,25/11x36,12+7x37,13","5x122,98+1x123,99/7x73,45+3x74,46/15x43,19+2x44,20/3x45,15+13x46,16","1x135,107+5x136,108/10x74,46+1x75,47/1x50,22+15x51,23/2x42,14+17x43,15","5x150,120+1x151,121/9x69,43+4x70,44/17x50,22+1x51,23/2x42,14+19x43,15","3x141,113+4x142,114/3x70,44+11x71,45/17x47,21+4x48,22/9x39,13+16x40,14","3x135,107+5x136,108/3x67,41+13x68,42/15x54,24+5x55,25/15x43,15+10x44,16","4x144,116+4x145,117/17x68,42/17x50,22+6x51,23/19x46,16+6x47,17","2x139,111+7x140,112/17x74,46/7x54,24+16x55,25/34x37,13","4x151,121+5x152,122/4x75,47+14x76,48/11x54,24+14x55,25/16x45,15+14x46,16","6x147,117+4x148,118/6x73,45+14x74,46/11x54,24+16x55,25/30x46,16+2x47,17","8x132,106+4x133,107/8x75,47+13x76,48/7x54,24+22x55,25/22x45,15+13x46,16","10x142,114+2x143,115/19x74,46+4x75,47/28x50,22+6x51,23/33x46,16+4x47,17","8x152,122+4x153,123/22x73,45+3x74,46/8x53,23+26x54,24/12x45,15+28x46,16","3x147,117+10x148,118/3x73,45+23x74,46/4x54,24+31x55,25/11x45,15+31x46,16","7x146,116+7x147,117/21x73,45+7x74,46/1x53,23+37x54,24/19x45,15+26x46,16","5x145,115+10x146,116/19x75,47+10x76,48/15x54,24+25x55,25/23x45,15+25x46,16","13x145,115+3x146,116/2x74,46+29x75,47/42x54,24+1x55,25/23x45,15+28x46,16","17x145,115/10x74,46+23x75,47/10x54,24+35x55,25/19x45,15+35x46,16","17x145,115+1x146,116/14x74,46+21x75,47/29x54,24+19x55,25/11x45,15+46x46,16","13x145,115+6x146,116/14x74,46+23x75,47/44x54,24+7x55,25/59x46,16+1x47,17","12x151,121+7x152,122/12x75,47+26x76,48/39x54,24+14x55,25/22x45,15+41x46,16","6x151,121+14x152,122/6x75,47+34x76,48/46x54,24+10x55,25/2x45,15+64x46,16","17x152,122+4x153,123/29x74,46+14x75,47/49x54,24+10x55,25/24x45,15+46x46,16","4x152,122+18x153,123/13x74,46+32x75,47/48x54,24+14x55,25/42x45,15+32x46,16","20x147,117+4x148,118/40x75,47+7x76,48/43x54,24+22x55,25/10x45,15+67x46,16","19x148,118+6x149,119/18x75,47+31x76,48/34x54,24+34x55,25/20x45,15+61x46,16"];
+  function rsBlocks(version, ecc) {
+    const spec = RS_TABLE[version - 1].split("/")["LMQH".indexOf(ecc)];
+    const out = [];
+    for (const grp of spec.split("+")) {
+      const [cnt, rest] = grp.split("x");
+      const [total, data] = rest.split(",").map(Number);
+      for (let i = 0; i < +cnt; i++) out.push({ total, data });
+    }
+    return out;
+  }
+  // 符号語ビットの配置順（右下から2列ずつジグザグ／6列目のタイミングは飛ばす）
+  function placementOrder(size, fm) {
+    const order = [];
+    let col = size - 1, up = true;
+    while (col > 0) {
+      if (col === 6) col--;
+      for (let k = 0; k < size; k++) {
+        const r = up ? size - 1 - k : k;
+        for (const c of [col, col - 1]) if (!fm[r * size + c]) order.push(r * size + c);
+      }
+      up = !up; col -= 2;
+    }
+    return order;
+  }
+  // インターリーブを解いて「符号語番号 → ブロック番号」を作る
+  function codewordOwners(blocks) {
+    const owner = [];
+    const dmax = Math.max.apply(null, blocks.map((b) => b.data));
+    for (let i = 0; i < dmax; i++) blocks.forEach((b, bi) => { if (i < b.data) owner.push(bi); });
+    const ecPer = blocks[0].total - blocks[0].data;
+    for (let i = 0; i < ecPer; i++) blocks.forEach((b, bi) => owner.push(bi));
+    return owner;
+  }
+  function measureEcBudget(canvas, cand) {
+    const size = state.size, W = canvas.width, cell = W / (size + QUIET * 2);
+    const img = canvas.getContext("2d").getImageData(0, 0, W, W).data;
+    const fm = state.fmask, data = cand.modules;
+    const rad = Math.max(1, Math.round(cell * 0.3));
+    const read = new Uint8Array(size * size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const cy = Math.round((QUIET + y + 0.5) * cell), cx = Math.round((QUIET + x + 0.5) * cell);
+        let sum = 0, cnt = 0;
+        for (let dy = -rad; dy <= rad; dy++) {
+          for (let dx = -rad; dx <= rad; dx++) {
+            const px = cx + dx, py = cy + dy;
+            if (px < 0 || py < 0 || px >= W || py >= W) continue;
+            const o = (py * W + px) * 4;
+            sum += 0.2126 * img[o] + 0.7152 * img[o + 1] + 0.0722 * img[o + 2];
+            cnt++;
+          }
+        }
+        read[y * size + x] = sum / cnt < 128 ? 1 : 0;
+      }
+    }
+    const blocks = rsBlocks(state.version, cand.ecc);
+    const owner = codewordOwners(blocks);
+    const order = placementOrder(size, fm);
+    const badCw = new Set();
+    for (let bit = 0; bit < order.length; bit++) {
+      const i = order[bit];
+      if (read[i] !== (data[i] ? 1 : 0)) badCw.add(bit >> 3);
+    }
+    const per = blocks.map(() => 0);
+    badCw.forEach((cw) => { if (cw < owner.length) per[owner[cw]]++; });
+    const cap = blocks.map((b) => ((b.total - b.data) / 2) | 0);
+    let worst = 0, worstIdx = 0;
+    per.forEach((e, i) => { const u = cap[i] ? e / cap[i] : 9; if (u > worst) { worst = u; worstIdx = i; } });
+    let fnErr = 0;
+    for (let i = 0; i < size * size; i++) if (fm[i] && read[i] !== (data[i] ? 1 : 0)) fnErr++;
+    return { worst, err: per[worstIdx], cap: cap[worstIdx], blocks: blocks.length, fnErr,
+             totalErr: per.reduce((a, b) => a + b, 0) };
   }
 
   /* ============ 読み取り検証（jsQR） ============ */
@@ -1451,11 +1547,14 @@ permalink: /apps/image-qr-studio/
       const cand = state.cands[i];
       renderQR(cv, cand, opt);
       const v = verifyCandidate(cv, cand);
-      cand.verify = v;
+      const ec = measureEcBudget(cv, cand);
+      cand.verify = v; cand.ec = ec;
       const badge = cards[i].querySelector("[data-badge]");
       if (badge) {
-        badge.className = "badge " + (v.normal ? "ok" : "ng");
-        badge.textContent = v.normal ? (v.strict ? "読取OK（余裕あり）" : "読取OK") : "読み取れず";
+        const ok = v.normal && ec.worst < 0.85;
+        badge.className = "badge " + (ok ? "ok" : "ng");
+        badge.textContent = !v.normal ? "読み取れず"
+          : "読取OK・余力 " + Math.round(ec.worst * 100) + "%使用";
       }
       await new Promise((r) => setTimeout(r, 0));
     }
@@ -1481,11 +1580,25 @@ permalink: /apps/image-qr-studio/
     clearTimeout(detailTimer);
     detailTimer = setTimeout(() => {
       const v = verifyCandidate($("outCanvas"), cand);
-      box.className = "verify " + (v.normal ? "ok" : "ng");
-      box.innerHTML = v.normal
-        ? "✅ <b>読み取りOK</b>（自動デコードで一致）" +
-          (v.strict ? "<br>小さく印刷しても余裕がありそうです。" : "<br>やや余裕は少なめ。大きめに出力するのがおすすめです。")
-        : "⚠️ <b>この設定では読み取れませんでした</b><br>ドットを大きく／画像の明暗補正を強く／ロゴ穴を小さく してみてください。";
+      const ec = measureEcBudget($("outCanvas"), cand);
+      const pct = Math.round(ec.worst * 100);
+      // jsQR の合否だけでなく、誤り訂正をどれだけ食っているかで判定する
+      const level = !v.normal || ec.worst >= 1 ? "ng" : ec.worst >= 0.85 ? "warn" : "ok";
+      box.className = "verify " + (level === "ok" ? "ok" : "ng");
+      const head = !v.normal
+        ? "⚠️ <b>この設定では読み取れませんでした</b><br>ドットを大きく／画像の明暗補正を強く／ロゴ穴を小さく してみてください。"
+        : ec.worst >= 1
+          ? "🚨 <b>誤り訂正の限界を超えています</b><br>画面上のデコードは通っても、印刷やカメラ越しでは読めない可能性が高いです。"
+          : ec.worst >= 0.85
+            ? "⚠️ <b>読み取りOK（ただし余力がほぼ残っていません）</b><br>誤り訂正レベルを上げるか、装飾を弱めるのがおすすめです。"
+            : "✅ <b>読み取りOK</b>（自動デコードで一致）" +
+              (v.strict ? "<br>小さく印刷しても余裕がありそうです。" : "<br>やや余裕は少なめ。大きめに出力するのがおすすめです。");
+      box.innerHTML = head +
+        '<br><span style="color:var(--muted);font-size:.78rem">' +
+        "誤り訂正の余力：使用率 " + pct + "%（最悪ブロック " + ec.err + " / " + ec.cap + " 語・全 " +
+        ec.blocks + " ブロック中、誤り語 合計 " + ec.totalErr + "）" +
+        (ec.fnErr ? "<br>⚠️ ファインダー・位置合わせパターンなど<b>誤り訂正が効かない領域</b>に " + ec.fnErr +
+          " モジュールのズレがあります（角丸やロゴ穴を弱めてください）" : "") + "</span>";
       $("verifyBox").insertAdjacentHTML("beforeend",
         '<br><span style="color:var(--muted);font-size:.78rem">一致率 ' + (cand.score * 100).toFixed(1) +
         "% ・ 型番 " + state.version + " ・ ECC " + cand.ecc + " ・ mask " + cand.mask +
@@ -1499,7 +1612,7 @@ permalink: /apps/image-qr-studio/
     }, 60);
   }
 
-  ["dotScale", "agreeAlpha", "markFade", "wash", "imgAlpha", "logo"].forEach((id) =>
+  ["dotScale", "agreeAlpha", "markFade", "wash", "imgAlpha", "logo", "finderRound"].forEach((id) =>
     $(id).addEventListener("input", () => {
       $(id + "V").textContent = (+$(id).value).toFixed(2);
       renderDetail();
@@ -1508,7 +1621,13 @@ permalink: /apps/image-qr-studio/
     $("cellV").textContent = $("cell").value + " px/モジュール";
     renderDetail();
   });
-  ["roundFinder", "roundDot"].forEach((id) => $(id).addEventListener("change", renderDetail));
+  $("roundDot").addEventListener("change", renderDetail);
+  $("finderRound").addEventListener("input", () => {
+    const v = +$("finderRound").value;
+    $("finderHint").textContent = v > 0.5
+      ? "⚠️ 角丸が強いと 1:1:3:1:1 の比率が崩れ、厳しめのスキャナで読めなくなることがあります。"
+      : "ファインダーは仕様で比率が決まっている部分です。控えめにすると安全です。";
+  }, { passive: true });
 
   $("dlBtn").addEventListener("click", () => {
     if (state.sel < 0) return;
