@@ -52,6 +52,15 @@ permalink: /apps/image-qr-studio/
   .chip:hover { border-color: var(--accent); background: var(--accent-light); }
   .chip input { accent-color: var(--accent); margin: 0; }
   .chip.on { border-color: var(--accent); background: var(--accent-light); }
+  .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border); display: inline-block; }
+  .sw-w { background: #38bdf8; } .sw-b { background: #f43f5e; }
+  .sw-i { background: #facc15; } .sw-x { background: #94a3b8; }
+  .sw-e { background: repeating-linear-gradient(45deg, #fff, #fff 3px, #e5e7eb 3px, #e5e7eb 6px); }
+  #paintCanvas {
+    width: 100%; max-width: 320px; aspect-ratio: 1; display: block; margin: 10px auto 6px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    cursor: crosshair; touch-action: none; image-rendering: pixelated;
+  }
 
   .btn {
     padding: 10px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
@@ -248,9 +257,33 @@ permalink: /apps/image-qr-studio/
 
         <div class="code mb" style="margin-top:12px" id="templatePreview"></div>
 
+        <h3>強調範囲（任意）</h3>
+        <p class="hint">
+          下の図をドラッグして塗ると、その範囲を<b>最優先で合わせます</b>（連立方程式の先頭に入ります）。
+          ただしQRの符号構造上、<b>どうしても動かせないモジュールが半分近くあります</b>
+          （固定URL部分のバイトなど）。実行後に「何モジュール一致したか」を表示します。
+        </p>
+        <div class="chips mb" id="brushChips">
+          <label class="chip on"><input type="radio" name="brush" value="1" checked><span class="sw sw-w"></span>絶対白</label>
+          <label class="chip"><input type="radio" name="brush" value="2"><span class="sw sw-b"></span>絶対黒</label>
+          <label class="chip"><input type="radio" name="brush" value="3"><span class="sw sw-i"></span>重要</label>
+          <label class="chip"><input type="radio" name="brush" value="4"><span class="sw sw-x"></span>気にしない</label>
+          <label class="chip"><input type="radio" name="brush" value="0"><span class="sw sw-e"></span>消しゴム</label>
+        </div>
+        <canvas id="paintCanvas" width="320" height="320"></canvas>
+        <div class="slider-row">
+          <label for="brushSize">筆の太さ <span id="brushSizeV">3</span></label>
+          <input type="range" id="brushSize" min="1" max="12" step="1" value="3">
+        </div>
+        <div class="chips" style="margin-bottom:6px">
+          <button class="btn sub" id="paintCircle">中央に白い円</button>
+          <button class="btn sub" id="paintClear">全部消す</button>
+        </div>
+        <p class="hint" id="paintStat"></p>
+
         <div id="solveOnlyNote" class="note" style="margin-top:14px">
-          <b>線形解法モード</b>では、自由部分は URLセーフな16文字
-          <code>H-O / h-o</code> を容量いっぱいまで自動で使います（文字種・長さの指定は使いません）。
+          <b>線形解法モード</b>では、自由部分は URLセーフな32文字
+          <code>H-W / h-w</code> を容量いっぱいまで自動で使います（文字種・長さの指定は使いません）。
         </div>
 
         <div id="randomOnlyChars">
@@ -372,6 +405,10 @@ permalink: /apps/image-qr-studio/
           <input type="range" id="agreeAlpha" min="0" max="1" step="0.05" value="0.6">
         </div>
         <div class="slider-row">
+          <label for="markFade">強調範囲のはみ出しを薄く <span id="markFadeV">0.50</span></label>
+          <input type="range" id="markFade" min="0" max="1" step="0.05" value="0.5">
+        </div>
+        <div class="slider-row">
           <label for="wash">画像の明暗補正 <span id="washV">0.55</span></label>
           <input type="range" id="wash" min="0" max="1" step="0.05" value="0.55">
         </div>
@@ -407,11 +444,18 @@ permalink: /apps/image-qr-studio/
         目標パターンのうち<b>輪郭に近く重みの大きいモジュールから順に</b>方程式を立て、ガウス消去で解きます。
         自由ビット数（＝自由部分の文字数×4）のぶんだけモジュールを厳密に一致させられ、残りは約50%です。
         基底はマスクに依存しないため、8種類のマスクぶんの右辺をまとめて1回の消去で処理しています。<br><br>
-        自由部分に使う <code>H-O / h-o</code> は <code>0x48 XOR {1,2,4,0x20}</code> という
-        <b>ビット部分空間になっている英字16文字</b>で、1文字あたり4ビットを自由に置けてURLとしても安全です。
+        自由部分に使う <code>H-W / h-w</code>（HIJKLMNOPQRSTUVW hijklmnopqrstuvw）は
+        <code>0x48 XOR {1,2,4,0x18,0x20}</code> という<b>ビット部分空間になっている英字32文字</b>で、
+        1文字あたり5ビットを自由に置けてURLとしても安全です（英字だけで作れる部分空間としてはこれが最大）。
         誤り訂正レベルを下げるほどデータ語が増えて自由ビットも増え、絵に近づきます（そのぶん訂正の余力は減ります）。<br><br>
         <b>ランダム探索</b>：文字種や長さを自分で決めたいときのモードです。ランダムな文字列の一致率は平均50%前後で、
         総当たりで積み増せるのは数ポイント。線形解法なら 60〜72% 程度まで上がります。<br><br>
+        <b>強調範囲</b>：塗った範囲は連立方程式の先頭に入るので、線形解法なら最優先で合わせられます。
+        ただし<b>符号の構造上どうしても動かせないモジュール</b>が全体の半分近くあります
+        （固定URL部分のバイト、アルファベットで固定される3ビット、自由バイトを含まないRSブロックのEC語）。
+        実行後に「強調範囲 何/何モジュール一致」と、動かせなかった数を表示します。
+        固定URLを短くする・誤り訂正レベルを Q 前後にすると動かせる割合が増えます。
+        残ったはみ出しは「強調範囲のはみ出しを薄く」で誤り訂正の余力を使って消せます（読み取り判定を見ながら調整）。<br><br>
         描画はどちらのモードでも共通で、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して
         写真を透けさせ、食い違うモジュールだけをはっきり描きます。
         誤り訂正の余力があるので、中央のロゴ穴もある程度なら耐えます。
@@ -567,6 +611,71 @@ permalink: /apps/image-qr-studio/
   });
   $("motifText").addEventListener("keydown", (e) => { if (e.key === "Enter") $("motifBtn").click(); });
 
+  /* ============ 強調範囲（塗り） ============ *
+   * 版によってモジュール数が変わるので、塗りは正規化した PAINT_RES 角の
+   * グリッドに保持し、目標パターンを作るときにモジュール座標へサンプルする。 */
+  const PAINT_RES = 160;
+  const FORCE_WEIGHT = 8;                 // 塗った所の重み（一致率にも強く効く）
+  const PAINT_COLOR = { 1: "56,189,248", 2: "244,63,94", 3: "250,204,21", 4: "148,163,184" };
+  state.paint = new Uint8Array(PAINT_RES * PAINT_RES);
+
+  function paintAt(x, y, size) {
+    const px = Math.min(PAINT_RES - 1, ((x + 0.5) / size * PAINT_RES) | 0);
+    const py = Math.min(PAINT_RES - 1, ((y + 0.5) / size * PAINT_RES) | 0);
+    return state.paint[py * PAINT_RES + px];
+  }
+  function paintStamp(nx, ny, radiusModules, value) {
+    const size = state.size || 33;
+    const r = (radiusModules / size) * PAINT_RES;      // モジュール単位の半径 → グリッド単位
+    const cx = nx * PAINT_RES, cy = ny * PAINT_RES, r2 = r * r;
+    const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(PAINT_RES - 1, Math.ceil(cx + r));
+    const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(PAINT_RES - 1, Math.ceil(cy + r));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy <= r2) state.paint[y * PAINT_RES + x] = value;
+    }
+  }
+  function paintCounts(size, fm) {
+    const c = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const i = y * size + x;
+      if (fm && fm[i]) continue;                       // 機能パターンは動かせないので数えない
+      const m = paintAt(x, y, size);
+      if (m) c[m]++;
+    }
+    return c;
+  }
+
+  function drawPaintCanvas() {
+    const cv = $("paintCanvas"), ctx = cv.getContext("2d"), W = cv.width;
+    const size = state.size || 33, cell = W / size;
+    const t = state.target && state.target.size === size ? state.target : computeTarget(size);
+    const fm = state.fmask && state.size === size ? state.fmask : null;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const i = y * size + x;
+      if (fm && fm[i]) ctx.fillStyle = t.bit[i] ? "#9ca3af" : "#f3f4f6";
+      else ctx.fillStyle = t.bit[i] ? "#111827" : "#ffffff";
+      ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+      const m = paintAt(x, y, size);
+      if (m) {
+        ctx.fillStyle = "rgba(" + PAINT_COLOR[m] + ",.5)";
+        ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+    if (fm) {   // 機能パターンは塗っても効かないことを示す
+      ctx.strokeStyle = "rgba(107,114,128,.6)"; ctx.lineWidth = 1;
+      ctx.strokeRect(.5, .5, W - 1, W - 1);
+    }
+    const c = paintCounts(size, fm);
+    const total = c[1] + c[2] + c[3];
+    $("paintStat").innerHTML = total || c[4]
+      ? "指定中：絶対白 " + c[1] + " / 絶対黒 " + c[2] + " / 重要 " + c[3] + " / 気にしない " + c[4] +
+        " モジュール<br>（線形解法で厳密に固定できるのは<b>自由ビット数まで</b>。足りない分は一致率で妥協されます）"
+      : "未指定。塗らなければ画像全体をバランスよく合わせます。";
+    return t;
+  }
+
   /* ============ 目標パターン ============ */
   function computeTarget(size) {
     const c = document.createElement("canvas");
@@ -585,6 +694,19 @@ permalink: /apps/image-qr-studio/
       bit[i] = L < thr ? 1 : 0;               // 1 = 黒モジュールにしたい
       weight[i] = 0.15 + Math.min(1, Math.abs(L - thr) * 3);
     }
+    // 塗った範囲を反映（1=絶対白 / 2=絶対黒 / 3=重要 / 4=気にしない）
+    const mark = new Uint8Array(n);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = y * size + x;
+        const m = paintAt(x, y, size);
+        mark[i] = m;
+        if (m === 1) { bit[i] = 0; lum[i] = 1; weight[i] = FORCE_WEIGHT; }
+        else if (m === 2) { bit[i] = 1; lum[i] = 0; weight[i] = FORCE_WEIGHT; }
+        else if (m === 3) { weight[i] = weight[i] * 2.5 + 0.5; }
+        else if (m === 4) { weight[i] *= 0.12; }
+      }
+    }
     // 局所コントラスト（輪郭）— 線形解法で「どのモジュールを優先して合わせるか」に使う
     const edge = new Float32Array(n);
     for (let y = 0; y < size; y++) {
@@ -598,7 +720,7 @@ permalink: /apps/image-qr-studio/
         edge[i] = Math.min(1, e * 1.6);
       }
     }
-    return { size, lum, bit, weight, edge };
+    return { size, lum, bit, weight, edge, mark };
   }
 
   function buildFunctionMask(size, version) {
@@ -645,8 +767,40 @@ permalink: /apps/image-qr-studio/
     const p = $("srcPreview"), ctx = p.getContext("2d");
     drawSource(ctx, p.width, p.height);
     drawTargetPreview();
+    drawPaintCanvas();
     updateTemplatePreview();
   }
+
+  /* ---- 塗りの操作 ---- */
+  (function setupPaint() {
+    const cv = $("paintCanvas");
+    let painting = false;
+    const brush = () => +document.querySelector('input[name="brush"]:checked').value;
+    const pos = (e) => {
+      const r = cv.getBoundingClientRect();
+      return [clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1)];
+    };
+    const stroke = (e) => {
+      const [nx, ny] = pos(e);
+      paintStamp(nx, ny, +$("brushSize").value, brush());
+      drawPaintCanvas();
+    };
+    cv.addEventListener("pointerdown", (e) => {
+      painting = true; cv.setPointerCapture(e.pointerId); stroke(e); e.preventDefault();
+    });
+    cv.addEventListener("pointermove", (e) => { if (painting) stroke(e); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((ev) =>
+      cv.addEventListener(ev, () => { painting = false; }));
+    $("brushSize").addEventListener("input", () => { $("brushSizeV").textContent = $("brushSize").value; });
+    $("paintClear").addEventListener("click", () => {
+      state.paint.fill(0); refreshPreviews(); showToast("強調範囲を消しました");
+    });
+    $("paintCircle").addEventListener("click", () => {
+      const size = state.size || 33;
+      paintStamp(0.5, 0.5, size * 0.15, 1);      // 中央にロゴ穴サイズの「絶対白」
+      refreshPreviews(); showToast("中央に絶対白の円を置きました");
+    });
+  })();
 
   ["thr", "contrast", "imgScale"].forEach((id) =>
     $(id).addEventListener("input", () => {
@@ -729,6 +883,17 @@ permalink: /apps/image-qr-studio/
     }
     return w > 0 ? s / w : 0;
   }
+  function markStats(data) {
+    const { mark } = state.target, fm = state.fmask;
+    let ok = 0, total = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (fm[i] || mark[i] === 0 || mark[i] === 4) continue;
+      total++;
+      const want = mark[i] === 1 ? 0 : mark[i] === 2 ? 1 : state.target.bit[i];
+      if ((data[i] ? 1 : 0) === want) ok++;
+    }
+    return { ok, total };
+  }
   function pushTop(list, cand) {
     let i = list.length;
     while (i > 0 && list[i - 1].score < cand.score) i--;
@@ -765,6 +930,7 @@ permalink: /apps/image-qr-studio/
     state.fmask = buildFunctionMask(state.size, version);
     state.target = computeTarget(state.size);
     drawTargetPreview();
+    drawPaintCanvas();
   }
   function finishSearch(list, extra, infoText) {
     // 上位候補＋（ECC×マスク）ごとのベストを合わせて一覧にする
@@ -846,6 +1012,7 @@ permalink: /apps/image-qr-studio/
             const cand = {
               text, free, ecc, mask: qr.maskPattern,
               score: scoreMatrix(qr.modules.data),
+              marks: markStats(qr.modules.data),
               modules: qr.modules.data
             };
             pushTop(list, cand);
@@ -876,9 +1043,10 @@ permalink: /apps/image-qr-studio/
    * 目標パターンの「重みの大きいモジュール」から順に連立方程式を立てて
    * ガウス消去で解く。基底はマスクに依らないので、8マスク分の右辺を
    * まとめて1回の消去で処理する。                                        */
-  const SOLVE_BASE = 0x48;              // 'H'
-  const SOLVE_BITS = [1, 2, 4, 0x20];   // → H-O / h-o の16文字（すべてURLセーフ）
-  const SOLVE_MAX_CHARS = 600;          // 自由部分の上限（＝2400自由ビット）
+  const SOLVE_BASE = 0x48;                        // 'H'
+  const SOLVE_BITS = [1, 2, 4, 0x18, 0x20];       // → H-W / h-w の32文字（すべて英字＝URLセーフ）
+  const NBITS = SOLVE_BITS.length;                // 1文字あたり5ビット
+  const SOLVE_MAX_CHARS = 500;                    // 自由部分の上限（＝2500自由ビット）
 
   const parity32 = (v) => { v ^= v >>> 16; v ^= v >>> 8; v ^= v >>> 4; v ^= v >>> 2; v ^= v >>> 1; return v & 1; };
   const solveBaseStr = (L) => String.fromCharCode(SOLVE_BASE).repeat(L);
@@ -911,7 +1079,7 @@ permalink: /apps/image-qr-studio/
     const size = state.size, n = size * size;
     const L = capacityLen(tpl, ecc, version);
     if (L < 1) return [];
-    const k = L * 4, words = (k + 31) >> 5;
+    const k = L * NBITS, words = (k + 31) >> 5;
     const base = solveBaseStr(L);
 
     // マスクごとの基準行列（基底はマスク非依存なので M0 だけ8通り作る）
@@ -922,8 +1090,8 @@ permalink: /apps/image-qr-studio/
     const rows = new Uint32Array(n * words);
     const ref = M0[0];
     for (let p = 0; p < L; p++) {
-      for (let b = 0; b < 4; b++) {
-        const col = p * 4 + b, wi = col >> 5, bv = 1 << (col & 31);
+      for (let b = 0; b < NBITS; b++) {
+        const col = p * NBITS + b, wi = col >> 5, bv = 1 << (col & 31);
         const s = base.slice(0, p) + String.fromCharCode(SOLVE_BASE ^ SOLVE_BITS[b]) + base.slice(p + 1);
         const m = encodeFree(tpl, s, ecc, version, 0).modules.data;
         for (let i = 0; i < n; i++) if ((m[i] ? 1 : 0) !== (ref[i] ? 1 : 0)) rows[i * words + wi] |= bv;
@@ -935,12 +1103,32 @@ permalink: /apps/image-qr-studio/
     }
 
     // 重みの大きいモジュールから順に方程式を追加（行階段形）
+    // 行が全部0のモジュールは、この符号化では原理的に動かせない
+    // （固定プレフィックスのバイト／アルファベットで固定される3ビット／
+    //   自由バイトを含まないRSブロックのEC語）。集計して正直に表示する。
+    const ctl = { markOk: 0, markAll: 0, allOk: 0, all: 0 };
+    for (let i = 0; i < n; i++) {
+      if (state.fmask[i]) continue;
+      let live = 0;
+      for (let t = 0; t < words; t++) if (rows[i * words + t]) { live = 1; break; }
+      ctl.all++; if (live) ctl.allOk++;
+      const mk = state.target.mark[i];
+      if (mk === 1 || mk === 2 || mk === 3) { ctl.markAll++; if (live) ctl.markOk++; }
+    }
+
     // 「どのモジュールを厳密に合わせるか」の優先度。
     // 重みが一様な図案だと順序が画面の上から順になり、上だけ綺麗で下が粗くなるので、
     // 輪郭（局所コントラスト）を優遇しつつ、同点は乱数でばらして全体に散らす。
     const fm = state.fmask, tgt = state.target;
     const prio = new Float32Array(n);
-    for (let i = 0; i < n; i++) prio[i] = tgt.weight[i] * (0.45 + 1.55 * tgt.edge[i]) + Math.random() * 0.02;
+    for (let i = 0; i < n; i++) {
+      let v = tgt.weight[i] * (0.45 + 1.55 * tgt.edge[i]) + Math.random() * 0.02;
+      const m = tgt.mark[i];
+      if (m === 1 || m === 2) v += 1000;        // 絶対白／絶対黒は方程式の最優先
+      else if (m === 3) v += 100;               // 「重要」はその次
+      else if (m === 4) v -= 100;               // 「気にしない」は最後（自由ビットを使わない）
+      prio[i] = v;
+    }
     const order = [];
     for (let i = 0; i < n; i++) if (!fm[i]) order.push(i);
     order.sort((a, b) => prio[b] - prio[a]);
@@ -993,8 +1181,8 @@ permalink: /apps/image-qr-studio/
       let free = "";
       for (let p = 0; p < L; p++) {
         let v = SOLVE_BASE;
-        for (let b = 0; b < 4; b++) {
-          const c = p * 4 + b;
+        for (let b = 0; b < NBITS; b++) {
+          const c = p * NBITS + b;
           if (x[c >> 5] & (1 << (c & 31))) v ^= SOLVE_BITS[b];
         }
         free += String.fromCharCode(v);
@@ -1002,8 +1190,8 @@ permalink: /apps/image-qr-studio/
       const qr = encodeFree(tpl, free, ecc, version, m);
       out.push({
         text: fillTemplate(tpl, free), free, ecc, mask: qr.maskPattern,
-        score: scoreMatrix(qr.modules.data), modules: qr.modules.data,
-        solved: { L, bits: k, rank: pivotCols.length }
+        score: scoreMatrix(qr.modules.data), marks: markStats(qr.modules.data),
+        modules: qr.modules.data, solved: { L, bits: k, rank: pivotCols.length, ctl }
       });
     }
     return out;
@@ -1040,7 +1228,8 @@ permalink: /apps/image-qr-studio/
     endRun();
     finishSearch(all, [],
       "線形解法 完了（" + sec + "秒 / 型番 " + state.version + "・" + state.size + "×" + state.size + " モジュール" +
-      (info ? " / 自由部分 " + info.L + "文字＝" + info.bits + "ビット、うち " + info.rank + " 本の方程式を厳密に一致" : "") +
+      (info ? " / 自由部分 " + info.L + "文字＝" + info.bits + "ビット、うち " + info.rank + " 本の方程式を厳密に一致" +
+        " / 動かせるモジュール " + info.ctl.allOk + "／" + info.ctl.all : "") +
       (state.abort ? " / 中断" : "") + "）");
   }
 
@@ -1083,6 +1272,7 @@ permalink: /apps/image-qr-studio/
       cell,
       dotScale: +$("dotScale").value,
       agreeAlpha: +$("agreeAlpha").value,
+      markFade: +$("markFade").value,
       wash: +$("wash").value,
       imgAlpha: +$("imgAlpha").value,
       logo: +$("logo").value,
@@ -1110,7 +1300,7 @@ permalink: /apps/image-qr-studio/
       ctx.restore();
     }
 
-    const data = cand.modules, lum = state.target.lum, fm = state.fmask;
+    const data = cand.modules, lum = state.target.lum, fm = state.fmask, mark = state.target.mark;
     // 角のファインダ領域（丸く描くときはモジュール単位の描画をスキップ）
     const corners = [[0, 0], [size - 7, 0], [0, size - 7]];
     const inFinder = (x, y) => corners.some(([cx, cy]) =>
@@ -1128,17 +1318,25 @@ permalink: /apps/image-qr-studio/
           ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
           continue;
         }
+        if (mark[i] === 1 || mark[i] === 2) {   // 「絶対白／絶対黒」は下地をベタ塗り（写真を消す）
+          ctx.fillStyle = mark[i] === 2 ? "#000000" : "#ffffff";
+          ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
+        }
         const L = lum[i];
         // 画像の明暗が逆のところだけ、下地を目標の色に寄せる
         const wrong = dark ? L : 1 - L;
-        const a = opt.wash * Math.max(0, wrong - 0.15);
+        let a = opt.wash * Math.max(0, wrong - 0.15);
+        // 強調範囲は下地をベタ塗り済みなので、はみ出しを薄くするときは補正も外す
+        if (mark[i] === 1 || mark[i] === 2) a *= 1 - opt.markFade;
         if (a > 0.01) {
           ctx.fillStyle = dark ? "rgba(0,0,0," + a.toFixed(3) + ")" : "rgba(255,255,255," + a.toFixed(3) + ")";
           ctx.fillRect(px, py, cell + 0.5, cell + 0.5);
         }
         // ドット（画像と一致している所は薄く＝写真が透ける）
         const agree = dark ? L < 0.5 : L >= 0.5;
-        const alpha = agree ? 1 - opt.agreeAlpha : 1;
+        let alpha = agree ? 1 - opt.agreeAlpha : 1;
+        // 「絶対白／絶対黒」からはみ出したモジュールは、誤り訂正の余力を使って薄くできる
+        if (!agree && (mark[i] === 1 || mark[i] === 2)) alpha *= 1 - opt.markFade;
         if (alpha <= 0.02) continue;
         const r = (cell * opt.dotScale) / 2;
         ctx.globalAlpha = alpha;
@@ -1231,6 +1429,8 @@ permalink: /apps/image-qr-studio/
         '<span class="sc">' + (cand.score * 100).toFixed(1) + "%</span><br>" +
         "…" + escapeHtml(cand.free) + "<br>" +
         "ECC " + cand.ecc + " / mask " + cand.mask +
+        (cand.marks && cand.marks.total
+          ? "<br>強調 " + Math.round((cand.marks.ok / cand.marks.total) * 100) + "%" : "") +
         '<br><span class="badge wait" data-badge>検証中…</span>';
       el.appendChild(meta);
       el.addEventListener("click", () => selectCandidate(idx));
@@ -1290,11 +1490,16 @@ permalink: /apps/image-qr-studio/
         '<br><span style="color:var(--muted);font-size:.78rem">一致率 ' + (cand.score * 100).toFixed(1) +
         "% ・ 型番 " + state.version + " ・ ECC " + cand.ecc + " ・ mask " + cand.mask +
         " ・ URL " + cand.text.length + "文字" +
-        (cand.solved ? "（自由部分 " + cand.solved.L + "文字＝" + cand.solved.bits + "ビット）" : "") + "</span>");
+        (cand.solved ? "（自由部分 " + cand.solved.L + "文字＝" + cand.solved.bits + "ビット）" : "") +
+        (cand.marks && cand.marks.total
+          ? "<br>強調範囲 " + cand.marks.ok + " / " + cand.marks.total + " モジュール一致（" +
+            Math.round((cand.marks.ok / cand.marks.total) * 100) + "%）" +
+            (cand.solved ? "　うち " + (cand.solved.ctl.markAll - cand.solved.ctl.markOk) +
+              " モジュールは符号の構造上どうしても動かせません" : "") : "") + "</span>");
     }, 60);
   }
 
-  ["dotScale", "agreeAlpha", "wash", "imgAlpha", "logo"].forEach((id) =>
+  ["dotScale", "agreeAlpha", "markFade", "wash", "imgAlpha", "logo"].forEach((id) =>
     $(id).addEventListener("input", () => {
       $(id + "V").textContent = (+$(id).value).toFixed(2);
       renderDetail();
