@@ -7,12 +7,17 @@
 </head>
 <body>
 
+{% if page.permalink == '/apps/image-qr-optimizer/' %}
+<script src="{{ '/assets/image-qr-hook.js' | relative_url }}"></script>
+{% endif %}
+
 {{ content }}
 
 {% include footer.html %}
 
 {% if page.permalink == '/apps/image-qr-optimizer/' %}
 <script src="{{ '/assets/image-qr-target-inset.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-auto-length.js' | relative_url }}"></script>
 {% endif %}
 
 </body>
