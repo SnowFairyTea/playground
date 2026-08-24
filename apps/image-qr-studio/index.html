@@ -257,18 +257,22 @@ permalink: /apps/image-qr-studio/
 
         <div class="code mb" style="margin-top:12px" id="templatePreview"></div>
 
-        <h3>強調範囲（任意）</h3>
+        <h3>モチーフの指定（塗り）</h3>
         <p class="hint">
-          下の図をドラッグして塗ると、その範囲を<b>最優先で合わせます</b>（連立方程式の先頭に入ります）。
-          ただしQRの符号構造上、<b>どうしても動かせないモジュールが半分近くあります</b>
-          （固定URL部分のバイトなど）。実行後に「何モジュール一致したか」を表示します。
+          下の図をドラッグして塗ります。<b>絶対白／絶対黒</b>は連立方程式の先頭に入れて最優先で合わせ、
+          <b>重要度</b>は「どれくらい合わせたいか」の重みを場所ごとに指定します
+          （背景など、どうでもいい部分は重要度を下げると、その分の自由ビットが大事な所に回ります）。
         </p>
         <div class="chips mb" id="brushChips">
           <label class="chip on"><input type="radio" name="brush" value="1" checked><span class="sw sw-w"></span>絶対白</label>
           <label class="chip"><input type="radio" name="brush" value="2"><span class="sw sw-b"></span>絶対黒</label>
-          <label class="chip"><input type="radio" name="brush" value="3"><span class="sw sw-i"></span>重要</label>
-          <label class="chip"><input type="radio" name="brush" value="4"><span class="sw sw-x"></span>気にしない</label>
+          <label class="chip"><input type="radio" name="brush" value="w"><span class="sw sw-i"></span>重要度</label>
           <label class="chip"><input type="radio" name="brush" value="0"><span class="sw sw-e"></span>消しゴム</label>
+        </div>
+        <div class="slider-row">
+          <label for="brushWeight">重要度 <span id="brushWeightV">1.00</span></label>
+          <input type="range" id="brushWeight" min="0" max="1" step="0.05" value="1">
+          <span class="hint" style="grid-column:1/-1">0 = どうでもいい（自由ビットを使わない） … 0.5 = ふつう … 1 = 最重要</span>
         </div>
         <canvas id="paintCanvas" width="320" height="320"></canvas>
         <div class="slider-row">
@@ -279,6 +283,14 @@ permalink: /apps/image-qr-studio/
           <button class="btn sub" id="paintCircle">中央に白い円</button>
           <button class="btn sub" id="paintClear">全部消す</button>
         </div>
+
+        <div class="chips mb">
+          <label class="chip"><input type="checkbox" id="showFixed">動かせないモジュールを表示</label>
+        </div>
+        <p class="hint" id="fixedStat">
+          固定URL（必須文字列）に由来して<b>どうやっても白黒を変えられないモジュール</b>を洗い出して重ねて表示します。
+          いまの型番・誤り訂正レベル・URLで計算するので、切り替えると再計算されます。
+        </p>
         <p class="hint" id="paintStat"></p>
 
         <div id="solveOnlyNote" class="note" style="margin-top:14px">
@@ -438,6 +450,14 @@ permalink: /apps/image-qr-studio/
           <label for="markFade">強調範囲のはみ出しを消す <span id="markFadeV">0.00</span></label>
           <input type="range" id="markFade" min="0" max="1" step="0.05" value="0">
         </div>
+        <div class="slider-row">
+          <label for="ecBudget">余力を使ってよい上限 <span id="ecBudgetV">0.25</span></label>
+          <input type="range" id="ecBudget" min="0" max="0.9" step="0.05" value="0.25">
+          <span class="hint" style="grid-column:1/-1">
+            RSブロックごとの訂正能力のうち、上の2つで壊してよい割合。0 なら1語も壊しません。
+            0.5 前後を超えると、厳しめのデコーダで読めなくなることがあります（実測: ECC L で0.46は失敗、0.23は成功）。
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -460,7 +480,12 @@ permalink: /apps/image-qr-studio/
         誤り訂正レベルを下げるほどデータ語が増えて自由ビットも増え、絵に近づきます（そのぶん訂正の余力は減ります）。<br><br>
         <b>ランダム探索</b>：文字種や長さを自分で決めたいときのモードです。ランダムな文字列の一致率は平均50%前後で、
         総当たりで積み増せるのは数ポイント。線形解法なら 60〜72% 程度まで上がります。<br><br>
-        <b>強調範囲</b>：塗った範囲は連立方程式の先頭に入るので、線形解法なら最優先で合わせられます。
+        <b>塗りによる指定</b>：<b>絶対白／絶対黒</b>は連立方程式の先頭に入り、線形解法なら最優先で合わせられます。
+        <b>重要度</b>は場所ごとの重み（1/6〜6倍）で、背景など「どうでもいい部分」を下げると
+        その分の自由ビットが大事な所に回ります。
+        <b>動かせないモジュールを表示</b>を押すと、固定URL（必須文字列）と符号構造のせいで
+        どうやっても白黒を変えられないモジュールを洗い出して重ねて表示します
+        （赤＝どんな文字列でも不可、橙＝使える32文字の制約で不可）。
         ただし<b>符号の構造上どうしても動かせないモジュール</b>が全体の半分近くあります
         （固定URL部分のバイト、アルファベットで固定される3ビット、自由バイトを含まないRSブロックのEC語）。
         実行後に「強調範囲 何/何モジュール一致」と、動かせなかった数を表示します。
@@ -475,7 +500,7 @@ permalink: /apps/image-qr-studio/
         <b>誤り訂正の余力は構成上ゼロ消費</b>です（絵の見え方は、モジュールの並びそのものと、
         画像と一致するモジュールをベタ塗り・食い違うモジュールを小さく描く差で作ります）。
         わざと壊すのは「ロゴ穴」と「強調範囲のはみ出しを消す」だけで、これらは描く前に
-        RSブロックごとの訂正能力の25%までに絞り込みます。
+        RSブロックごとの訂正能力の<b>「余力を使ってよい上限」</b>（既定25%）までに絞り込みます。
         実際の消費量は<b>「誤り訂正の余力 使用率」</b>として表示します。
         ファインダーの角丸やロゴ穴が<b>誤り訂正の効かない機能パターン</b>を壊している場合も警告します。<br><br>
         描画はどちらのモードでも共通で、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して
@@ -639,14 +664,15 @@ permalink: /apps/image-qr-studio/
   const PAINT_RES = 160;
   const FORCE_WEIGHT = 8;                 // 塗った所の重み（一致率にも強く効く）
   const PAINT_COLOR = { 1: "56,189,248", 2: "244,63,94", 3: "250,204,21", 4: "148,163,184" };
-  state.paint = new Uint8Array(PAINT_RES * PAINT_RES);
+  state.paint = new Uint8Array(PAINT_RES * PAINT_RES);            // 0=なし 1=絶対白 2=絶対黒
+  state.wpaint = new Uint8Array(PAINT_RES * PAINT_RES).fill(128);  // 重要度 0..255（128=ふつう）
 
-  function paintAt(x, y, size) {
-    const px = Math.min(PAINT_RES - 1, ((x + 0.5) / size * PAINT_RES) | 0);
-    const py = Math.min(PAINT_RES - 1, ((y + 0.5) / size * PAINT_RES) | 0);
-    return state.paint[py * PAINT_RES + px];
-  }
-  function paintStamp(nx, ny, radiusModules, value) {
+  const paintIdx = (x, y, size) =>
+    Math.min(PAINT_RES - 1, (((y + 0.5) / size * PAINT_RES) | 0)) * PAINT_RES +
+    Math.min(PAINT_RES - 1, (((x + 0.5) / size * PAINT_RES) | 0));
+  const paintAt = (x, y, size) => state.paint[paintIdx(x, y, size)];
+  const weightAt = (x, y, size) => state.wpaint[paintIdx(x, y, size)] / 255;   // 0..1（0.5=ふつう）
+  function paintStamp(nx, ny, radiusModules, value) {   // value: 0=消しゴム 1/2=固定 "w"=重要度
     const size = state.size || 33;
     const r = (radiusModules / size) * PAINT_RES;      // モジュール単位の半径 → グリッド単位
     const cx = nx * PAINT_RES, cy = ny * PAINT_RES, r2 = r * r;
@@ -654,18 +680,86 @@ permalink: /apps/image-qr-studio/
     const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(PAINT_RES - 1, Math.ceil(cy + r));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
-      if (dx * dx + dy * dy <= r2) state.paint[y * PAINT_RES + x] = value;
+      if (dx * dx + dy * dy > r2) continue;
+      const k = y * PAINT_RES + x;
+      if (value === "w") state.wpaint[k] = Math.round(+$("brushWeight").value * 255);
+      else if (value === 0) { state.paint[k] = 0; state.wpaint[k] = 128; }
+      else state.paint[k] = value;
     }
   }
   function paintCounts(size, fm) {
-    const c = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const c = { 1: 0, 2: 0, up: 0, down: 0 };
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const i = y * size + x;
       if (fm && fm[i]) continue;                       // 機能パターンは動かせないので数えない
       const m = paintAt(x, y, size);
       if (m) c[m]++;
+      const w = weightAt(x, y, size);
+      if (w > 0.55) c.up++; else if (w < 0.45) c.down++;
     }
     return c;
+  }
+
+  /* 必須文字列（固定URL）と符号構造のせいで動かせないモジュールを洗い出す。
+     ペイロードの各バイトのビットを1つずつ反転した差分を集めれば、
+     「どの自由ビットにも触られないモジュール」＝どうやっても動かせないモジュールが分かる。
+     ASCII の範囲（bit7=0）を保つため、反転するのは bit0〜6 の7本。 */
+  const ANY_BITS = [1, 2, 4, 8, 0x10, 0x20, 0x40];
+  async function computeFixedMap(onProgress) {
+    const tpl = currentTemplate();
+    if (!tpl || !tpl.includes("{}")) return null;
+    const eccList = selectedEcc();
+    const ecc = eccList[0];
+    const version = currentMethod() === "solve" ? detectVersionSolve(tpl, eccList) : detectVersion(tpl, eccList);
+    if (version < 0) return null;
+    const key = tpl + "|" + ecc + "|" + version;
+    if (state.fixed && state.fixed.key === key) return state.fixed;
+
+    const size = version * 4 + 17, n = size * size;
+    const L = capacityLen(tpl, ecc, version);
+    if (L < 1) return null;
+    const base = solveBaseStr(L);
+    const M0 = encodeFree(tpl, base, ecc, version, 0).modules.data;
+    const anyLive = new Uint8Array(n);       // どれかのビットで動く＝原理的には動かせる
+    const ourLive = new Uint8Array(n);       // いま使える32文字アルファベットで動く
+    const d = ANY_BITS.map(() => null);
+    for (let p = 0; p < L; p++) {
+      for (let b = 0; b < ANY_BITS.length; b++) {
+        const str = base.slice(0, p) + String.fromCharCode(SOLVE_BASE ^ ANY_BITS[b]) + base.slice(p + 1);
+        const m = encodeFree(tpl, str, ecc, version, 0).modules.data;
+        const diff = new Uint8Array(n);
+        for (let i = 0; i < n; i++) if ((m[i] ? 1 : 0) !== (M0[i] ? 1 : 0)) { diff[i] = 1; anyLive[i] = 1; }
+        d[b] = diff;
+      }
+      // 使えるアルファベットのマスク {1,2,4,0x18,0x20} のうち 0x18 は bit3 と bit4 の同時反転
+      for (let i = 0; i < n; i++) {
+        if (d[0][i] || d[1][i] || d[2][i] || d[5][i] || (d[3][i] ^ d[4][i])) ourLive[i] = 1;
+      }
+      if ((p & 7) === 0 && onProgress) { await onProgress(p / L); }
+    }
+    state.fixed = { key, size, version, ecc, L, anyLive, ourLive };
+    return state.fixed;
+  }
+
+  function updateFixedStat() {
+    const fx = state.fixed;
+    if (!fx || !$("showFixed").checked) return;
+    const fm = buildFunctionMask(fx.size, fx.version);
+    let anyFix = 0, csFix = 0, fnCnt = 0, tot = 0;
+    for (let i = 0; i < fx.size * fx.size; i++) {
+      if (fm[i]) { fnCnt++; continue; }
+      tot++;
+      if (!fx.anyLive[i]) anyFix++;
+      else if (!fx.ourLive[i]) csFix++;
+    }
+    $("fixedStat").innerHTML =
+      "型番 " + fx.version + "・ECC " + fx.ecc + "・自由部分 " + fx.L + "文字 のとき<br>" +
+      '<span style="color:#dc2626">■</span> <b>どんな文字列でも動かせない ' + anyFix + "</b>" +
+      "（固定URLのバイト／自由バイトを含まないRSブロックのEC語）<br>" +
+      '<span style="color:#f97316">■</span> 使える32文字の制約で動かせない ' + csFix +
+      "（1バイト8ビットのうち2ビットが固定される分）<br>" +
+      "動かせる <b>" + (tot - anyFix - csFix) + "</b> / データ領域 " + tot +
+      "（ほかに機能パターン " + fnCnt + " モジュールは仕様で固定）";
   }
 
   function drawPaintCanvas() {
@@ -673,16 +767,37 @@ permalink: /apps/image-qr-studio/
     const size = state.size || 33, cell = W / size;
     const t = state.target && state.target.size === size ? state.target : computeTarget(size);
     const fm = state.fmask && state.size === size ? state.fmask : null;
+    const fx = $("showFixed").checked ? state.fixed : null;
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const i = y * size + x;
       if (fm && fm[i]) ctx.fillStyle = t.bit[i] ? "#9ca3af" : "#f3f4f6";
       else ctx.fillStyle = t.bit[i] ? "#111827" : "#ffffff";
       ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+      // 重要度（高い=黄、低い=グレー）
+      const w = weightAt(x, y, size);
+      if (w > 0.52 || w < 0.48) {
+        ctx.fillStyle = w > 0.5
+          ? "rgba(250,204,21," + ((w - 0.5) * 1.4).toFixed(2) + ")"
+          : "rgba(148,163,184," + ((0.5 - w) * 1.6).toFixed(2) + ")";
+        ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+      }
       const m = paintAt(x, y, size);
       if (m) {
         ctx.fillStyle = "rgba(" + PAINT_COLOR[m] + ",.5)";
         ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+      }
+      // 動かせないモジュール（赤=どんな文字列でも不可／橙=文字集合の制約で不可）
+      if (fx && fx.size === size) {
+        const i2 = y * size + x;
+        if (fm && fm[i2]) { /* 機能パターンは別扱い */ }
+        else if (!fx.anyLive[i2]) {
+          ctx.fillStyle = "rgba(220,38,38,.55)";
+          ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+        } else if (!fx.ourLive[i2]) {
+          ctx.fillStyle = "rgba(249,115,22,.45)";
+          ctx.fillRect(x * cell, y * cell, Math.ceil(cell), Math.ceil(cell));
+        }
       }
     }
     if (fm) {   // 機能パターンは塗っても効かないことを示す
@@ -690,10 +805,10 @@ permalink: /apps/image-qr-studio/
       ctx.strokeRect(.5, .5, W - 1, W - 1);
     }
     const c = paintCounts(size, fm);
-    const total = c[1] + c[2] + c[3];
-    $("paintStat").innerHTML = total || c[4]
-      ? "指定中：絶対白 " + c[1] + " / 絶対黒 " + c[2] + " / 重要 " + c[3] + " / 気にしない " + c[4] +
-        " モジュール<br>（線形解法で厳密に固定できるのは<b>自由ビット数まで</b>。足りない分は一致率で妥協されます）"
+    $("paintStat").innerHTML = (c[1] + c[2] + c.up + c.down)
+      ? "指定中：絶対白 " + c[1] + " / 絶対黒 " + c[2] +
+        " / 重要度↑ " + c.up + " / 重要度↓ " + c.down + " モジュール" +
+        "<br>（絶対白・絶対黒を厳密に固定できるのは<b>自由ビット数まで</b>。足りない分は重み順で妥協されます）"
       : "未指定。塗らなければ画像全体をバランスよく合わせます。";
     return t;
   }
@@ -723,10 +838,10 @@ permalink: /apps/image-qr-studio/
         const i = y * size + x;
         const m = paintAt(x, y, size);
         mark[i] = m;
+        // 重要度（0=どうでもいい 0.5=ふつう 1=最重要）を 1/6〜6倍の重みに変換
+        weight[i] *= Math.pow(6, (weightAt(x, y, size) - 0.5) * 2);
         if (m === 1) { bit[i] = 0; lum[i] = 1; weight[i] = FORCE_WEIGHT; }
         else if (m === 2) { bit[i] = 1; lum[i] = 0; weight[i] = FORCE_WEIGHT; }
-        else if (m === 3) { weight[i] = weight[i] * 2.5 + 0.5; }
-        else if (m === 4) { weight[i] *= 0.12; }
       }
     }
     // 局所コントラスト（輪郭）— 線形解法で「どのモジュールを優先して合わせるか」に使う
@@ -788,6 +903,19 @@ permalink: /apps/image-qr-studio/
   function refreshPreviews() {
     const p = $("srcPreview"), ctx = p.getContext("2d");
     drawSource(ctx, p.width, p.height);
+    // 塗りのマス目が実物とズレないよう、いまの設定で使われる版に合わせておく
+    try {
+      const tpl = currentTemplate();
+      if (tpl) {
+        const eccList = selectedEcc();
+        const v = currentMethod() === "solve" ? detectVersionSolve(tpl, eccList) : detectVersion(tpl, eccList);
+        if (v > 0 && v !== state.version) {
+          state.version = v; state.size = v * 4 + 17;
+          state.fmask = buildFunctionMask(state.size, v);
+        }
+      }
+    } catch (e) { /* URL未入力などは無視 */ }
+    state.target = computeTarget(state.size || 33);
     drawTargetPreview();
     drawPaintCanvas();
     updateTemplatePreview();
@@ -797,7 +925,10 @@ permalink: /apps/image-qr-studio/
   (function setupPaint() {
     const cv = $("paintCanvas");
     let painting = false;
-    const brush = () => +document.querySelector('input[name="brush"]:checked').value;
+    const brush = () => {
+      const v = document.querySelector('input[name="brush"]:checked').value;
+      return v === "w" ? "w" : +v;
+    };
     const pos = (e) => {
       const r = cv.getBoundingClientRect();
       return [clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1)];
@@ -814,8 +945,12 @@ permalink: /apps/image-qr-studio/
     ["pointerup", "pointercancel", "pointerleave"].forEach((ev) =>
       cv.addEventListener(ev, () => { painting = false; }));
     $("brushSize").addEventListener("input", () => { $("brushSizeV").textContent = $("brushSize").value; });
+    $("brushWeight").addEventListener("input", () => {
+      $("brushWeightV").textContent = (+$("brushWeight").value).toFixed(2);
+    });
     $("paintClear").addEventListener("click", () => {
-      state.paint.fill(0); refreshPreviews(); showToast("強調範囲を消しました");
+      state.paint.fill(0); state.wpaint.fill(128);
+      refreshPreviews(); showToast("塗りを消しました");
     });
     $("paintCircle").addEventListener("click", () => {
       const size = state.size || 33;
@@ -823,6 +958,37 @@ permalink: /apps/image-qr-studio/
       refreshPreviews(); showToast("中央に絶対白の円を置きました");
     });
   })();
+
+  /* ---- 動かせないモジュールの解析 ---- */
+  let fixedBusy = false, fixedTimer = null;
+  function invalidateFixed() {
+    state.fixed = null;
+    if (!$("showFixed").checked) return;
+    clearTimeout(fixedTimer);
+    fixedTimer = setTimeout(() => refreshFixed(true), 400);
+  }
+  async function refreshFixed(force) {
+    if (!$("showFixed").checked) { drawPaintCanvas(); return; }
+    if (fixedBusy) return;
+    fixedBusy = true;
+    if (force) state.fixed = null;
+    const stat = $("fixedStat");
+    const before = stat.innerHTML;
+    try {
+      const r = await computeFixedMap(async (f) => {
+        stat.textContent = "解析中… " + Math.round(f * 100) + "%";
+        await yieldNow();
+      });
+      if (!r) { stat.innerHTML = before; showToast("この設定では解析できません（URLを確認してください）", false); }
+      else { prepareTarget(r.version); updateFixedStat(); }
+    } catch (e) {
+      stat.innerHTML = before;
+      showToast("解析に失敗しました", false);
+    }
+    fixedBusy = false;
+    drawPaintCanvas();
+  }
+  $("showFixed").addEventListener("change", () => refreshFixed(false));
 
   ["thr", "contrast", "imgScale"].forEach((id) =>
     $(id).addEventListener("input", () => {
@@ -869,7 +1035,10 @@ permalink: /apps/image-qr-studio/
     box.innerHTML = esc(tpl).split("{}").join('<span class="slot">' + esc(sampleFree()) + "</span>");
   }
   ["destUrl", "paramName", "template", "customChars", "maxLen", "minLen"].forEach((id) =>
-    $(id).addEventListener("input", updateTemplatePreview));
+    $(id).addEventListener("input", () => { updateTemplatePreview(); invalidateFixed(); }));
+  document.querySelectorAll("#eccChips input").forEach((i) =>
+    i.addEventListener("change", invalidateFixed));
+  $("verBoost").addEventListener("change", invalidateFixed);
   document.querySelectorAll("#charsetChips input").forEach((i) =>
     i.addEventListener("change", updateTemplatePreview));
   document.querySelectorAll('input[name="mode"]').forEach((r) =>
@@ -909,9 +1078,9 @@ permalink: /apps/image-qr-studio/
     const { mark } = state.target, fm = state.fmask;
     let ok = 0, total = 0;
     for (let i = 0; i < data.length; i++) {
-      if (fm[i] || mark[i] === 0 || mark[i] === 4) continue;
+      if (fm[i] || mark[i] === 0) continue;
       total++;
-      const want = mark[i] === 1 ? 0 : mark[i] === 2 ? 1 : state.target.bit[i];
+      const want = mark[i] === 1 ? 0 : 1;
       if ((data[i] ? 1 : 0) === want) ok++;
     }
     return { ok, total };
@@ -1134,8 +1303,7 @@ permalink: /apps/image-qr-studio/
       let live = 0;
       for (let t = 0; t < words; t++) if (rows[i * words + t]) { live = 1; break; }
       ctl.all++; if (live) ctl.allOk++;
-      const mk = state.target.mark[i];
-      if (mk === 1 || mk === 2 || mk === 3) { ctl.markAll++; if (live) ctl.markOk++; }
+      if (state.target.mark[i]) { ctl.markAll++; if (live) ctl.markOk++; }
     }
 
     // 「どのモジュールを厳密に合わせるか」の優先度。
@@ -1145,10 +1313,7 @@ permalink: /apps/image-qr-studio/
     const prio = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       let v = tgt.weight[i] * (0.45 + 1.55 * tgt.edge[i]) + Math.random() * 0.02;
-      const m = tgt.mark[i];
-      if (m === 1 || m === 2) v += 1000;        // 絶対白／絶対黒は方程式の最優先
-      else if (m === 3) v += 100;               // 「重要」はその次
-      else if (m === 4) v -= 100;               // 「気にしない」は最後（自由ビットを使わない）
+      if (tgt.mark[i]) v += 1000;               // 絶対白／絶対黒は方程式の最優先
       prio[i] = v;
     }
     const order = [];
@@ -1296,6 +1461,7 @@ permalink: /apps/image-qr-studio/
       dotScale: +$("dotScale").value,
       markFade: +$("markFade").value,
       logo: +$("logo").value,
+      ecBudget: +$("ecBudget").value,
       finderRound: +$("finderRound").value,
       roundDot: $("roundDot").checked
     };
@@ -1308,7 +1474,6 @@ permalink: /apps/image-qr-studio/
    * わざと壊すのは「ロゴ穴」と「強調範囲のはみ出し消し」だけで、
    * これらは描く前にRSブロックごとの上限まで絞り込む。                     */
   const DARK_MAX = 70, LIGHT_MIN = 186;
-  const EC_BREAK_LIMIT = 0.25;          // 1ブロックの訂正能力のうち、わざと壊してよい割合
 
   function planBreaks(cand, opt) {
     const size = state.size, mark = state.target.mark, fm = state.fmask, data = cand.modules;
@@ -1342,7 +1507,7 @@ permalink: /apps/image-qr-studio/
       byBlock.get(b).push(cw);
     });
     byBlock.forEach((cws, b) => {
-      const limit = Math.max(0, Math.floor(lay.cap[b] * EC_BREAK_LIMIT));
+      const limit = Math.max(0, Math.floor(lay.cap[b] * opt.ecBudget));
       // 中心に近い符号語から優先して壊す（見た目の中心を残す）
       cws.sort((p, q) => Math.min.apply(null, byCw.get(p).map((t) => t.d)) -
                          Math.min.apply(null, byCw.get(q).map((t) => t.d)));
@@ -1694,7 +1859,7 @@ permalink: /apps/image-qr-studio/
     }, 60);
   }
 
-  ["photo", "dotScale", "markFade", "logo", "finderRound"].forEach((id) =>
+  ["photo", "dotScale", "markFade", "logo", "finderRound", "ecBudget"].forEach((id) =>
     $(id).addEventListener("input", () => {
       $(id + "V").textContent = (+$(id).value).toFixed(2);
       renderDetail();
