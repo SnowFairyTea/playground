@@ -333,6 +333,33 @@ permalink: /apps/image-qr-studio/
         </div>
         <p class="hint" id="methodHint"></p>
 
+        <div id="solveOnlyOpts">
+          <div class="slider-row">
+            <label for="lock">モチーフの再現度 <span id="lockV">0.75</span></label>
+            <input type="range" id="lock" min="0.2" max="1" step="0.05" value="0.75">
+            <span class="hint" style="grid-column:1/-1">
+              重要な所から順に方程式を立て、自由ビットのこの割合まで使ったら止めます。
+              残りは<b>同じモチーフを満たす別解の自由スペース</b>になり、そこを振って候補を量産します。
+              下げるほど候補のばらつきが大きく、上げるほど絵に忠実で似た候補ばかりになります。
+              （「絶対白／絶対黒」の指定はこの割合に関係なく必ず先に確保します）
+            </span>
+          </div>
+          <div class="row">
+            <div>
+              <label class="field" for="candCount">一度に出す候補数</label>
+              <select id="candCount">
+                <option value="8">8個</option>
+                <option value="16" selected>16個</option>
+                <option value="32">32個</option>
+                <option value="64">64個</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn sub" id="rollBtn" style="display:none;width:100%">別の候補を出す</button>
+            </div>
+          </div>
+        </div>
+
         <h3>誤り訂正レベル（複数選択可）</h3>
         <div class="chips mb" id="eccChips">
           <label class="chip"><input type="checkbox" data-ecc="L">L (7%)</label>
@@ -580,7 +607,8 @@ permalink: /apps/image-qr-studio/
   };
   const QUIET = 4;      // クワイエットゾーン（モジュール数）
   const TOP_K = 8;      // 一致率の上位として保持する数
-  const MAX_CARDS = 16; // 表示する候補の上限
+  const MAX_CARDS = 16; // 表示する候補の上限（ランダム探索時）
+  const cardLimit = () => (currentMethod() === "solve" ? +$("candCount").value : MAX_CARDS);
 
   /* ============ 状態 ============ */
   const state = {
@@ -1129,10 +1157,10 @@ permalink: /apps/image-qr-studio/
     const has = new Set(merged.map((c) => c.text + c.ecc + c.mask));
     (extra || []).sort((a, b) => b.score - a.score).forEach((c) => {
       const k = c.text + c.ecc + c.mask;
-      if (!has.has(k) && merged.length < MAX_CARDS) { has.add(k); merged.push(c); }
+      if (!has.has(k) && merged.length < cardLimit()) { has.add(k); merged.push(c); }
     });
     merged.sort((a, b) => b.score - a.score);
-    if (merged.length > MAX_CARDS) merged.length = MAX_CARDS;
+    if (merged.length > cardLimit()) merged.length = cardLimit();
 
     $("progText").textContent = infoText;
     state.cands = merged;
@@ -1266,7 +1294,7 @@ permalink: /apps/image-qr-studio/
     return Math.min(40, v + (+$("verBoost").value));
   }
 
-  async function solveForEcc(tpl, ecc, version, progress) {
+  async function solveForEcc(tpl, ecc, version, lock, progress) {
     const size = state.size, n = size * size;
     const L = capacityLen(tpl, ecc, version);
     if (L < 1) return [];
@@ -1320,12 +1348,21 @@ permalink: /apps/image-qr-studio/
     for (let i = 0; i < n; i++) if (!fm[i]) order.push(i);
     order.sort((a, b) => prio[b] - prio[a]);
 
+    // 方程式を全部埋めてしまうと解が1つに定まる。大事な所だけを式にして途中で止めれば、
+    // 残りは「同じモチーフを満たす別解の集合」＝自由スペースとして残り、そこを振れば
+    // 大事な所が揃ったまま見た目だけ違う候補をいくらでも作れる。
+    const maxEq = Math.max(1, Math.round(k * lock));
+    let forcedDone = false, rankAfterForced = 0;
     const pivotRow = new Array(k).fill(null);
     const pivotRhs = new Int32Array(k);     // 8マスク分の右辺をビットで持つ
     const pivotCols = [];
     const row = new Uint32Array(words);
     for (let oi = 0; oi < order.length && pivotCols.length < k; oi++) {
       const i = order[oi];
+      if (!forcedDone && !tgt.mark[i]) {     // 「絶対白／絶対黒」はここまで。以降は上限で打ち切る
+        forcedDone = true; rankAfterForced = pivotCols.length;
+      }
+      if (forcedDone && pivotCols.length >= Math.max(rankAfterForced, maxEq)) break;
       row.set(rows.subarray(i * words, i * words + words));
       let rhs = 0;
       for (let m = 0; m < 8; m++) if (tgt.bit[i] ^ (M0[m][i] ? 1 : 0)) rhs |= 1 << m;
@@ -1354,32 +1391,53 @@ permalink: /apps/image-qr-studio/
       }
     }
 
-    // 後退代入 → 文字列 → 候補（マスク8種ぶん）
-    const cols = pivotCols.slice().sort((a, b) => b - a);
+    const isPivot = new Uint8Array(k);
+    pivotCols.forEach((c) => { isPivot[c] = 1; });
+    const freeCols = [];
+    for (let c = 0; c < k; c++) if (!isPivot[c]) freeCols.push(c);
+    return {
+      tpl, ecc, version, L, k, words, ctl,
+      pivotRow, pivotRhs,
+      order: pivotCols.slice().sort((a, b) => b - a),   // 後退代入は列の大きい順
+      freeCols, rank: pivotCols.length
+    };
+  }
+
+  /* 残った自由度をランダムに振って候補を作る。
+     消去はやり直さないので、何度でも一瞬で振り直せる。 */
+  function sampleCandidates(el, count) {
     const out = [];
-    for (let m = 0; m < 8; m++) {
-      const x = new Uint32Array(words);
-      for (const c of cols) {
-        const pr = pivotRow[c];
-        let par = 0;
-        for (let t = 0; t < words; t++) par ^= parity32(pr[t] & x[t]);
-        if (((pivotRhs[c] >> m) & 1) ^ par) x[c >> 5] |= 1 << (c & 31);
-      }
-      let free = "";
-      for (let p = 0; p < L; p++) {
-        let v = SOLVE_BASE;
-        for (let b = 0; b < NBITS; b++) {
-          const c = p * NBITS + b;
-          if (x[c >> 5] & (1 << (c & 31))) v ^= SOLVE_BITS[b];
+    for (let idx = 0; idx < count; idx++) {
+      const m = idx % 8;
+      // 最初の8個は自由変数を全部0にした基準解（＝いちばん絵に忠実）を8マスク分。
+      // それ以降は1個ごとに自由スペースを引き直す。
+      const seed = new Uint32Array(el.words);
+      if (idx >= 8) for (const c of el.freeCols) if (Math.random() < 0.5) seed[c >> 5] |= 1 << (c & 31);
+      {
+        const x = Uint32Array.from(seed);
+        for (const c of el.order) {                     // 後退代入（自由変数はseedのまま）
+          const pr = el.pivotRow[c];
+          let par = 0;
+          for (let t = 0; t < el.words; t++) par ^= parity32(pr[t] & x[t]);
+          if (((el.pivotRhs[c] >> m) & 1) ^ par) x[c >> 5] |= 1 << (c & 31);
         }
-        free += String.fromCharCode(v);
+        let free = "";
+        for (let p = 0; p < el.L; p++) {
+          let v = SOLVE_BASE;
+          for (let b = 0; b < NBITS; b++) {
+            const c = p * NBITS + b;
+            if (x[c >> 5] & (1 << (c & 31))) v ^= SOLVE_BITS[b];
+          }
+          free += String.fromCharCode(v);
+        }
+        const qr = encodeFree(el.tpl, free, el.ecc, el.version, m);
+        out.push({
+          text: fillTemplate(el.tpl, free), free, ecc: el.ecc, mask: qr.maskPattern,
+          score: scoreMatrix(qr.modules.data), marks: markStats(qr.modules.data),
+          modules: qr.modules.data,
+          solved: { L: el.L, bits: el.k, rank: el.rank, free: el.freeCols.length, ctl: el.ctl }
+        });
       }
-      const qr = encodeFree(tpl, free, ecc, version, m);
-      out.push({
-        text: fillTemplate(tpl, free), free, ecc, mask: qr.maskPattern,
-        score: scoreMatrix(qr.modules.data), marks: markStats(qr.modules.data),
-        modules: qr.modules.data, solved: { L, bits: k, rank: pivotCols.length, ctl }
-      });
     }
     return out;
   }
@@ -1393,36 +1451,53 @@ permalink: /apps/image-qr-studio/
 
     beginRun();
     const t0 = performance.now();
-    let all = [];
-    let info = null;
+    const lock = +$("lock").value;
+    const els = [];
     for (let ei = 0; ei < eccList.length; ei++) {
       const ecc = eccList[ei];
       const span = 1 / eccList.length;
-      const res = await solveForEcc(tpl, ecc, version, async (frac, label) => {
+      const el = await solveForEcc(tpl, ecc, version, lock, async (frac, label) => {
         $("barFill").style.width = Math.round((ei * span + frac * span) * 100) + "%";
         $("progText").textContent = "ECC " + ecc + "：" + label;
-        $("progScore").textContent = all.length ? "最高一致率 " + (all[0].score * 100).toFixed(1) + "%" : "";
         await yieldNow();
       });
-      if (res === null) break;                 // 中断
-      all = all.concat(res).sort((a, b) => b.score - a.score);
-      if (res.length && !info) info = res[0].solved;
-      $("progScore").textContent = "最高一致率 " + (all[0].score * 100).toFixed(1) + "%";
+      if (el === null) break;                  // 中断
+      els.push(el);
       await yieldNow();
     }
-
+    state.els = els;                           // 振り直し用にとっておく
     const sec = ((performance.now() - t0) / 1000).toFixed(1);
     endRun();
+    if (!els.length) { finishSearch([], [], "候補を作れませんでした"); return; }
+    rollCandidates("線形解法 完了（" + sec + "秒 / ");
+  }
+
+  /* 自由スペースを振り直して候補を作る（消去はやり直さないので一瞬） */
+  function rollCandidates(prefix) {
+    const els = state.els || [];
+    if (!els.length) { showToast("先に候補を作ってください", false); return; }
+    const count = +$("candCount").value;
+    const per = Math.max(1, Math.round(count / els.length));
+    let all = [];
+    els.forEach((el) => { all = all.concat(sampleCandidates(el, per)); });
+    all.sort((a, b) => b.score - a.score);
+    const info = all[0].solved;
+    $("rollBtn").style.display = "";
     finishSearch(all, [],
-      "線形解法 完了（" + sec + "秒 / 型番 " + state.version + "・" + state.size + "×" + state.size + " モジュール" +
-      (info ? " / 自由部分 " + info.L + "文字＝" + info.bits + "ビット、うち " + info.rank + " 本の方程式を厳密に一致" +
-        " / 動かせるモジュール " + info.ctl.allOk + "／" + info.ctl.all : "") +
+      (prefix || "振り直し（") + "型番 " + state.version + "・" + state.size + "×" + state.size + " モジュール" +
+      " / 自由部分 " + info.L + "文字＝" + info.bits + "ビット" +
+      " / 方程式 " + info.rank + " 本を固定、残り " + info.free + " ビットが自由（" +
+      (info.free > 30 ? "10億通り以上" : Math.pow(2, info.free).toLocaleString() + "通り") + "の別解）" +
+      " / 動かせるモジュール " + info.ctl.allOk + "／" + info.ctl.all +
       (state.abort ? " / 中断" : "") + "）");
   }
+
 
   /* ---- モード切り替えのUI ---- */
   function syncMethod() {
     const solve = currentMethod() === "solve";
+    $("solveOnlyOpts").style.display = solve ? "" : "none";
+    if (!solve) $("rollBtn").style.display = "none";
     $("solveOnlyNote").style.display = solve ? "" : "none";
     $("randomOnlyChars").style.display = solve ? "none" : "";
     $("randomOnlyTries").style.display = solve ? "none" : "";
@@ -1439,6 +1514,9 @@ permalink: /apps/image-qr-studio/
   document.querySelectorAll('input[name="method"]').forEach((r) => r.addEventListener("change", syncMethod));
 
   $("runBtn").addEventListener("click", runSearch);
+  $("rollBtn").addEventListener("click", () => rollCandidates());
+  $("lock").addEventListener("input", () => { $("lockV").textContent = (+$("lock").value).toFixed(2); });
+  $("candCount").addEventListener("change", () => { if (state.els && state.els.length) rollCandidates(); });
   $("stopBtn").addEventListener("click", () => { state.abort = true; });
 
   /* ============ 描画 ============ */
