@@ -248,6 +248,12 @@ permalink: /apps/image-qr-studio/
 
         <div class="code mb" style="margin-top:12px" id="templatePreview"></div>
 
+        <div id="solveOnlyNote" class="note" style="margin-top:14px">
+          <b>線形解法モード</b>では、自由部分は URLセーフな16文字
+          <code>H-O / h-o</code> を容量いっぱいまで自動で使います（文字種・長さの指定は使いません）。
+        </div>
+
+        <div id="randomOnlyChars">
         <h3>自由部分に使える文字</h3>
         <div class="chips mb" id="charsetChips">
           <label class="chip on"><input type="checkbox" data-set="lower" checked>英小文字 a-z</label>
@@ -269,10 +275,18 @@ permalink: /apps/image-qr-studio/
             <input type="number" id="maxLen" value="10" min="1" max="30">
           </div>
         </div>
+        </div>
       </div>
 
       <div class="card">
         <h2><span class="step">3</span>探索の設定</h2>
+
+        <h3>探索方法</h3>
+        <div class="chips mb" id="methodChips">
+          <label class="chip on"><input type="radio" name="method" value="solve" checked>線形解法（目標から生成）</label>
+          <label class="chip"><input type="radio" name="method" value="mc">ランダム探索</label>
+        </div>
+        <p class="hint" id="methodHint"></p>
 
         <h3>誤り訂正レベル（複数選択可）</h3>
         <div class="chips mb" id="eccChips">
@@ -281,7 +295,7 @@ permalink: /apps/image-qr-studio/
           <label class="chip"><input type="checkbox" data-ecc="Q">Q (25%)</label>
           <label class="chip on"><input type="checkbox" data-ecc="H" checked>H (30%)</label>
         </div>
-        <p class="hint">画像を重ねるなら H が有利です。L に近いほどモジュール数が減って絵は粗くなります。</p>
+        <p class="hint" id="eccHint"></p>
 
         <div class="row" style="margin-top:14px">
           <div>
@@ -295,7 +309,7 @@ permalink: /apps/image-qr-studio/
               <option value="6">自動 +6</option>
             </select>
           </div>
-          <div>
+          <div id="randomOnlyTries">
             <label class="field" for="tries">試行回数</label>
             <select id="tries">
               <option value="500">500</option>
@@ -306,7 +320,7 @@ permalink: /apps/image-qr-studio/
             </select>
           </div>
         </div>
-        <div class="chips" style="margin-top:12px">
+        <div class="chips" style="margin-top:12px" id="randomOnlyMask">
           <label class="chip on"><input type="checkbox" id="allMasks" checked>マスク8種すべて試す</label>
         </div>
         <p class="hint">細かくするほど絵の解像度は上がりますが、印刷サイズが小さいと読み取りづらくなります。</p>
@@ -385,15 +399,22 @@ permalink: /apps/image-qr-studio/
     <details class="help">
       <summary>仕組みと注意点</summary>
       <p class="hint" style="font-size:.84rem">
-        QRコードは、同じリンク先でも <b>末尾に付けるゴミ文字列</b>・<b>誤り訂正レベル</b>・<b>マスクパターン</b> を変えると
-        模様がまったく変わります。このツールはその組み合わせを大量に試し、
-        元画像を白黒化した「目標パターン」との一致率が高いものを選びます。<br><br>
-        さらに描画側では、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して写真を透けさせ、
-        食い違うモジュールだけをはっきり描くことで、読み取りやすさと見た目を両立しています。
-        誤り訂正の余力（H なら約30%）があるので、中央のロゴ穴もある程度なら耐えます。<br><br>
-        なお、ランダムな文字列の一致率は平均50%前後です。探索で積み増せるのは数ポイント程度なので、
-        <b>見た目を大きく左右するのは「仕上げ」側の設定</b>（ドットの大きさ・合っている所を薄く・明暗補正）です。
-        候補は「一致率」よりも<b>実際の見た目とマスクの雰囲気</b>で選ぶのがおすすめです。
+        <b>線形解法（既定）</b>：QRコードの「ペイロードのビット → モジュールの白黒」という対応は、
+        GF(2) 上の<b>アフィン写像</b>になっています（Reed-Solomon 符号化が線形、モジュール配置は並べ替え、
+        マスクは定数のXOR、モード・文字数ヘッダと埋め草は長さを固定すれば不変）。つまり
+        <code>M(x) = M0 XOR (Σ xi・Di)</code> と書けるので、自由部分の各ビットを1つずつ反転した差分
+        <code>Di</code> を基底として集めれば、<b>「この模様にしたい」から文字列を逆算</b>できます。<br><br>
+        目標パターンのうち<b>輪郭に近く重みの大きいモジュールから順に</b>方程式を立て、ガウス消去で解きます。
+        自由ビット数（＝自由部分の文字数×4）のぶんだけモジュールを厳密に一致させられ、残りは約50%です。
+        基底はマスクに依存しないため、8種類のマスクぶんの右辺をまとめて1回の消去で処理しています。<br><br>
+        自由部分に使う <code>H-O / h-o</code> は <code>0x48 XOR {1,2,4,0x20}</code> という
+        <b>ビット部分空間になっている英字16文字</b>で、1文字あたり4ビットを自由に置けてURLとしても安全です。
+        誤り訂正レベルを下げるほどデータ語が増えて自由ビットも増え、絵に近づきます（そのぶん訂正の余力は減ります）。<br><br>
+        <b>ランダム探索</b>：文字種や長さを自分で決めたいときのモードです。ランダムな文字列の一致率は平均50%前後で、
+        総当たりで積み増せるのは数ポイント。線形解法なら 60〜72% 程度まで上がります。<br><br>
+        描画はどちらのモードでも共通で、<b>模様と画像がすでに一致しているモジュールのドットを薄く</b>して
+        写真を透けさせ、食い違うモジュールだけをはっきり描きます。
+        誤り訂正の余力があるので、中央のロゴ穴もある程度なら耐えます。
       </p>
       <div class="note" style="margin-top:10px">
         画面下の判定は jsQR による自動デコード結果です。OK でも、印刷サイズ・紙質・カメラによっては読めないことがあります。
@@ -564,7 +585,20 @@ permalink: /apps/image-qr-studio/
       bit[i] = L < thr ? 1 : 0;               // 1 = 黒モジュールにしたい
       weight[i] = 0.15 + Math.min(1, Math.abs(L - thr) * 3);
     }
-    return { size, lum, bit, weight };
+    // 局所コントラスト（輪郭）— 線形解法で「どのモジュールを優先して合わせるか」に使う
+    const edge = new Float32Array(n);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = y * size + x;
+        let e = 0;
+        if (x > 0) e = Math.max(e, Math.abs(lum[i] - lum[i - 1]));
+        if (x < size - 1) e = Math.max(e, Math.abs(lum[i] - lum[i + 1]));
+        if (y > 0) e = Math.max(e, Math.abs(lum[i] - lum[i - size]));
+        if (y < size - 1) e = Math.max(e, Math.abs(lum[i] - lum[i + size]));
+        edge[i] = Math.min(1, e * 1.6);
+      }
+    }
+    return { size, lum, bit, weight, edge };
   }
 
   function buildFunctionMask(size, version) {
@@ -641,6 +675,7 @@ permalink: /apps/image-qr-studio/
   }
   function fillTemplate(tpl, free) { return tpl.split("{}").join(free); }
   function sampleFree() {
+    if (currentMethod() === "solve") return "HkLnhOimjKlN…";
     const cs = currentCharset() || "abcdefghijklmnopqrstuvwxyz0123456789";
     const len = clamp(+$("maxLen").value || 8, 1, 30);
     let s = ""; for (let i = 0; i < len; i++) s += cs[i % cs.length];
@@ -708,10 +743,67 @@ permalink: /apps/image-qr-studio/
     return s;
   }
 
+  /* ---- 実行まわりの共通処理 ---- */
+  const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+
+  function beginRun() {
+    state.running = true; state.abort = false;
+    $("runBtn").disabled = true;
+    $("stopBtn").style.display = "";
+    $("progressWrap").style.display = "";
+    $("candEmpty").style.display = "none";
+  }
+  function endRun() {
+    state.running = false;
+    $("runBtn").disabled = false;
+    $("stopBtn").style.display = "none";
+    $("barFill").style.width = "100%";
+  }
+  function prepareTarget(version) {
+    state.version = version;
+    state.size = version * 4 + 17;
+    state.fmask = buildFunctionMask(state.size, version);
+    state.target = computeTarget(state.size);
+    drawTargetPreview();
+  }
+  function finishSearch(list, extra, infoText) {
+    // 上位候補＋（ECC×マスク）ごとのベストを合わせて一覧にする
+    const merged = list.slice();
+    const has = new Set(merged.map((c) => c.text + c.ecc + c.mask));
+    (extra || []).sort((a, b) => b.score - a.score).forEach((c) => {
+      const k = c.text + c.ecc + c.mask;
+      if (!has.has(k) && merged.length < MAX_CARDS) { has.add(k); merged.push(c); }
+    });
+    merged.sort((a, b) => b.score - a.score);
+    if (merged.length > MAX_CARDS) merged.length = MAX_CARDS;
+
+    $("progText").textContent = infoText;
+    state.cands = merged;
+    state.sel = -1;
+    if (!merged.length) {
+      $("candEmpty").style.display = "";
+      $("candEmpty").textContent = "条件に合う候補が見つかりませんでした。自由部分を短くするか、QRの細かさを上げてみてください。";
+      $("candGrid").innerHTML = "";
+      return;
+    }
+    renderCandidates();
+    selectCandidate(0);
+  }
+
+  function currentMethod() {
+    return document.querySelector('input[name="method"]:checked').value;
+  }
+
   async function runSearch() {
     if (state.running) return;
     const tpl = currentTemplate();
     if (!tpl) { showToast("リンク先URLを入力してください", false); return; }
+    if (currentMethod() === "solve") await runSolve(tpl);
+    else await runMonteCarlo(tpl);
+  }
+
+  /* ============ ランダム探索（モンテカルロ） ============ */
+  async function runMonteCarlo(tpl) {
     const cs = currentCharset();
     if (!cs) { showToast("自由部分に使う文字を1種類以上選んでください", false); return; }
     let minL = clamp(+$("minLen").value || 1, 1, 30);
@@ -720,12 +812,7 @@ permalink: /apps/image-qr-studio/
     const eccList = selectedEcc();
     const version = detectVersion(tpl, eccList);
     if (version < 0) { showToast("URLが長すぎてQRコードに収まりません", false); return; }
-
-    state.version = version;
-    state.size = version * 4 + 17;
-    state.fmask = buildFunctionMask(state.size, version);
-    state.target = computeTarget(state.size);
-    drawTargetPreview();
+    prepareTarget(version);
 
     const hasSlot = tpl.includes("{}");
     const masks = $("allMasks").checked ? [0, 1, 2, 3, 4, 5, 6, 7] : [null];
@@ -733,12 +820,7 @@ permalink: /apps/image-qr-studio/
     let space = 0;
     for (let L = minL; L <= maxL; L++) space += Math.pow(cs.length, L);
 
-    state.running = true; state.abort = false;
-    $("runBtn").disabled = true;
-    $("stopBtn").style.display = "";
-    $("progressWrap").style.display = "";
-    $("candEmpty").style.display = "none";
-
+    beginRun();
     const list = [];
     const bestByKey = new Map();   // ECC×マスクごとのベスト（見た目のバリエーション用）
     const seen = new Set();
@@ -773,44 +855,212 @@ permalink: /apps/image-qr-studio/
           }
         }
       }
-      const pct = Math.round((done / tries) * 100);
-      $("barFill").style.width = pct + "%";
+      $("barFill").style.width = Math.round((done / tries) * 100) + "%";
       $("progText").textContent = done.toLocaleString() + " / " + tries.toLocaleString() + " 通り";
       $("progScore").textContent = list.length ? "最高一致率 " + (list[0].score * 100).toFixed(1) + "%" : "";
-      await new Promise((r) => setTimeout(r, 0));
+      await yieldNow();
     }
 
     const sec = ((performance.now() - t0) / 1000).toFixed(1);
-    state.running = false;
-    $("runBtn").disabled = false;
-    $("stopBtn").style.display = "none";
-    $("barFill").style.width = "100%";
-    $("progText").textContent =
-      "完了（" + sec + "秒 / 型番 " + version + "・" + state.size + "×" + state.size + " モジュール" +
-      (skipped ? " / 長さ超過で除外 " + skipped : "") + "）";
-
-    // 上位候補＋（ECC×マスク）ごとのベストを合わせて一覧にする
-    const merged = list.slice();
-    const has = new Set(merged.map((c) => c.text + c.ecc + c.mask));
-    Array.from(bestByKey.values())
-      .sort((a, b) => b.score - a.score)
-      .forEach((c) => {
-        const k = c.text + c.ecc + c.mask;
-        if (!has.has(k) && merged.length < MAX_CARDS) { has.add(k); merged.push(c); }
-      });
-    merged.sort((a, b) => b.score - a.score);
-
-    state.cands = merged;
-    state.sel = -1;
-    if (!merged.length) {
-      $("candEmpty").style.display = "";
-      $("candEmpty").textContent = "条件に合う候補が見つかりませんでした。自由部分を短くするか、QRの細かさを上げてみてください。";
-      $("candGrid").innerHTML = "";
-      return;
-    }
-    renderCandidates();
-    selectCandidate(0);
+    endRun();
+    finishSearch(list, Array.from(bestByKey.values()),
+      "ランダム探索 完了（" + sec + "秒 / 型番 " + state.version + "・" + state.size + "×" + state.size +
+      " モジュール" + (skipped ? " / 長さ超過で除外 " + skipped : "") + "）");
   }
+
+  /* ============ 線形解法（目標パターンから文字列を生成） ============ *
+   * QRの「ペイロードのビット → モジュール」は GF(2) 上のアフィン写像:
+   *     M(x) = M0 XOR ( Σ xi・Di )
+   * （RS符号は線形／配置は置換／マスクは定数XOR）。
+   * そこで自由部分の各ビットの差分 Di を基底として集め、
+   * 目標パターンの「重みの大きいモジュール」から順に連立方程式を立てて
+   * ガウス消去で解く。基底はマスクに依らないので、8マスク分の右辺を
+   * まとめて1回の消去で処理する。                                        */
+  const SOLVE_BASE = 0x48;              // 'H'
+  const SOLVE_BITS = [1, 2, 4, 0x20];   // → H-O / h-o の16文字（すべてURLセーフ）
+  const SOLVE_MAX_CHARS = 600;          // 自由部分の上限（＝2400自由ビット）
+
+  const parity32 = (v) => { v ^= v >>> 16; v ^= v >>> 8; v ^= v >>> 4; v ^= v >>> 2; v ^= v >>> 1; return v & 1; };
+  const solveBaseStr = (L) => String.fromCharCode(SOLVE_BASE).repeat(L);
+
+  function encodeFree(tpl, free, ecc, version, mask) {
+    const opt = { errorCorrectionLevel: ecc, version };
+    if (mask !== null && mask !== undefined) opt.maskPattern = mask;
+    return QRCode.create([{ data: fillTemplate(tpl, free), mode: "byte" }], opt);
+  }
+  function capacityLen(tpl, ecc, version) {
+    try { encodeFree(tpl, solveBaseStr(1), ecc, version, 0); } catch (e) { return -1; }
+    let lo = 1, hi = SOLVE_MAX_CHARS;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      try { encodeFree(tpl, solveBaseStr(mid), ecc, version, 0); lo = mid; }
+      catch (e) { hi = mid - 1; }
+    }
+    return lo;
+  }
+  function detectVersionSolve(tpl, eccList) {
+    let v = 1;
+    for (const ecc of eccList) {
+      try { v = Math.max(v, encodeFree(tpl, solveBaseStr(8), ecc, undefined, undefined).version); }
+      catch (e) { return -1; }
+    }
+    return Math.min(40, v + (+$("verBoost").value));
+  }
+
+  async function solveForEcc(tpl, ecc, version, progress) {
+    const size = state.size, n = size * size;
+    const L = capacityLen(tpl, ecc, version);
+    if (L < 1) return [];
+    const k = L * 4, words = (k + 31) >> 5;
+    const base = solveBaseStr(L);
+
+    // マスクごとの基準行列（基底はマスク非依存なので M0 だけ8通り作る）
+    const M0 = [];
+    for (let m = 0; m < 8; m++) M0.push(encodeFree(tpl, base, ecc, version, m).modules.data);
+
+    // 基底 Di（1ビット反転の差分）をモジュール行ごとのビットセットに詰める
+    const rows = new Uint32Array(n * words);
+    const ref = M0[0];
+    for (let p = 0; p < L; p++) {
+      for (let b = 0; b < 4; b++) {
+        const col = p * 4 + b, wi = col >> 5, bv = 1 << (col & 31);
+        const s = base.slice(0, p) + String.fromCharCode(SOLVE_BASE ^ SOLVE_BITS[b]) + base.slice(p + 1);
+        const m = encodeFree(tpl, s, ecc, version, 0).modules.data;
+        for (let i = 0; i < n; i++) if ((m[i] ? 1 : 0) !== (ref[i] ? 1 : 0)) rows[i * words + wi] |= bv;
+      }
+      if ((p & 7) === 0) {
+        await progress(0.6 * (p / L), "基底を構築中");
+        if (state.abort) return null;
+      }
+    }
+
+    // 重みの大きいモジュールから順に方程式を追加（行階段形）
+    // 「どのモジュールを厳密に合わせるか」の優先度。
+    // 重みが一様な図案だと順序が画面の上から順になり、上だけ綺麗で下が粗くなるので、
+    // 輪郭（局所コントラスト）を優遇しつつ、同点は乱数でばらして全体に散らす。
+    const fm = state.fmask, tgt = state.target;
+    const prio = new Float32Array(n);
+    for (let i = 0; i < n; i++) prio[i] = tgt.weight[i] * (0.45 + 1.55 * tgt.edge[i]) + Math.random() * 0.02;
+    const order = [];
+    for (let i = 0; i < n; i++) if (!fm[i]) order.push(i);
+    order.sort((a, b) => prio[b] - prio[a]);
+
+    const pivotRow = new Array(k).fill(null);
+    const pivotRhs = new Int32Array(k);     // 8マスク分の右辺をビットで持つ
+    const pivotCols = [];
+    const row = new Uint32Array(words);
+    for (let oi = 0; oi < order.length && pivotCols.length < k; oi++) {
+      const i = order[oi];
+      row.set(rows.subarray(i * words, i * words + words));
+      let rhs = 0;
+      for (let m = 0; m < 8; m++) if (tgt.bit[i] ^ (M0[m][i] ? 1 : 0)) rhs |= 1 << m;
+      let placed = false;
+      for (let wi = 0; wi < words && !placed; wi++) {
+        let w = row[wi];
+        while (w) {
+          const c = (wi << 5) + (31 - Math.clz32(w & -w));
+          const pr = pivotRow[c];
+          if (pr) {                                   // 既存ピボットで消去
+            for (let t = wi; t < words; t++) row[t] ^= pr[t];
+            rhs ^= pivotRhs[c];
+            w = row[wi];
+          } else {                                    // 新しいピボット
+            pivotRow[c] = Uint32Array.from(row);
+            pivotRhs[c] = rhs;
+            pivotCols.push(c);
+            placed = true;
+            break;
+          }
+        }
+      }
+      if ((oi & 511) === 0) {
+        await progress(0.6 + 0.35 * (pivotCols.length / k), "連立方程式を解いています");
+        if (state.abort) return null;
+      }
+    }
+
+    // 後退代入 → 文字列 → 候補（マスク8種ぶん）
+    const cols = pivotCols.slice().sort((a, b) => b - a);
+    const out = [];
+    for (let m = 0; m < 8; m++) {
+      const x = new Uint32Array(words);
+      for (const c of cols) {
+        const pr = pivotRow[c];
+        let par = 0;
+        for (let t = 0; t < words; t++) par ^= parity32(pr[t] & x[t]);
+        if (((pivotRhs[c] >> m) & 1) ^ par) x[c >> 5] |= 1 << (c & 31);
+      }
+      let free = "";
+      for (let p = 0; p < L; p++) {
+        let v = SOLVE_BASE;
+        for (let b = 0; b < 4; b++) {
+          const c = p * 4 + b;
+          if (x[c >> 5] & (1 << (c & 31))) v ^= SOLVE_BITS[b];
+        }
+        free += String.fromCharCode(v);
+      }
+      const qr = encodeFree(tpl, free, ecc, version, m);
+      out.push({
+        text: fillTemplate(tpl, free), free, ecc, mask: qr.maskPattern,
+        score: scoreMatrix(qr.modules.data), modules: qr.modules.data,
+        solved: { L, bits: k, rank: pivotCols.length }
+      });
+    }
+    return out;
+  }
+
+  async function runSolve(tpl) {
+    if (!tpl.includes("{}")) { showToast("テンプレートに {} （自由部分）が必要です", false); return; }
+    const eccList = selectedEcc();
+    const version = detectVersionSolve(tpl, eccList);
+    if (version < 0) { showToast("URLが長すぎてQRコードに収まりません", false); return; }
+    prepareTarget(version);
+
+    beginRun();
+    const t0 = performance.now();
+    let all = [];
+    let info = null;
+    for (let ei = 0; ei < eccList.length; ei++) {
+      const ecc = eccList[ei];
+      const span = 1 / eccList.length;
+      const res = await solveForEcc(tpl, ecc, version, async (frac, label) => {
+        $("barFill").style.width = Math.round((ei * span + frac * span) * 100) + "%";
+        $("progText").textContent = "ECC " + ecc + "：" + label;
+        $("progScore").textContent = all.length ? "最高一致率 " + (all[0].score * 100).toFixed(1) + "%" : "";
+        await yieldNow();
+      });
+      if (res === null) break;                 // 中断
+      all = all.concat(res).sort((a, b) => b.score - a.score);
+      if (res.length && !info) info = res[0].solved;
+      $("progScore").textContent = "最高一致率 " + (all[0].score * 100).toFixed(1) + "%";
+      await yieldNow();
+    }
+
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    endRun();
+    finishSearch(all, [],
+      "線形解法 完了（" + sec + "秒 / 型番 " + state.version + "・" + state.size + "×" + state.size + " モジュール" +
+      (info ? " / 自由部分 " + info.L + "文字＝" + info.bits + "ビット、うち " + info.rank + " 本の方程式を厳密に一致" : "") +
+      (state.abort ? " / 中断" : "") + "）");
+  }
+
+  /* ---- モード切り替えのUI ---- */
+  function syncMethod() {
+    const solve = currentMethod() === "solve";
+    $("solveOnlyNote").style.display = solve ? "" : "none";
+    $("randomOnlyChars").style.display = solve ? "none" : "";
+    $("randomOnlyTries").style.display = solve ? "none" : "";
+    $("randomOnlyMask").style.display = solve ? "none" : "";
+    $("methodHint").innerHTML = solve
+      ? "QRの符号化は GF(2) 上のアフィン写像なので、<b>目標パターンから文字列を逆算</b>できます。" +
+        "重みの大きいモジュールから順に連立方程式を立てて解くため、ランダム探索より一致率が大きく上がります（そのぶんURLは長くなります）。"
+      : "自由部分をランダムに振って一致率で選びます。<b>文字種や長さを自分で決めたいとき</b>はこちら。一致率は50%＋数ポイントが上限です。";
+    $("eccHint").innerHTML = solve
+      ? "線形解法では <b>L に近いほど自由ビットが増えて絵に近づきます</b>（そのぶん誤り訂正の余力は減ります）。まずは M か Q がおすすめ。"
+      : "画像を重ねるなら H が有利です。L に近いほどモジュール数が減って絵は粗くなります。";
+    updateTemplatePreview();
+  }
+  document.querySelectorAll('input[name="method"]').forEach((r) => r.addEventListener("change", syncMethod));
 
   $("runBtn").addEventListener("click", runSearch);
   $("stopBtn").addEventListener("click", () => { state.abort = true; });
@@ -1038,7 +1288,9 @@ permalink: /apps/image-qr-studio/
         : "⚠️ <b>この設定では読み取れませんでした</b><br>ドットを大きく／画像の明暗補正を強く／ロゴ穴を小さく してみてください。";
       $("verifyBox").insertAdjacentHTML("beforeend",
         '<br><span style="color:var(--muted);font-size:.78rem">一致率 ' + (cand.score * 100).toFixed(1) +
-        "% ・ 型番 " + state.version + " ・ ECC " + cand.ecc + " ・ mask " + cand.mask + "</span>");
+        "% ・ 型番 " + state.version + " ・ ECC " + cand.ecc + " ・ mask " + cand.mask +
+        " ・ URL " + cand.text.length + "文字" +
+        (cand.solved ? "（自由部分 " + cand.solved.L + "文字＝" + cand.solved.bits + "ビット）" : "") + "</span>");
     }, 60);
   }
 
@@ -1070,6 +1322,7 @@ permalink: /apps/image-qr-studio/
   });
 
   /* ============ 初期化 ============ */
+  syncMethod();
   setImage(makeMotif("❄"));
   refreshPreviews();
 })();
