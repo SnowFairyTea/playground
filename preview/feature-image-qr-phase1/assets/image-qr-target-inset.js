@@ -3,9 +3,11 @@
 
   const zoom = document.getElementById('image-zoom');
   const fit = document.getElementById('fit-mode');
+  const offsetX = document.getElementById('image-offset-x');
+  const offsetY = document.getElementById('image-offset-y');
   const matrix = document.getElementById('matrix');
   const imageCard = document.getElementById('image-card');
-  if (!zoom || !fit || !matrix || !imageCard) return;
+  if (!zoom || !fit || !offsetX || !offsetY || !matrix || !imageCard) return;
 
   const zoomWrap = zoom.parentElement;
   const settingsGrid = zoomWrap && zoomWrap.parentElement;
@@ -51,10 +53,20 @@
     return Math.max(1, Math.min(100, inner / size * 100));
   }
 
+  function syncOffsetState() {
+    const locked = avoid.checked;
+    offsetX.disabled = locked;
+    offsetY.disabled = locked;
+    if (locked) {
+      offsetX.value = '0';
+      offsetY.value = '0';
+    }
+  }
+
   function updateHelp(limit = safeZoomLimit()) {
     const size = qrSize();
     if (!avoid.checked) {
-      help.textContent = '四隅回避はOFFです。Zoom / Fitをそのまま使用します。';
+      help.textContent = '四隅回避はOFFです。Zoom / Fit / X・Y位置をそのまま使用します。';
       return;
     }
     if (!size || limit == null) {
@@ -63,10 +75,11 @@
     }
     const margin = Math.max(0, Number(inset.value) || 0);
     const inner = Math.max(1, size - margin * 2);
-    help.textContent = `QR ${size}×${size}: 目標画像を中央 ${inner}×${inner} modules 以内に収めます（最大Zoom ${limit.toFixed(1)}%）。`;
+    help.textContent = `QR ${size}×${size}: 目標画像を中央 ${inner}×${inner} modules 以内に収めます（最大Zoom ${limit.toFixed(1)}%）。四隅回避ON中は中央固定です。`;
   }
 
   function applySafeInset(resetToLimit = false) {
+    syncOffsetState();
     if (applying || !avoid.checked) {
       updateHelp();
       return;
@@ -85,6 +98,12 @@
         fit.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
+      if (offsetX.value !== '0' || offsetY.value !== '0') {
+        offsetX.value = '0';
+        offsetY.value = '0';
+        offsetX.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
       const current = Math.max(1, Number(zoom.value) || 100);
       const next = resetToLimit ? limit : Math.min(current, limit);
       if (Math.abs(current - next) > 0.05) {
@@ -99,11 +118,14 @@
 
   inset.addEventListener('change', () => applySafeInset(true));
   avoid.addEventListener('change', () => {
+    syncOffsetState();
     if (avoid.checked) applySafeInset(true);
     else updateHelp();
   });
   zoom.addEventListener('change', () => applySafeInset(false));
   fit.addEventListener('change', () => applySafeInset(false));
+  offsetX.addEventListener('change', () => applySafeInset(false));
+  offsetY.addEventListener('change', () => applySafeInset(false));
 
   // QR写像の再構築で matrix のサイズが変わった場合も、そのVersionに合わせて再計算する。
   const observer = new MutationObserver(() => applySafeInset(true));
@@ -114,5 +136,6 @@
 
   // 初期状態から安全側にする。QRサイズ確定後にObserverがZoomを決める。
   fit.value = 'contain';
+  syncOffsetState();
   updateHelp();
 })();
