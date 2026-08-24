@@ -51,6 +51,7 @@
         <button id="cancel-auto-length" class="secondary" type="button" disabled>現在の長さ探索を中断</button>
       </div>
     </div>
+    <div class="tiny" style="margin-top:8px">QR VersionがAutoで長さにより行列サイズが変わる場合、重要度・絶対制約は最大長問題の正規化座標を基準に最近傍で移送します。</div>
     <div id="auto-length-status" class="status">最大長を設定し、通常どおり「画像目標へ最適化」を押してください。</div>
   `;
   optimizerCard.insertBefore(controls, optimizeButton.parentElement);
@@ -107,6 +108,7 @@
     const n = combinationCount(maxes);
     comboCount.textContent = maxes.length ? n.toString() : '0';
     comboCount.classList.toggle('warn-pill', n > 64n);
+    if (!running) aggregateCard.style.display = 'none';
   }
 
   const segmentObserver = new MutationObserver(updateCombinationCount);
@@ -294,8 +296,13 @@
 
   function* combinations(maxes, index = 0, prefix = []) {
     if (index >= maxes.length) { yield prefix.slice(); return; }
-    const values = autoToggle.checked ? Array.from({ length: maxes[index] }, (_, i) => i + 1) : [maxes[index]];
-    for (const v of values) {
+    if (!autoToggle.checked) {
+      prefix.push(maxes[index]);
+      yield* combinations(maxes, index + 1, prefix);
+      prefix.pop();
+      return;
+    }
+    for (let v = 1; v <= maxes[index]; v++) {
       prefix.push(v);
       yield* combinations(maxes, index + 1, prefix);
       prefix.pop();
