@@ -1,0 +1,966 @@
+---
+layout: artifacts
+title: "メール復元ツール"
+permalink: /apps/mail-text-restore/
+---
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  h1 { font-size: 1.5rem; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: .92rem; margin: 0 0 20px; line-height: 1.7; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 1rem; margin: 0 0 12px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card h2 .spacer { margin-left: auto; }
+
+  textarea {
+    width: 100%; min-height: 200px; padding: 12px;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font-mono); font-size: .86rem; line-height: 1.6;
+    resize: vertical; background: var(--surface); color: var(--text);
+    outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+
+  .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+
+  button {
+    padding: 9px 18px; border: none; border-radius: var(--radius-pill);
+    cursor: pointer; font-size: .9rem; font-family: inherit; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: var(--text); transition: all .2s ease;
+  }
+  button:hover { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); transform: translateY(-1px); }
+  button.ghost {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); font-weight: 500;
+  }
+  button.ghost:hover { background: var(--accent-light); border-color: var(--accent); transform: none; }
+  button.sm { padding: 6px 14px; font-size: .82rem; }
+
+  .file-label {
+    display: inline-block; padding: 6px 14px; font-size: .82rem;
+    border: 1px solid var(--border); border-radius: var(--radius-pill);
+    background: var(--surface); cursor: pointer;
+  }
+  .file-label:hover { background: var(--accent-light); border-color: var(--accent); }
+  .file-label input { display: none; }
+
+  .count { margin-left: auto; color: var(--muted); font-size: .82rem; }
+
+  /* --- options --- */
+  .auto-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: var(--accent-light); margin-bottom: 14px; font-size: .88rem;
+  }
+  .auto-row label { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+  .auto-note { color: var(--muted); font-size: .8rem; }
+
+  .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .step {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 9px 11px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface);
+    font-size: .85rem; line-height: 1.45; cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .step.applied { border-color: var(--accent); background: var(--accent-light); }
+  .step input { margin: 3px 0 0; flex: none; }
+  .step .body { min-width: 0; }
+  .step .name { font-weight: 600; }
+  .step .desc { color: var(--muted); font-size: .76rem; }
+  .step.locked { cursor: default; opacity: .95; }
+
+  /* --- headers --- */
+  #headers-card { display: none; }
+  table.hdr { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  table.hdr th, table.hdr td {
+    text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border);
+    vertical-align: top; word-break: break-word;
+  }
+  table.hdr th { width: 110px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  table.hdr tr:last-child th, table.hdr tr:last-child td { border-bottom: none; }
+
+  /* --- output --- */
+  .out {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    font-size: .95rem; line-height: 1.85;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 60vh; overflow-y: auto; margin: 0;
+    font-family: var(--font);
+  }
+  .out.mono { font-family: var(--font-mono); font-size: .86rem; line-height: 1.7; }
+  .out:empty::before { content: "ここに復元結果が表示されます"; color: var(--muted); }
+
+  .log { margin-top: 12px; font-size: .82rem; color: var(--muted); line-height: 1.9; }
+  .tag {
+    display: inline-block; background: var(--accent-light); color: var(--accent-hover);
+    border-radius: var(--radius-pill); padding: 2px 11px; margin: 0 5px 5px 0;
+    font-size: .78rem; font-weight: 600;
+  }
+  .tag.warn { background: var(--error-bg); color: var(--error); }
+
+  .hint {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    font-size: .85rem; line-height: 1.8; color: var(--text);
+  }
+  .hint strong { display: block; margin-bottom: 6px; }
+  .hint ul { margin: 0; padding-left: 1.3em; }
+  .hint code { font-family: var(--font-mono); font-size: .82rem; background: var(--accent-light); padding: 1px 5px; border-radius: 4px; }
+
+  .toast {
+    position: fixed; top: 14px; right: 14px; z-index: 9999;
+    background: var(--accent-hover); color: #fff;
+    padding: 10px 14px; border-radius: var(--radius);
+    box-shadow: var(--shadow); display: none; font-size: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 16px 14px 48px; }
+    .card { padding: 16px; }
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <h1>メール復元ツール</h1>
+  <p class="subtitle">
+    テキストとして貼り付けられた／保存されたメールを、読める形に復元します。<br>
+    MIMEヘッダー（<code>=?UTF-8?B?...?=</code>）・quoted-printable（<code>=E3=81=82</code>）・Base64・HTMLタグ・引用記号・折り返しなどを自動判定して元に戻します。すべてブラウザ内で処理され、どこにも送信されません。
+  </p>
+
+  <!-- ========== 入力 ========== -->
+  <div class="card">
+    <h2>1. 崩れたメールを貼り付け</h2>
+    <textarea id="input" placeholder="メールソース（.eml の中身）や、テキスト化されて読めなくなったメール本文をそのまま貼り付けてください"></textarea>
+    <div class="controls">
+      <button id="btn-run">復元する</button>
+      <button class="ghost sm" id="btn-sample-a">サンプル: メールソース</button>
+      <button class="ghost sm" id="btn-sample-b">サンプル: HTMLメール</button>
+      <label class="file-label">ファイルを開く
+        <input type="file" id="file" accept=".eml,.txt,.msg,message/rfc822,text/plain">
+      </label>
+      <button class="ghost sm" id="btn-clear">クリア</button>
+      <span class="count" id="in-count">0 文字</span>
+    </div>
+  </div>
+
+  <!-- ========== オプション ========== -->
+  <div class="card">
+    <h2>2. 適用する処理</h2>
+    <div class="auto-row">
+      <label><input type="checkbox" id="auto" checked>自動判定にまかせる</label>
+      <span class="auto-note">オフにすると、下のチェックを手動で選べます（緑色＝実際に効果があった処理）</span>
+    </div>
+    <div class="steps" id="steps"></div>
+  </div>
+
+  <!-- ========== ヘッダー ========== -->
+  <div class="card" id="headers-card">
+    <h2>ヘッダー情報
+      <span class="spacer"></span>
+      <label style="font-size:.82rem;font-weight:400;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="with-header">結果にも含める
+      </label>
+    </h2>
+    <table class="hdr"><tbody id="hdr-body"></tbody></table>
+  </div>
+
+  <!-- ========== 出力 ========== -->
+  <div class="card">
+    <h2>3. 復元結果
+      <span class="spacer"></span>
+      <label style="font-size:.82rem;font-weight:400;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="mono">等幅で表示
+      </label>
+    </h2>
+    <pre class="out" id="output"></pre>
+    <div class="controls">
+      <button id="btn-copy">結果をコピー</button>
+      <button class="ghost sm" id="btn-download">.txt で保存</button>
+      <span class="count" id="out-count">0 文字</span>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="hint">
+    <strong>うまく戻らないときは</strong>
+    <ul>
+      <li>「自動判定にまかせる」をオフにして、必要な処理だけを手動でオンにしてください。</li>
+      <li>文字化け（<code>縺薙ｓ縺ｫ縺｡縺ｯ</code> のような表示）が残る場合は、元の文字コード（Shift_JIS / ISO-2022-JP / EUC-JP）が判別できていない可能性があります。<code>Content-Type</code> ヘッダーごと貼り付けると精度が上がります。</li>
+      <li>折り返しの結合が過剰／不足する場合は「折り返しを結合」のオン・オフで切り替えてください。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="text/plain" id="sample-a">
+Return-Path: <tanaka@example.com>
+Received: from mail.example.com (mail.example.com [203.0.113.25])
+	by mx.example.net with ESMTPS id 4XyZ12345
+	for <snow@example.net>; Tue, 26 Aug 2026 10:02:11 +0900 (JST)
+Date: Tue, 26 Aug 2026 10:02:08 +0900
+From: =?UTF-8?B?55Sw5LitIOWkqumDjg==?= <tanaka@example.com>
+To: snow@example.net
+Subject: =?UTF-8?B?44CQ6YeN6KaB44CROOaciOW6piDlrprkvovjg5/jg7zjg4bjgqPjg7PjgrDjga7ml6XnqIvlpInmm7TjgavjgaTjgYTjgaY=?=
+Message-ID: <20260826100208.4XyZ12345@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+=E9=9B=AA=E9=87=8E=E3=81=95=E3=82=93
+
+=E3=81=8A=E4=B8=96=E8=A9=B1=E3=81=AB=E3=81=AA=E3=81=A3=E3=81=A6=E3=81=8A=E3=
+=82=8A=E3=81=BE=E3=81=99=E3=80=82=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=
+=B5=E3=83=B3=E3=83=97=E3=83=AB=E3=81=AE=E7=94=B0=E4=B8=AD=E3=81=A7=E3=81=99=
+=E3=80=82
+
+=E6=A8=99=E9=A1=8C=E3=81=AE=E4=BB=B6=E3=80=818=E6=9C=8828=E6=97=A5(=E6=9C=
+=A8)=E3=81=AB=E4=BA=88=E5=AE=9A=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=
+=BE=E3=81=97=E3=81=9F=E5=AE=9A=E4=BE=8B=E3=83=9F=E3=83=BC=E3=83=86=E3=82=A3=
+=E3=83=B3=E3=82=B0=E3=81=A7=E3=81=99=E3=81=8C=E3=80=81=E5=85=88=E6=96=B9=E3=
+=81=AE=E9=83=BD=E5=90=88=E3=81=AB=E3=82=88=E3=82=8A=E4=B8=8B=E8=A8=98=E3=81=
+=AE=E9=80=9A=E3=82=8A=E5=A4=89=E6=9B=B4=E3=81=A8=E3=81=AA=E3=82=8A=E3=81=BE=
+=E3=81=97=E3=81=9F=E3=81=AE=E3=81=A7=E3=81=94=E9=80=A3=E7=B5=A1=E3=81=84=E3=
+=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+
+  =E6=97=A5=E6=99=82: 2026=E5=B9=B49=E6=9C=882=E6=97=A5(=E7=81=AB) 14:00-15=
+:00
+  =E5=A0=B4=E6=89=80: =E6=9C=AC=E7=A4=BE 3F =E4=BC=9A=E8=AD=B0=E5=AE=A4A
+  =E8=B3=87=E6=96=99: https://example.com/docs/meeting/2026-09-02/agenda.pd=
+f?token=3Dabcdef123456
+
+> =E3=81=94=E7=A2=BA=E8=AA=8D=E3=81=AE=E3=81=86=E3=81=88=E3=80=81=E5=8F=82=
+=E5=8A=A0=E5=8F=AF=E5=90=A6=E3=82=928=E6=9C=8830=E6=97=A5=E3=81=BE=E3=81=A7=
+=E3=81=AB=E3=81=94=E8=BF=94=E4=BF=A1=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=
+=80=82
+> =E3=81=AA=E3=81=8A=E3=80=81=E5=BD=93=E6=97=A5=E3=81=AE=E8=B3=87=E6=96=99=
+=E3=81=AF=E5=89=8D=E6=97=A5=E3=81=BE=E3=81=A7=E3=81=AB=E5=85=B1=E6=9C=89=E3=
+=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+
+=E3=81=8A=E6=89=8B=E6=95=B0=E3=82=92=E3=81=8A=E3=81=8B=E3=81=91=E3=81=97=E3=
+=81=BE=E3=81=99=E3=81=8C=E3=80=81=E4=BD=95=E5=8D=92=E3=82=88=E3=82=8D=E3=81=
+=97=E3=81=8F=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=
+=E3=81=99=E3=80=82
+
+--
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=B5=E3=83=B3=E3=83=97=E3=83=AB =
+=E5=96=B6=E6=A5=AD=E9=83=A8
+=E7=94=B0=E4=B8=AD =E5=A4=AA=E9=83=8E (tanaka@example.com)
+</script>
+<script type="text/plain" id="sample-b">
+&gt; From: &quot;山田 花子&quot; &lt;yamada@example.com&gt;\n&gt; Subject: イベントご案内\n
+<div>雪野様</div><br>
+<p>平素より大変お世話になっております。<br>
+下記のとおりオンライン勉強会を開催いたしますので、<br>
+ご都合がよろしければぜひご参加ください。</p>
+<ul><li>日時: 9月10日(水) 19:00～</li><li>会場: オンライン (Zoom)</li></ul>
+<p>申し込みはこちら &rarr; <a href="https://example.com/e?q=%E5%8B%89%E5%BC%B7%E4%BC%9A&amp;id=42">https://example.com/e?q=%E5%8B%89%E5%BC%B7%E4%BC%9A&amp;id=42</a></p>
+<p>&nbsp;</p>
+<p>--&nbsp;<br>山田 花子 &lt;yamada@example.com&gt;</p>
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ============================================================
+     バイト列 / 文字コードのヘルパー
+     ============================================================ */
+  var CHARSET_ALIAS = {
+    "shift-jis": "shift_jis", "sjis": "shift_jis", "x-sjis": "shift_jis",
+    "ms_kanji": "shift_jis", "windows-31j": "shift_jis", "cp932": "shift_jis",
+    "csshiftjis": "shift_jis", "iso2022jp": "iso-2022-jp", "csiso2022jp": "iso-2022-jp",
+    "x-iso2022jp": "iso-2022-jp", "eucjp": "euc-jp", "x-euc-jp": "euc-jp",
+    "utf8": "utf-8", "unicode-1-1-utf-8": "utf-8", "us-ascii": "utf-8", "ascii": "utf-8"
+  };
+
+  function normCharset(cs) {
+    if (!cs) return "utf-8";
+    var k = String(cs).trim().toLowerCase().replace(/^["']|["']$/g, "");
+    return CHARSET_ALIAS[k] || k;
+  }
+
+  var encoder = new TextEncoder();
+
+  /* 文字列 → バイト列。0-255 の文字はそのまま1バイト、それ以外は UTF-8 として展開する。
+     （生メールを latin1 として読み込んだ場合も、UTF-8 で貼り付けられた場合も破綻しない） */
+  function toBytes(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c < 256) { out.push(c); continue; }
+      var ch = str[i];
+      if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) { ch = str.substr(i, 2); i++; }
+      var b = encoder.encode(ch);
+      for (var j = 0; j < b.length; j++) out.push(b[j]);
+    }
+    return new Uint8Array(out);
+  }
+
+  function bytesToText(bytes, charset) {
+    if (!bytes) return "";
+    try { return new TextDecoder(normCharset(charset), { fatal: false }).decode(bytes); }
+    catch (e) {
+      try { return new TextDecoder("utf-8").decode(bytes); }
+      catch (e2) {
+        var s = "";
+        for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+        return s;
+      }
+    }
+  }
+
+  function bytesToLatin1(bytes) {
+    var s = "", CH = 8192;
+    for (var i = 0; i < bytes.length; i += CH) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    return s;
+  }
+
+  /* ---------- quoted-printable ---------- */
+  function qpToBytes(str) {
+    var s = str.replace(/=(?:\r\n|\n|\r)/g, "");
+    var out = [];
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c === 61 && /^[0-9A-Fa-f]{2}$/.test(s.substr(i + 1, 2))) {
+        out.push(parseInt(s.substr(i + 1, 2), 16));
+        i += 2;
+      } else if (c < 256) {
+        out.push(c);
+      } else {
+        var ch = s[i];
+        if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) { ch = s.substr(i, 2); i++; }
+        var b = encoder.encode(ch);
+        for (var j = 0; j < b.length; j++) out.push(b[j]);
+      }
+    }
+    return new Uint8Array(out);
+  }
+
+  /* ---------- base64 ---------- */
+  function b64ToBytes(str) {
+    var s = str.replace(/[^A-Za-z0-9+/=_-]/g, "").replace(/-/g, "+").replace(/_/g, "/").replace(/=+$/, "");
+    var rem = s.length % 4;
+    if (rem === 1) s = s.slice(0, -1);
+    else if (rem) s += new Array(5 - rem).join("=");
+    try {
+      var bin = atob(s);
+      var out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    } catch (e) { return null; }
+  }
+
+  /* 復号結果がテキストとして妥当かどうかの簡易判定 */
+  function looksLikeText(s) {
+    if (!s) return false;
+    var bad = s.replace(/[\s\S]/g, function (c) {
+      var n = c.charCodeAt(0);
+      return (n === 9 || n === 10 || n === 13 || (n >= 32 && n !== 0xFFFD)) ? "" : "x";
+    }).length;
+    var repl = (s.match(/\uFFFD/g) || []).length;
+    return (bad + repl) / s.length < 0.1;
+  }
+
+  /* ---------- MIME encoded-word ---------- */
+  var EW_ONE = /^=\?([^?]+)\?([BbQq])\?([^?]*)\?=$/;
+  var EW_SEQ = /(?:=\?[^?]+\?[BbQq]\?[^?]*\?=)(?:[ \t]*\r?\n?[ \t]*=\?[^?]+\?[BbQq]\?[^?]*\?=)*/g;
+
+  function decodeOneWord(w) {
+    var m = EW_ONE.exec(w);
+    if (!m) return w;
+    var cs = m[1].replace(/\*.*$/, ""); /* RFC 2231 の言語指定を落とす */
+    var enc = m[2].toUpperCase();
+    var data = m[3];
+    var bytes = (enc === "B") ? b64ToBytes(data) : qpToBytes(data.replace(/_/g, " "));
+    if (!bytes) return w;
+    var text = bytesToText(bytes, cs);
+    return looksLikeText(text) ? text : w;
+  }
+
+  function decodeEncodedWords(text) {
+    return text.replace(EW_SEQ, function (seq) {
+      var words = seq.match(/=\?[^?]+\?[BbQq]\?[^?]*\?=/g) || [];
+      var joined = "";
+      for (var i = 0; i < words.length; i++) joined += decodeOneWord(words[i]);
+      return joined;
+    });
+  }
+
+  /* ---------- HTML ---------- */
+  function decodeEntities(s) {
+    var ta = document.createElement("textarea");
+    return s.replace(/&(?:#\d{1,7}|#[xX][0-9A-Fa-f]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});/g, function (m) {
+      ta.innerHTML = m;
+      return ta.value;
+    });
+  }
+
+  function htmlToText(s) {
+    /* タグに隣接するソース上の改行はレイアウト用なので取り除き、
+       それ以外の改行（テキスト化のときに入った本物の改行）は残す */
+    var x = s
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<\s*(script|style|head)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+      .replace(/[ \t]*<\s*br\s*\/?\s*>[ \t]*\n?/gi, "\n")
+      .replace(/[ \t]*\n?[ \t]*<\s*\/\s*(p|div|tr|li|h[1-6]|blockquote|ul|ol|table|section|article)\s*>[ \t]*\n?/gi, "\n")
+      .replace(/[ \t]*\n?[ \t]*<\s*(p|div|tr|h[1-6]|blockquote|section|article)\b[^>]*>[ \t]*\n?/gi, "\n")
+      .replace(/[ \t]*\n?[ \t]*<\s*li\b[^>]*>[ \t]*/gi, "\n・")
+      .replace(/<\s*(td|th)\b[^>]*>/gi, "\t")
+      .replace(/<[^>]*>/g, "");
+    x = decodeEntities(x);
+    return x.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+/, "");
+  }
+
+  /* ---------- エスケープ / パーセントエンコード ---------- */
+  function unescapeSeq(s) {
+    return s
+      .replace(/\\u\{([0-9A-Fa-f]{1,6})\}/g, function (m, h) {
+        try { return String.fromCodePoint(parseInt(h, 16)); } catch (e) { return m; }
+      })
+      .replace(/\\u([0-9A-Fa-f]{4})/g, function (m, h) { return String.fromCharCode(parseInt(h, 16)); })
+      .replace(/\\x([0-9A-Fa-f]{2})/g, function (m, h) { return String.fromCharCode(parseInt(h, 16)); })
+      .replace(/\\r\\n/g, "\n")
+      .replace(/\\[nr]/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\(["'\/])/g, "$1")
+      .replace(/\\\\/g, "\\");
+  }
+
+  function decodePercent(s) {
+    return s.replace(/(?:%[0-9A-Fa-f]{2})+/g, function (m) {
+      try {
+        var d = decodeURIComponent(m);
+        return looksLikeText(d) ? d : m;
+      } catch (e) { return m; }
+    });
+  }
+
+  /* ---------- 折り返しの結合 ---------- */
+  function dispWidth(s) {
+    var w = 0;
+    for (var i = 0; i < s.length; i++) w += (s.charCodeAt(i) > 0x7f ? 2 : 1);
+    return w;
+  }
+
+  var BLOCK_START = /^\s*(?:[-*+>＞|｜#=~_]|[・■●▲▼◆□◇☆★※→←]|\d{1,3}[.)．)、]|[(（]\d{1,3}[)）]|[[【「『]|On .+wrote:|\d{4}[-\/年])/;
+  var HEADER_LIKE = /^[A-Za-z][A-Za-z0-9-]{1,30}:\s/;
+
+  function wrapThreshold(lines) {
+    var ws = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim()) ws.push(dispWidth(lines[i]));
+    }
+    if (ws.length < 4) return Infinity;
+    ws.sort(function (a, b) { return a - b; });
+    var p90 = ws[Math.floor(ws.length * 0.9)];
+    if (p90 < 40) return Infinity;           /* そもそも折り返されていない */
+    return Math.max(34, p90 - 12);
+  }
+
+  function shouldJoin(a, b, thr) {
+    if (!a.trim() || !b.trim()) return false;
+    if (BLOCK_START.test(b) || HEADER_LIKE.test(b)) return false;
+    if (/^[ \t]{2,}/.test(b)) return false;   /* インデントされた行は別ブロック扱い */
+    var aw = dispWidth(a.replace(/[ \t]+$/, ""));
+    if (/https?:\/\/\S{8,}$/.test(a) && /^\S/.test(b) && aw >= thr - 12) return true;
+    if (/[ \t]$/.test(a) && aw >= 40) return true;  /* format=flowed */
+    return aw >= thr;
+  }
+
+  function joinLine(a, b) {
+    var A = a.replace(/[ \t]+$/, ""), B = b.replace(/^[ \t]+/, "");
+    if (!A) return B;
+    if (!B) return A;
+    if (/https?:\/\/\S+$/.test(A)) return A + B;
+    var la = A.charCodeAt(A.length - 1), fb = B.charCodeAt(0);
+    if (la < 0x80 && fb < 0x80) return A + " " + B;
+    return A + B;
+  }
+
+  function unwrap(text) {
+    var lines = text.split("\n");
+    var thr = wrapThreshold(lines);
+    if (thr === Infinity) return text;
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+      var cur = lines[i];
+      while (i + 1 < lines.length && shouldJoin(cur, lines[i + 1], thr)) {
+        cur = joinLine(cur, lines[i + 1]);
+        i++;
+      }
+      out.push(cur);
+    }
+    return out.join("\n");
+  }
+
+  /* ============================================================
+     メールソース（ヘッダー + MIME）の解析
+     ============================================================ */
+  function splitMessage(raw) {
+    var m = /\n[ \t]*\n/.exec(raw);
+    if (!m) return { head: raw, body: "" };
+    return { head: raw.slice(0, m.index), body: raw.slice(m.index + m[0].length) };
+  }
+
+  function parseHeaders(head) {
+    var unfolded = head.replace(/\n[ \t]+/g, " ");
+    var map = {}, order = [];
+    unfolded.split("\n").forEach(function (line) {
+      var m = /^([A-Za-z][A-Za-z0-9-]*)\s*:\s?([\s\S]*)$/.exec(line);
+      if (!m) return;
+      var k = m[1].toLowerCase();
+      if (map[k] === undefined) { map[k] = m[2]; order.push(k); }
+      else { map[k] += ", " + m[2]; }
+    });
+    map.__order = order;
+    return map;
+  }
+
+  function looksLikeMailSource(text) {
+    var s = splitMessage(text);
+    if (!s.head.trim()) return false;
+    var h = parseHeaders(s.head);
+    var core = ["from", "to", "subject", "date", "received", "message-id", "mime-version", "content-type", "return-path", "delivered-to"];
+    var hit = 0;
+    for (var i = 0; i < core.length; i++) if (h[core[i]] !== undefined) hit++;
+    var lines = s.head.split("\n").filter(function (l) { return l.trim(); });
+    var hdrLines = s.head.replace(/\n[ \t]+/g, " ").split("\n").filter(function (l) {
+      return /^[A-Za-z][A-Za-z0-9-]*\s*:/.test(l);
+    }).length;
+    return hit >= 2 && hdrLines >= 2 && hdrLines >= lines.length * 0.6;
+  }
+
+  function paramOf(ct, name) {
+    var re = new RegExp(name + "\\s*=\\s*(?:\"([^\"]*)\"|([^;\\s]+))", "i");
+    var m = re.exec(ct || "");
+    return m ? (m[1] !== undefined ? m[1] : m[2]) : "";
+  }
+
+  function splitBoundary(body, boundary) {
+    var marker = "--" + boundary;
+    var lines = body.split("\n");
+    var parts = [], cur = null;
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].replace(/[\s]+$/, "");
+      if (t === marker) { if (cur) parts.push(cur.join("\n")); cur = []; continue; }
+      if (t === marker + "--") { if (cur) parts.push(cur.join("\n")); cur = null; break; }
+      if (cur) cur.push(lines[i]);
+    }
+    if (cur && cur.length) parts.push(cur.join("\n"));
+    return parts;
+  }
+
+  /* node = {headers, body} → {mime, text} / null（添付など） */
+  function decodeNode(node, depth, ctx) {
+    var ct = node.headers["content-type"] || "text/plain; charset=utf-8";
+    var mime = ct.split(";")[0].trim().toLowerCase();
+    var disp = node.headers["content-disposition"] || "";
+
+    if (mime.indexOf("multipart/") === 0 && depth < 8) {
+      var boundary = paramOf(ct, "boundary");
+      if (boundary) {
+        var results = [];
+        splitBoundary(node.body, boundary).forEach(function (p) {
+          var s = splitMessage(p);
+          var r = decodeNode({ headers: parseHeaders(s.head), body: s.body }, depth + 1, ctx);
+          if (r) results.push(r);
+        });
+        var pick = null;
+        for (var i = 0; i < results.length; i++) if (results[i].mime === "text/plain") { pick = results[i]; break; }
+        if (!pick) for (var j = 0; j < results.length; j++) if (results[j].mime === "text/html") { pick = results[j]; break; }
+        return pick || results[0] || null;
+      }
+    }
+
+    var filename = paramOf(disp, "filename") || paramOf(ct, "name");
+    if (filename || /^attachment/i.test(disp)) {
+      ctx.attachments.push(decodeEncodedWords(filename || "(名称不明)") + (mime ? " [" + mime + "]" : ""));
+      if (mime.indexOf("text/") !== 0) return null;
+    }
+    if (mime.indexOf("text/") !== 0 && mime !== "message/rfc822" && mime !== "") return null;
+
+    var cte = (node.headers["content-transfer-encoding"] || "").trim().toLowerCase();
+    var bytes = null;
+    if (cte === "base64") bytes = b64ToBytes(node.body);
+    else if (cte === "quoted-printable") bytes = qpToBytes(node.body);
+    if (!bytes) bytes = toBytes(node.body);
+
+    var charset = paramOf(ct, "charset") || "utf-8";
+    var text = bytesToText(bytes, charset);
+    if (!looksLikeText(text) && charset.toLowerCase() !== "utf-8") text = bytesToText(bytes, "utf-8");
+    ctx.charset = charset;
+    return { mime: mime || "text/plain", text: text };
+  }
+
+  var SHOW_HEADERS = [
+    ["subject", "件名"], ["from", "差出人"], ["to", "宛先"], ["cc", "Cc"],
+    ["date", "日時"], ["reply-to", "返信先"], ["message-id", "Message-ID"]
+  ];
+
+  function parseMailSource(text, ctx) {
+    var s = splitMessage(text);
+    var headers = parseHeaders(s.head);
+    var node = decodeNode({ headers: headers, body: s.body }, 0, ctx);
+    ctx.headers = [];
+    SHOW_HEADERS.forEach(function (pair) {
+      if (headers[pair[0]]) ctx.headers.push([pair[1], decodeEncodedWords(headers[pair[0]]).trim()]);
+    });
+    if (!node) return text;
+    ctx.partMime = node.mime;
+    return node.text;
+  }
+
+  /* ============================================================
+     処理ステップ定義
+     ============================================================ */
+  var STEPS = [
+    {
+      id: "escape", name: "エスケープ復号", desc: "\\n や \\u3042 を元の文字に戻す",
+      detect: function (t) { return /\\u[0-9A-Fa-f]{4}|\\x[0-9A-Fa-f]{2}|\\[nrt]/.test(t); },
+      apply: function (t) { return unescapeSeq(t); }
+    },
+    {
+      id: "source", name: "メールソース解析", desc: "ヘッダー・MIMEパートを解析して本文を取り出す",
+      detect: function (t) { return looksLikeMailSource(t); },
+      apply: function (t, ctx) { return parseMailSource(t, ctx); }
+    },
+    {
+      id: "encoded", name: "MIMEヘッダー復号", desc: "=?UTF-8?B?...?= 形式を復号する",
+      detect: function (t) { return /=\?[^?\s]+\?[BbQq]\?[^?]*\?=/.test(t); },
+      apply: function (t) { return decodeEncodedWords(t); }
+    },
+    {
+      id: "qp", name: "quoted-printable 復号", desc: "=E3=81=82 や行末の = を元に戻す",
+      detect: function (t) {
+        var hex = (t.match(/=[0-9A-Fa-f]{2}/g) || []).length;
+        return hex >= 3 || /=\n/.test(t);
+      },
+      apply: function (t, ctx) {
+        var out = bytesToText(qpToBytes(t), ctx.charset || "utf-8");
+        if (!looksLikeText(out)) {
+          var alt = ["utf-8", "shift_jis", "euc-jp", "iso-2022-jp"];
+          for (var i = 0; i < alt.length; i++) {
+            var cand = bytesToText(qpToBytes(t), alt[i]);
+            if (looksLikeText(cand)) return cand;
+          }
+          return t;
+        }
+        return out;
+      }
+    },
+    {
+      id: "base64", name: "Base64 復号", desc: "本文全体が Base64 の場合に復号する",
+      detect: function (t) {
+        var body = t.replace(/\s+/g, "");
+        if (body.length < 32) return false;
+        if (!/^[A-Za-z0-9+/=]+$/.test(body)) return false;
+        var bytes = b64ToBytes(body);
+        return !!bytes && looksLikeText(bytesToText(bytes, "utf-8"));
+      },
+      apply: function (t, ctx) {
+        var bytes = b64ToBytes(t.replace(/\s+/g, ""));
+        if (!bytes) return t;
+        var alt = [ctx.charset || "utf-8", "utf-8", "shift_jis", "euc-jp", "iso-2022-jp"];
+        for (var i = 0; i < alt.length; i++) {
+          var cand = bytesToText(bytes, alt[i]);
+          if (looksLikeText(cand)) return cand;
+        }
+        return t;
+      }
+    },
+    {
+      id: "html", name: "HTMLをテキスト化", desc: "タグを除去して改行・箇条書きに変換",
+      detect: function (t) { return /<\s*\/?\s*(html|body|div|p|br|span|table|td|tr|ul|li|a|b|strong|font|img|meta)\b[^>]*>/i.test(t); },
+      apply: function (t) { return htmlToText(t); }
+    },
+    {
+      id: "entity", name: "HTMLエンティティ復号", desc: "&amp;gt; &amp;nbsp; などを元の文字に戻す",
+      detect: function (t) { return /&(?:#\d{1,7}|#[xX][0-9A-Fa-f]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});/.test(t); },
+      apply: function (t) { return decodeEntities(t); }
+    },
+    {
+      id: "percent", name: "パーセントエンコード復号", desc: "URL内の %E3%81%82 を日本語に戻す",
+      detect: function (t) { return /(?:%[0-9A-Fa-f]{2}){2,}/.test(t); },
+      apply: function (t) { return decodePercent(t); }
+    },
+    {
+      id: "quote", name: "引用記号を除去", desc: "行頭の > や ＞ を取り除く",
+      detect: function (t) { return (t.match(/^[ \t]*[>＞]/gm) || []).length >= 1; },
+      apply: function (t) {
+        return t.split("\n").map(function (l) {
+          return l.replace(/^(?:[ \t]*[>＞][ \t]?)+/, "");
+        }).join("\n");
+      }
+    },
+    {
+      id: "unwrap", name: "折り返しを結合", desc: "強制改行された行を段落に戻す",
+      detect: function (t) {
+        var lines = t.split("\n");
+        if (lines.length < 4) return false;
+        var thr = wrapThreshold(lines);
+        if (thr === Infinity) return false;
+        var n = 0;
+        for (var i = 0; i < lines.length - 1; i++) if (shouldJoin(lines[i], lines[i + 1], thr)) n++;
+        return n >= 2;
+      },
+      apply: function (t) { return unwrap(t); }
+    },
+    {
+      id: "space", name: "空白・空行の整形", desc: "行末の空白・全角スペース・過剰な空行を整理",
+      detect: function (t) { return /[ \t]+$|\n{3,}|\u00a0|[\u200b-\u200d\u2060]|^\uFEFF/m.test(t); },
+      apply: function (t) {
+        return t
+          .replace(/^\uFEFF/, "")
+          .replace(/\u00a0/g, " ")
+          .replace(/[\u200b-\u200d\u2060]/g, "")
+          .replace(/[ \t]+$/gm, "")
+          .replace(/\n{3,}/g, "\n\n")
+          .replace(/^\n+/, "")
+          .replace(/\s+$/, "");
+      }
+    }
+  ];
+
+  /* ============================================================
+     UI
+     ============================================================ */
+  var stepBoxes = {};
+
+  function buildSteps() {
+    var host = $("steps");
+    STEPS.forEach(function (st) {
+      var label = document.createElement("label");
+      label.className = "step locked";
+      label.id = "step-" + st.id;
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.disabled = true;
+      var body = document.createElement("div");
+      body.className = "body";
+      var n = document.createElement("div");
+      n.className = "name";
+      n.textContent = st.name;
+      var d = document.createElement("div");
+      d.className = "desc";
+      d.textContent = st.desc;
+      body.appendChild(n); body.appendChild(d);
+      label.appendChild(cb); label.appendChild(body);
+      host.appendChild(label);
+      stepBoxes[st.id] = cb;
+      cb.addEventListener("change", run);
+    });
+  }
+
+  function setAutoMode(auto) {
+    STEPS.forEach(function (st) {
+      stepBoxes[st.id].disabled = auto;
+      $("step-" + st.id).classList.toggle("locked", auto);
+    });
+  }
+
+  function restore(input) {
+    var ctx = { headers: null, attachments: [], charset: "", partMime: "" };
+    var auto = $("auto").checked;
+    var text = input.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    var applied = [];
+
+    STEPS.forEach(function (st) {
+      var on = auto ? st.detect(text) : stepBoxes[st.id].checked;
+      var changed = false;
+      if (on) {
+        var before = text;
+        var res;
+        try { res = st.apply(text, ctx); }
+        catch (e) { res = before; }
+        if (typeof res === "string") text = res;
+        changed = (text !== before) || (st.id === "source" && !!ctx.headers);
+        if (changed) applied.push(st.name);
+      }
+      if (auto) stepBoxes[st.id].checked = on;
+      $("step-" + st.id).classList.toggle("applied", changed);
+    });
+
+    return { text: text, applied: applied, ctx: ctx };
+  }
+
+  var lastResult = "";
+
+  function run() {
+    var input = $("input").value;
+    $("in-count").textContent = input.length.toLocaleString() + " 文字";
+    if (!input.trim()) {
+      $("output").textContent = "";
+      $("log").innerHTML = "";
+      $("out-count").textContent = "0 文字";
+      $("headers-card").style.display = "none";
+      STEPS.forEach(function (st) { $("step-" + st.id).classList.remove("applied"); });
+      lastResult = "";
+      return;
+    }
+
+    var r = restore(input);
+    var ctx = r.ctx;
+
+    /* ヘッダー表示 */
+    if (ctx.headers && ctx.headers.length) {
+      var tb = $("hdr-body");
+      tb.innerHTML = "";
+      ctx.headers.forEach(function (pair) {
+        var tr = document.createElement("tr");
+        var th = document.createElement("th");
+        th.textContent = pair[0];
+        var td = document.createElement("td");
+        td.textContent = pair[1];
+        tr.appendChild(th); tr.appendChild(td);
+        tb.appendChild(tr);
+      });
+      if (ctx.attachments.length) {
+        var tr2 = document.createElement("tr");
+        var th2 = document.createElement("th");
+        th2.textContent = "添付ファイル";
+        var td2 = document.createElement("td");
+        td2.textContent = ctx.attachments.join(" / ");
+        tr2.appendChild(th2); tr2.appendChild(td2);
+        tb.appendChild(tr2);
+      }
+      $("headers-card").style.display = "block";
+    } else {
+      $("headers-card").style.display = "none";
+    }
+
+    var text = r.text;
+    if (ctx.headers && ctx.headers.length && $("with-header").checked) {
+      var head = ctx.headers.map(function (p) { return p[0] + ": " + p[1]; }).join("\n");
+      text = head + "\n" + new Array(41).join("-") + "\n" + text;
+    }
+
+    lastResult = text;
+    $("output").textContent = text;
+    $("out-count").textContent = text.length.toLocaleString() + " 文字 / " + text.split("\n").length.toLocaleString() + " 行";
+
+    var html = "";
+    if (r.applied.length) {
+      html += r.applied.map(function (n) { return '<span class="tag">' + n + "</span>"; }).join("");
+    } else {
+      html += '<span class="tag warn">変換なし</span> 崩れている箇所が検出されませんでした。手動でチェックを付けて試してください。';
+    }
+    if (ctx.charset) html += '<br>文字コード: <code>' + ctx.charset + "</code>";
+    if (ctx.partMime) html += (ctx.charset ? " / " : "<br>") + "パート: <code>" + ctx.partMime + "</code>";
+    $("log").innerHTML = html;
+  }
+
+  /* ---------- トースト / コピー ---------- */
+  function showToast(msg, ok) {
+    var el = $("toast");
+    el.textContent = msg;
+    el.style.background = (ok === false) ? "#dc2626" : "#16a34a";
+    el.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { el.style.display = "none"; }, 2000);
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("復元結果をコピーしました！");
+    } catch (e) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); showToast("復元結果をコピーしました！"); }
+      catch (e2) { showToast("コピーに失敗しました", false); }
+      document.body.removeChild(ta);
+    }
+  }
+
+  /* ---------- イベント ---------- */
+  buildSteps();
+
+  $("input").addEventListener("input", run);
+  $("auto").addEventListener("change", function () { setAutoMode(this.checked); run(); });
+  $("with-header").addEventListener("change", run);
+  $("mono").addEventListener("change", function () { $("output").classList.toggle("mono", this.checked); });
+  $("btn-run").addEventListener("click", run);
+
+  $("btn-clear").addEventListener("click", function () {
+    $("input").value = "";
+    run();
+    $("input").focus();
+  });
+
+  $("btn-sample-a").addEventListener("click", function () {
+    $("input").value = $("sample-a").textContent.replace(/^\n/, "");
+    run();
+  });
+  $("btn-sample-b").addEventListener("click", function () {
+    $("input").value = $("sample-b").textContent.replace(/^\n/, "");
+    run();
+  });
+
+  $("btn-copy").addEventListener("click", function () {
+    if (!lastResult) { showToast("復元結果がありません", false); return; }
+    copyToClipboard(lastResult);
+  });
+
+  $("btn-download").addEventListener("click", function () {
+    if (!lastResult) { showToast("復元結果がありません", false); return; }
+    var blob = new Blob([lastResult], { type: "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "restored-mail.txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    showToast("ダウンロードしました！");
+  });
+
+  $("file").addEventListener("change", function (ev) {
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var bytes = new Uint8Array(reader.result);
+      var latin1 = bytesToLatin1(bytes);
+      var text = latin1;
+      /* MIME ヘッダーが無い普通のテキストなら UTF-8 として読み直す */
+      if (!/^content-(type|transfer-encoding)\s*:/im.test(latin1.slice(0, 4000))) {
+        try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+        catch (e) { text = latin1; }
+      }
+      $("input").value = text;
+      run();
+      showToast(f.name + " を読み込みました");
+    };
+    reader.readAsArrayBuffer(f);
+    ev.target.value = "";
+  });
+
+  setAutoMode(true);
+})();
+</script>
