@@ -19,11 +19,11 @@
     </div>
     <div>
       <label>品質を落とさない負荷制限</label>
-      <div class="tiny">自動探索では候補件数・selftest・Mask比較だけを減らします。画像一致に使うGF(2)独立式のrank / reserve-freeは変更しません。</div>
+      <div class="tiny">候補件数・探索パス・Mask比較だけを減らします。画像一致に使うGF(2)独立式のrank / reserve-freeは変更しません。</div>
     </div>
     <div>
       <label>自動フル求解の状態</label>
-      <div id="auto-heavy-safety-note" class="tiny">軽量探索完了時に自動調整します。手動設定は実行後に戻します。</div>
+      <div id="auto-heavy-safety-note" class="tiny">軽量探索完了時に自動調整します。M0⊕ΣxiDi は実エンコーダで2回セルフテストします。</div>
     </div>`;
   controls.appendChild(box);
 
@@ -64,12 +64,12 @@
     const topCap = Math.max(1, Math.floor(Number(capInput.value) || 1));
     const fullTop = $('auto-length-full-top');
     if (fullTop) fullTop.value = String(Math.min(Math.max(1, Number(fullTop.value) || 1), topCap));
-    if ($('selftest-count')) $('selftest-count').value = '0';
+    if ($('selftest-count')) $('selftest-count').value = String(Math.min(Math.max(0, Number($('selftest-count').value) || 0), 2));
     if ($('soft-passes')) $('soft-passes').value = '1';
     if ($('null-samples')) $('null-samples').value = String(Math.min(Math.max(1, Number($('null-samples').value) || 1), 16));
     if ($('all-masks')) $('all-masks').checked = false;
 
-    note.textContent = `自動フル求解: 上位${fullTop?.value || 1}件 / selftest 0 / Mask比較OFF。GF(2) rank と reserve-free は元設定のまま。`;
+    note.textContent = `自動フル求解: 上位${fullTop?.value || 1}件 / affine selftest ${$('selftest-count')?.value || 0}回 / Mask比較OFF。GF(2) rank と reserve-free は元設定のまま。`;
   }
 
   function restoreControls() {
