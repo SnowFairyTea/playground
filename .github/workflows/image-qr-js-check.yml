@@ -1,0 +1,32 @@
+name: Image QR JavaScript Check
+
+on:
+  pull_request:
+    paths:
+      - "assets/image-qr-*.js"
+      - "apps/image-qr-optimizer/**"
+      - "_layouts/artifacts.html"
+      - ".github/workflows/image-qr-js-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check image QR helper JavaScript syntax
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(assets/image-qr-*.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No image-qr helper scripts found."
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            echo "node --check $file"
+            node --check "$file"
+          done
