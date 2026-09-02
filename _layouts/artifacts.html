@@ -7,9 +7,28 @@
 </head>
 <body>
 
+{% if page.permalink == '/apps/image-qr-optimizer/' %}
+<script src="{{ '/assets/image-qr-hook.js' | relative_url }}"></script>
+{% endif %}
+
 {{ content }}
 
 {% include footer.html %}
+
+{% if page.permalink == '/apps/image-qr-optimizer/' %}
+<script src="{{ '/assets/image-qr-target-inset.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-constraint-sync.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-mutation-guard.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-replay-guard.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-auto-length.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-length-screen.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-length-screen-ui.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-length-screen-loop-guard.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-search-safety.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-max-length.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-auto-length-display.js' | relative_url }}"></script>
+<script src="{{ '/assets/image-qr-region-tools.js' | relative_url }}"></script>
+{% endif %}
 
 </body>
 </html>

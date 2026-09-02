@@ -1,0 +1,724 @@
+---
+layout: artifacts
+title: "画像埋め込みQRコード最適化"
+permalink: /apps/image-qr-optimizer/
+---
+
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+  h1 { margin: 0 0 6px; font-size: 1.65rem; }
+  h2 { margin: 0 0 14px; font-size: 1.15rem; }
+  h3 { margin: 16px 0 8px; font-size: 1rem; }
+  p { line-height: 1.65; }
+  .subtitle { color: var(--muted); margin: 0 0 18px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 20px; margin-bottom: 18px; }
+  .phase-banner { border-left: 5px solid var(--accent); }
+  .phase-banner strong { color: var(--accent-hover); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 820px) { .grid, .grid-3 { grid-template-columns: 1fr; } .wrap { padding: 14px; } }
+  label { display: block; font-size: .86rem; font-weight: 650; margin-bottom: 5px; }
+  input, select, textarea, button { font: inherit; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: #fff; color: var(--text); padding: 9px 10px; outline: none;
+  }
+  textarea { resize: vertical; min-height: 72px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,197,94,.14); }
+  button { border: 0; border-radius: var(--radius-pill); padding: 9px 16px; cursor: pointer; font-weight: 650; }
+  button.primary { background: var(--accent); color: white; }
+  button.primary:hover { background: var(--accent-hover); }
+  button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  button.danger { background: #fee2e2; color: #991b1b; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .muted { color: var(--muted); font-size: .86rem; }
+  .tiny { font-size: .78rem; color: var(--muted); }
+  .status { padding: 11px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-top: 10px; white-space: pre-wrap; }
+  .status.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .status.ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+  .segment { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; background: var(--surface); }
+  .segment-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .segment-title { font-weight: 750; }
+  .quickchars { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+  .quickchars button { padding: 5px 9px; font-size: .76rem; background: white; border: 1px solid var(--border); color: var(--text); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .summary-table th, .summary-table td { border-bottom: 1px solid var(--border); padding: 8px 7px; text-align: left; vertical-align: top; }
+  .summary-table th { color: var(--muted); font-weight: 650; }
+  .mono { font-family: var(--font-mono); word-break: break-all; }
+  .pill { display: inline-block; padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-light); color: #166534; font-size: .76rem; font-weight: 650; }
+  .warn-pill { background: #fef3c7; color: #92400e; }
+  .canvas-wrap { overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: white; padding: 10px; }
+  canvas.matrix { display: block; image-rendering: pixelated; cursor: crosshair; margin: 0 auto; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .78rem; margin: 10px 0; }
+  .legend span::before { content: ''; display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.15); background: var(--legend); }
+  .candidate { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin: 12px 0; }
+  .candidate-grid { display: grid; grid-template-columns: 220px 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 700px) { .candidate-grid { grid-template-columns: 1fr; } }
+  .candidate canvas { width: 210px; height: 210px; image-rendering: pixelated; border: 1px solid var(--border); }
+  .candidate textarea { min-height: 84px; font-family: var(--font-mono); }
+  details { margin-top: 10px; }
+  code { font-family: var(--font-mono); background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+</style>
+
+<div class="wrap">
+  <div class="card phase-banner">
+    <h1>画像埋め込みQRコード最適化</h1>
+    <p class="subtitle">QRを壊して画像に似せるのではなく、QRエンコーダへ与えるペイロード自由度から、目的のモジュール配置を数学的に作るためのツールです。</p>
+    <strong>Phase 1 + Phase 2 — QR自由度解析 / 画像目標への求解</strong>
+    <p class="muted">Phase 1の自由度解析に加え、元画像の二値目標化、重要度・絶対制約ブラシ、重要度順の両立独立条件を追加するヒューリスティック、残存零空間からの複数候補生成まで実装しています。独立デコーダ/RS検証はまだ未実装です。</p>
+  </div>
+
+  <div class="card">
+    <h2>1. ペイロード構成</h2>
+    <p class="muted">固定・可変セグメントを任意の順序で複数配置できます。固定部はUTF-8、可変部はPhase 1では1文字=1バイトのASCII文字集合に限定します。</p>
+    <div id="segments"></div>
+    <div class="toolbar">
+      <button class="secondary" id="add-fixed">固定セグメントを追加</button>
+      <button class="secondary" id="add-variable">可変セグメントを追加</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. QR構造条件</h2>
+    <div class="grid-3">
+      <div>
+        <label for="version">Version</label>
+        <select id="version"></select>
+        <div class="tiny">AutoはPhase 1では「基準ペイロードを収容できる最小Versionを決め、その後固定」です。</div>
+      </div>
+      <div>
+        <label for="ecc">Error Correction Level</label>
+        <select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select>
+        <div class="tiny">既定Mは実装上の暫定既定値で、規格が推奨する固定値ではありません。</div>
+      </div>
+      <div>
+        <label for="mask">Mask Pattern</label>
+        <select id="mask"><option value="auto">Auto（QR標準ペナルティで選択後に固定）</option></select>
+        <div class="tiny">Phase 1のAutoは画像一致では選びません。0〜7を個別指定できます。</div>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:12px">
+      <div>
+        <label for="mode">Encoding Mode</label>
+        <select id="mode" disabled><option>Byte</option></select>
+        <div class="tiny">Phase 1アルゴリズム上の制約。将来モード追加可能。</div>
+      </div>
+      <div>
+        <label for="affine-limit">表示するアフィン候補数</label>
+        <input id="affine-limit" type="number" min="1" step="1" value="8">
+        <div class="tiny">暫定値8。最大次元の証明には影響せず、同次元候補を何件表示するかだけを制限します。</div>
+      </div>
+      <div>
+        <label for="selftest-count">アフィン写像セルフテスト回数</label>
+        <input id="selftest-count" type="number" min="0" step="1" value="8">
+        <div class="tiny">暫定値8。ランダムな解ベクトルで実エンコーダと M0⊕ΣxiDi を照合する実装確認用です。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. 可変文字集合 → アフィン部分空間</h2>
+    <div class="toolbar"><button class="primary" id="analyze-charsets">文字集合を解析</button></div>
+    <div id="charset-status" class="status">未解析</div>
+    <div id="affine-results"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 固定QR問題を構築</h2>
+    <p class="muted">選択したVersion / ECC / Mask / Byte Mode / ペイロード長 / 可変バイト位置を固定し、基準QR M0と各自由変数を1つだけ反転した実エンコーダ出力との差分から Di を構築します。</p>
+    <div class="toolbar"><button class="primary" id="build-problem" disabled>QR写像を構築</button></div>
+    <div id="problem-status" class="status">文字集合の解析後に実行できます。</div>
+    <div id="problem-summary"></div>
+  </div>
+
+  <div class="card" id="matrix-card" style="display:none">
+    <h2>5. 固定 / 可変モジュール可視化と絶対制約</h2>
+    <p class="muted">セルをクリックすると「制約なし → 絶対黒 → 絶対白 → 制約なし」と切り替わります。これは画像処理ではなく、Phase 1のGF(2)求解確認用です。</p>
+    <div class="legend">
+      <span style="--legend:#e9d5ff">QR構造上固定</span>
+      <span style="--legend:#dbeafe">固定ペイロード/符号条件で固定</span>
+      <span style="--legend:#dcfce7">可変ペイロードで変化可能</span>
+      <span style="--legend:#ef4444">絶対黒制約</span>
+      <span style="--legend:#3b82f6">絶対白制約</span>
+    </div>
+    <div class="canvas-wrap"><canvas id="matrix" class="matrix"></canvas></div>
+    <div id="constraint-summary" class="status">絶対制約: 0</div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="secondary" id="clear-constraints">制約を全消去</button>
+      <label style="margin:0 0 0 auto; display:flex; align-items:center; gap:7px">候補数 <input id="solution-count" type="number" min="1" step="1" value="6" style="width:90px"></label>
+      <button class="primary" id="solve">GF(2)で求解</button>
+    </div>
+    <div id="solve-status" class="status">未求解</div>
+  </div>
+
+  <div class="card" id="image-card" style="display:none">
+    <h2>6. Phase 2 — 目標画像</h2>
+    <p class="muted">元画像を現在のQRモジュール解像度へ変換して、目標となる白黒配置を作ります。この段階ではQR行列を変更しません。</p>
+    <div class="grid">
+      <div>
+        <label for="source-image">元画像</label>
+        <input id="source-image" type="file" accept="image/*">
+      </div>
+      <div>
+        <label for="fit-mode">フィット方式</label>
+        <select id="fit-mode"><option value="cover" selected>Cover</option><option value="contain">Contain</option><option value="stretch">Stretch</option></select>
+      </div>
+    </div>
+    <h3>二値化</h3>
+    <div class="grid-3">
+      <div><label for="threshold">しきい値 (0–255)</label><input id="threshold" type="number" min="0" max="255" step="1" value="128"></div>
+      <div><label for="brightness">明るさ (-255–255)</label><input id="brightness" type="number" min="-255" max="255" step="1" value="0"></div>
+      <div><label for="contrast">コントラスト倍率</label><input id="contrast" type="number" min="0" step="0.05" value="1"></div>
+    </div>
+    <div class="grid-3" style="margin-top:10px">
+      <div><label for="gray-method">グレースケール</label><select id="gray-method"><option value="bt709" selected>BT.709係数</option><option value="average">RGB平均</option><option value="max">RGB最大値</option></select></div>
+      <div><label for="outside-level">余白明度 (0–255)</label><input id="outside-level" type="number" min="0" max="255" step="1" value="255"></div>
+      <div><label style="display:flex;align-items:center;gap:8px;margin-top:26px"><input id="invert-target" type="checkbox" style="width:auto"> 白黒を反転</label></div>
+    </div>
+    <h3>クロップ・拡大縮小・位置</h3>
+    <div class="grid-3">
+      <div><label for="crop-x">Crop X (%)</label><input id="crop-x" type="number" min="0" max="100" step="0.1" value="0"></div>
+      <div><label for="crop-y">Crop Y (%)</label><input id="crop-y" type="number" min="0" max="100" step="0.1" value="0"></div>
+      <div><label for="crop-w">Crop width (%)</label><input id="crop-w" type="number" min="0.1" max="100" step="0.1" value="100"></div>
+      <div><label for="crop-h">Crop height (%)</label><input id="crop-h" type="number" min="0.1" max="100" step="0.1" value="100"></div>
+      <div><label for="image-zoom">Zoom (%)</label><input id="image-zoom" type="number" min="1" step="1" value="100"></div>
+      <div><label for="image-offset-x">X位置 (modules)</label><input id="image-offset-x" type="number" step="0.25" value="0"></div>
+      <div><label for="image-offset-y">Y位置 (modules)</label><input id="image-offset-y" type="number" step="0.25" value="0"></div>
+      <div><label style="display:flex;align-items:center;gap:8px;margin-top:26px"><input id="image-smoothing" type="checkbox" style="width:auto" checked> 補間を使用</label></div>
+    </div>
+    <p class="tiny">既定値（threshold 128 / contrast 1 / brightness 0 / cover / BT.709 / smoothing ON）はQR規格値ではなく、編集開始点としての実装上の暫定値です。すべてUIから変更できます。</p>
+    <div class="toolbar"><button class="secondary" id="refresh-target">目標画像を更新</button></div>
+    <div id="image-status" class="status">画像を選択してください。</div>
+    <div class="canvas-wrap" style="margin-top:10px"><canvas id="target-canvas" class="matrix"></canvas></div>
+  </div>
+
+  <div class="card" id="weight-card" style="display:none">
+    <h2>7. 重要度・絶対制約ブラシ</h2>
+    <div class="grid-3">
+      <div><label for="brush-mode">ブラシ</label><select id="brush-mode"><option value="weight">重要度を塗る</option><option value="black">絶対黒</option><option value="white">絶対白</option><option value="clear">絶対制約を消す</option></select></div>
+      <div><label for="brush-weight">重要度 (0.0–1.0)</label><input id="brush-weight" type="number" min="0" max="1" step="0.05" value="1"></div>
+      <div><label for="brush-radius">半径 (modules)</label><input id="brush-radius" type="number" min="0" step="1" value="1"></div>
+      <div><label for="default-weight">リセット時の重要度</label><input id="default-weight" type="number" min="0" max="1" step="0.05" value="1"></div>
+    </div>
+    <div class="toolbar" style="margin-top:10px"><button class="secondary" id="reset-weights">重要度をリセット</button><button class="secondary" id="clear-absolute">絶対制約を全消去</button></div>
+    <div class="canvas-wrap" style="margin-top:10px"><canvas id="paint-canvas" class="matrix"></canvas></div>
+    <div id="paint-status" class="status">重要度マップ未初期化</div>
+  </div>
+
+  <div class="card" id="optimize-card" style="display:none">
+    <h2>8. ソフト制約ヒューリスティック</h2>
+    <p class="muted">絶対制約を先に固定し、重要度の高い目標モジュールから順に、現在の方程式系と両立する独立条件だけを追加します。これは重み付き不一致の厳密最適化ではなく、優先順位付きの貪欲ヒューリスティックです。</p>
+    <div class="grid-3">
+      <div><label for="reserve-free">意図的に残す自由度</label><input id="reserve-free" type="number" min="0" step="1" value="8"><div class="tiny">暫定値8。多様な候補を残すための計算量/品質トレードオフ。</div></div>
+      <div><label for="soft-passes">同一重要度の順序パス数</label><input id="soft-passes" type="number" min="1" step="1" value="3"><div class="tiny">暫定値3。同一重み内だけ順序を変えます。</div></div>
+      <div><label for="null-samples">各パスの零空間サンプル数</label><input id="null-samples" type="number" min="1" step="1" value="64"><div class="tiny">暫定値64。ランダムQR総当たりではなく、求解後の z のみをサンプル。</div></div>
+      <div><label for="phase2-candidate-count">表示候補数</label><input id="phase2-candidate-count" type="number" min="1" step="1" value="12"></div>
+      <div><label for="optimizer-seed">乱数seed</label><input id="optimizer-seed" type="number" step="1" value="1"></div>
+      <div><label style="display:flex;align-items:center;gap:8px;margin-top:26px"><input id="all-masks" type="checkbox" style="width:auto"> 同じVersionでMask 0–7を独立問題として比較</label></div>
+    </div>
+    <div class="toolbar" style="margin-top:12px"><button class="primary" id="optimize-image">画像目標へ最適化</button></div>
+    <div id="optimize-status" class="status">目標画像を作成してください。</div>
+  </div>
+
+  <div class="card" id="phase2-candidate-card" style="display:none">
+    <h2>9. Phase 2 候補比較</h2>
+    <div id="phase2-candidates"></div>
+  </div>
+
+  <div class="card" id="candidate-card" style="display:none">
+    <h2>Phase 1 手動制約の求解候補</h2>
+    <div id="candidates"></div>
+  </div>
+
+  <div class="card">
+    <h2>まだ未実装の項目</h2>
+    <ul class="muted">
+      <li>Version範囲をまたいだ独立問題比較（同一VersionのMask 0〜7比較は実装済み）</li>
+      <li>独立エンコーダ比較、独立デコーダ復号、PNGモジュール再読込、RSブロック実測</li>
+      <li>最終PNG/SVG配布描画、装飾</li>
+    </ul>
+  </div>
+</div>
+
+<script src="/assets/qrcode.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder('utf-8');
+  const URLSAFE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const EXT_URLSAFE = URLSAFE + '.~';
+
+  let nextSegId = 1;
+  let segments = [
+    { id: nextSegId++, kind: 'fixed', text: '' },
+    { id: nextSegId++, kind: 'variable', length: 8, allowed: URLSAFE, forbidden: '', affineChoice: 'auto' }
+  ];
+  let affineBySeg = new Map();
+  const affineCache = new Map();
+  let problem = null;
+  const constraints = new Map(); // module index -> 0/1
+  let sourceImage = null;
+  let targetBits = null;
+  let weights = null;
+  const mappingCache = new Map();
+
+  const $ = id => document.getElementById(id);
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  }
+
+  function setStatus(id, text, kind='') {
+    const el = $(id); el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function uniqueChars(text) {
+    const out = []; const seen = new Set();
+    for (const ch of Array.from(text)) if (!seen.has(ch)) { seen.add(ch); out.push(ch); }
+    return out;
+  }
+
+  function asciiBytesFromChars(allowedText, forbiddenText) {
+    const forbidden = new Set(uniqueChars(forbiddenText));
+    const bytes = [];
+    const unsupported = [];
+    for (const ch of uniqueChars(allowedText)) {
+      if (forbidden.has(ch)) continue;
+      const b = encoder.encode(ch);
+      if (b.length !== 1) unsupported.push(ch);
+      else bytes.push(b[0]);
+    }
+    bytes.sort((a,b)=>a-b);
+    return { bytes, unsupported };
+  }
+
+  function byteToChar(b) { return String.fromCharCode(b); }
+  function bytesToDisplay(bytes) { return bytes.map(byteToChar).join(''); }
+  function toHex(b) { return '0x' + b.toString(16).padStart(2,'0').toUpperCase(); }
+
+  function renderSegments() {
+    const root = $('segments'); root.innerHTML = '';
+    segments.forEach((seg, idx) => {
+      const el = document.createElement('div'); el.className = 'segment'; el.dataset.id = seg.id;
+      const head = document.createElement('div'); head.className = 'segment-head';
+      head.innerHTML = `<span class="segment-title">${idx+1}. ${seg.kind === 'fixed' ? '固定' : '可変'}セグメント</span>`;
+      const del = document.createElement('button'); del.className='danger'; del.textContent='削除'; del.onclick=()=>{segments=segments.filter(s=>s.id!==seg.id); affineBySeg.delete(seg.id); renderSegments(); invalidate();};
+      head.appendChild(del); el.appendChild(head);
+
+      const typeWrap = document.createElement('div'); typeWrap.style.marginBottom='10px';
+      typeWrap.innerHTML = `<label>種類</label>`;
+      const type = document.createElement('select'); type.innerHTML='<option value="fixed">固定</option><option value="variable">可変</option>'; type.value=seg.kind;
+      type.onchange=()=>{ seg.kind=type.value; if(seg.kind==='fixed'){seg.text=seg.text??'';} else {seg.length=seg.length||8;seg.allowed=seg.allowed||URLSAFE;seg.forbidden=seg.forbidden||'';seg.affineChoice='auto';} affineBySeg.delete(seg.id); renderSegments(); invalidate(); };
+      typeWrap.appendChild(type); el.appendChild(typeWrap);
+
+      if (seg.kind === 'fixed') {
+        const w=document.createElement('div'); w.innerHTML='<label>固定文字列（UTF-8）</label>';
+        const ta=document.createElement('textarea'); ta.value=seg.text||''; ta.placeholder='例: https://example.com/'; ta.oninput=()=>{seg.text=ta.value; invalidate(false);}; w.appendChild(ta); el.appendChild(w);
+      } else {
+        const grid=document.createElement('div'); grid.className='grid';
+        const a=document.createElement('div'); a.innerHTML='<label>可変部分の長さ（ASCII文字数 = バイト数）</label>';
+        const len=document.createElement('input'); len.type='number'; len.min='1'; len.step='1'; len.value=seg.length; len.oninput=()=>{seg.length=Math.max(1,parseInt(len.value||'1',10)); affineBySeg.delete(seg.id); invalidate();}; a.appendChild(len);
+        const b=document.createElement('div'); b.innerHTML='<label>禁止文字（許可集合から除外）</label>';
+        const forb=document.createElement('input'); forb.type='text'; forb.value=seg.forbidden||''; forb.oninput=()=>{seg.forbidden=forb.value; affineBySeg.delete(seg.id); invalidate();}; b.appendChild(forb);
+        grid.append(a,b); el.appendChild(grid);
+        const c=document.createElement('div'); c.style.marginTop='10px'; c.innerHTML='<label>使用可能文字</label>';
+        const ta=document.createElement('textarea'); ta.value=seg.allowed||''; ta.oninput=()=>{seg.allowed=ta.value; affineBySeg.delete(seg.id); invalidate();}; c.appendChild(ta);
+        const quick=document.createElement('div'); quick.className='quickchars';
+        const presets=[['A-Z','ABCDEFGHIJKLMNOPQRSTUVWXYZ'],['a-z','abcdefghijklmnopqrstuvwxyz'],['0-9','0123456789'],['- _ . ~','-_.~'],['URL-safe',URLSAFE],['URL-safe + .~',EXT_URLSAFE]];
+        for(const [name,val] of presets){const btn=document.createElement('button');btn.type='button';btn.textContent=name;btn.onclick=()=>{seg.allowed=val;ta.value=val;affineBySeg.delete(seg.id);invalidate();};quick.appendChild(btn);}
+        c.appendChild(quick); el.appendChild(c);
+      }
+      root.appendChild(el);
+    });
+  }
+
+  function invalidate(clearAffine=true) {
+    problem=null; constraints.clear(); $('matrix-card').style.display='none'; $('candidate-card').style.display='none'; $('image-card').style.display='none'; $('weight-card').style.display='none'; $('optimize-card').style.display='none'; $('phase2-candidate-card').style.display='none'; $('build-problem').disabled=true;
+    setStatus('problem-status','文字集合を解析し直してください。');
+    if(clearAffine){ affineBySeg.clear(); $('affine-results').innerHTML=''; setStatus('charset-status','入力が変更されました。再解析してください。'); }
+  }
+
+  $('add-fixed').onclick=()=>{segments.push({id:nextSegId++,kind:'fixed',text:''});renderSegments();invalidate();};
+  $('add-variable').onclick=()=>{segments.push({id:nextSegId++,kind:'variable',length:8,allowed:URLSAFE,forbidden:'',affineChoice:'auto'});renderSegments();invalidate();};
+
+  // ---------- exact affine-subspace search in F2^8 ----------
+  function gaussianBinomial(n,k) {
+    if(k<0||k>n) return 0; let num=1, den=1;
+    for(let i=0;i<k;i++){num*=Math.pow(2,n-i)-1;den*=Math.pow(2,k-i)-1;}
+    return Math.round(num/den);
+  }
+
+  function pivotCombinations(n,k) {
+    const out=[];
+    function rec(start,left,acc){ if(left===0){out.push(acc.slice());return;} for(let i=start;i<=n-left;i++){acc.push(i);rec(i+1,left-1,acc);acc.pop();} }
+    rec(0,k,[]); return out;
+  }
+
+  function* enumerateRrefBases(n,k) {
+    if(k===0){yield [];return;}
+    for(const pivots of pivotCombinations(n,k)) {
+      const pivotSet=new Set(pivots); const free=[];
+      for(let r=0;r<k;r++) for(let c=pivots[r]+1;c<n;c++) if(!pivotSet.has(c)) free.push([r,c]);
+      const total=1<<free.length;
+      for(let mask=0;mask<total;mask++) {
+        const rows=pivots.map(p=>1<<p);
+        for(let t=0;t<free.length;t++) if((mask>>>t)&1){const [r,c]=free[t];rows[r]|=1<<c;}
+        yield rows;
+      }
+    }
+  }
+
+  function spanFromBasis(basis) {
+    const span=[0];
+    for(const v of basis){const n=span.length;for(let i=0;i<n;i++)span.push(span[i]^v);}
+    span.sort((a,b)=>a-b); return span;
+  }
+
+  async function findAffineSpaces(allowedBytes, limit, progress) {
+    if(!allowedBytes.length) throw new Error('使用可能文字集合が空です。');
+    const allowed=new Uint8Array(256); for(const b of allowedBytes) allowed[b]=1;
+    const maxDim=Math.min(8,Math.floor(Math.log2(allowedBytes.length)));
+    for(let k=maxDim;k>=0;k--) {
+      const total=gaussianBinomial(8,k); let checked=0; const found=[];
+      for(const basis of enumerateRrefBases(8,k)) {
+        checked++;
+        const span=spanFromBasis(basis); const visited=new Uint8Array(256);
+        for(let base=0;base<256;base++) {
+          if(visited[base]) continue;
+          let ok=true; const elems=[];
+          for(const v of span){const x=base^v;visited[x]=1;elems.push(x);if(!allowed[x])ok=false;}
+          if(ok){elems.sort((a,b)=>a-b);found.push({dim:k,base:elems[0],basis:basis.slice(),elements:elems}); if(found.length>=limit) break;}
+        }
+        if(found.length>=limit) break;
+        if((checked&511)===0){ if(progress)progress(k,checked,total); await new Promise(r=>setTimeout(r,0)); }
+      }
+      if(progress) progress(k,checked,total);
+      if(found.length) return {maxDim:k,candidates:found,checkedAtWinningDim:checked,totalAtWinningDim:total};
+    }
+    throw new Error('アフィン部分空間を構築できませんでした。');
+  }
+
+  function affineCacheKey(bytes,limit){return bytes.join(',')+'|'+limit;}
+
+  $('analyze-charsets').onclick = async () => {
+    try {
+      const vars=segments.filter(s=>s.kind==='variable');
+      if(!vars.length) throw new Error('可変セグメントがありません。自由度0のQRは作れますが、Phase 1解析対象として可変部を1つ以上追加してください。');
+      const limit=Math.max(1,parseInt($('affine-limit').value||'1',10));
+      affineBySeg.clear(); $('affine-results').innerHTML=''; $('build-problem').disabled=true;
+      for(let idx=0;idx<vars.length;idx++) {
+        const seg=vars[idx]; const parsed=asciiBytesFromChars(seg.allowed||'',seg.forbidden||'');
+        if(parsed.unsupported.length) throw new Error(`可変セグメント ${segments.indexOf(seg)+1}: Phase 1では1バイトASCIIのみ対応です。未対応: ${parsed.unsupported.join(' ')}`);
+        if(!parsed.bytes.length) throw new Error(`可変セグメント ${segments.indexOf(seg)+1}: 禁止文字適用後の許可集合が空です。`);
+        setStatus('charset-status',`可変セグメント ${idx+1}/${vars.length} を解析中…`);
+        const key=affineCacheKey(parsed.bytes,limit);
+        let result=affineCache.get(key);
+        if(!result){ result=await findAffineSpaces(parsed.bytes,limit,(k,n,total)=>setStatus('charset-status',`可変セグメント ${idx+1}/${vars.length}: dim=${k} を厳密探索中 ${n}/${total} subspaces`)); affineCache.set(key,result); }
+        result.allowedBytes=parsed.bytes.slice(); affineBySeg.set(seg.id,result);
+      }
+      renderAffineResults(); $('build-problem').disabled=false;
+      setStatus('charset-status',`解析完了。各可変セグメントについて、表示された最大次元より高いアフィン部分空間が存在しないことを8-bit空間の列挙で確認しました。`,'ok');
+    } catch(e) { setStatus('charset-status',e.message||String(e),'error'); }
+  };
+
+  function renderAffineResults() {
+    const root=$('affine-results'); root.innerHTML='';
+    const vars=segments.filter(s=>s.kind==='variable');
+    for(const seg of vars) {
+      const r=affineBySeg.get(seg.id); if(!r) continue;
+      const card=document.createElement('div'); card.className='segment';
+      const first=r.candidates[0];
+      const notUsed=r.allowedBytes.filter(b=>!new Set(first.elements).has(b));
+      card.innerHTML=`<strong>可変セグメント ${segments.indexOf(seg)+1}</strong>
+        <div class="grid" style="margin-top:8px"><div><span class="pill">最大自由度 ${r.maxDim} bit/文字</span><p class="tiny">許可文字数 ${r.allowedBytes.length} / 採用アフィン集合サイズ ${1<<r.maxDim}</p></div><div><label>アフィン部分空間</label></div></div>`;
+      const grid=card.querySelector('.grid'); const selectWrap=grid.children[1];
+      const sel=document.createElement('select');
+      const auto=document.createElement('option'); auto.value='auto'; auto.textContent='Auto（列挙順の第1候補）'; sel.appendChild(auto);
+      r.candidates.forEach((c,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`候補 ${i+1}: ${bytesToDisplay(c.elements)}`;sel.appendChild(o);});
+      sel.value=seg.affineChoice??'auto'; sel.onchange=()=>{seg.affineChoice=sel.value; problem=null;constraints.clear();$('matrix-card').style.display='none';$('candidate-card').style.display='none';setStatus('problem-status','アフィン候補が変更されました。QR写像を再構築してください。');}; selectWrap.appendChild(sel);
+      const details=document.createElement('details'); details.innerHTML=`<summary>文字集合の詳細</summary><table class="summary-table">
+        <tr><th>ユーザー許可集合</th><td class="mono">${escapeHtml(bytesToDisplay(r.allowedBytes))}</td></tr>
+        <tr><th>Auto採用集合</th><td class="mono">${escapeHtml(bytesToDisplay(first.elements))}</td></tr>
+        <tr><th>Auto基底</th><td class="mono">base=${toHex(first.base)}, V=[${first.basis.map(toHex).join(', ')}]</td></tr>
+        <tr><th>Autoで採用しない文字</th><td class="mono">${escapeHtml(bytesToDisplay(notUsed))||'なし'}</td></tr>
+        <tr><th>理由</th><td>許可集合に完全包含されるアフィン部分空間の次元を最大化。候補間の意味的優劣はPhase 1では定義せず、Autoは決定的な列挙順の先頭を使用。</td></tr>
+      </table>`; card.appendChild(details); root.appendChild(card);
+    }
+  }
+
+  function selectedAffine(seg) {
+    const r=affineBySeg.get(seg.id); if(!r) throw new Error('文字集合が未解析です。');
+    const idx=seg.affineChoice==='auto'||seg.affineChoice==null?0:parseInt(seg.affineChoice,10);
+    if(!r.candidates[idx]) throw new Error('選択されたアフィン候補がありません。');
+    return r.candidates[idx];
+  }
+
+  function buildPayloadModel() {
+    const bytes=[]; const variables=[]; const variableInfo=[];
+    for(const seg of segments) {
+      if(seg.kind==='fixed') { for(const b of encoder.encode(seg.text||'')) bytes.push(b); }
+      else {
+        const aff=selectedAffine(seg); const length=Math.max(1,parseInt(seg.length||1,10)); const start=bytes.length;
+        for(let p=0;p<length;p++) {
+          const offset=bytes.length; bytes.push(aff.base);
+          for(const v of aff.basis) variables.push({segId:seg.id,charIndex:p,offset,vector:v});
+        }
+        variableInfo.push({seg,start,length,aff});
+      }
+    }
+    return {baselineBytes:new Uint8Array(bytes),variables,variableInfo};
+  }
+
+  function qrCreate(bytes, version, ecc, mask) {
+    const opts={errorCorrectionLevel:ecc}; if(version!=null)opts.version=version;if(mask!=null)opts.maskPattern=mask;
+    const text=decoder.decode(bytes);
+    return QRCode.create([{data:text,mode:'byte'}],opts);
+  }
+
+  function resolveQrConfig(bytes) {
+    const ecc=$('ecc').value; const vRaw=$('version').value; const mRaw=$('mask').value;
+    const requestedVersion=vRaw==='auto'?null:parseInt(vRaw,10); const requestedMask=mRaw==='auto'?null:parseInt(mRaw,10);
+    const probe=qrCreate(bytes,requestedVersion,ecc,requestedMask);
+    const version=requestedVersion??probe.version; const mask=requestedMask??probe.maskPattern;
+    const fixed=qrCreate(bytes,version,ecc,mask);
+    if(fixed.version!==version||fixed.maskPattern!==mask) throw new Error('QRライブラリが指定したVersion/Maskを保持しませんでした。');
+    return {version,ecc,mask,autoVersion:requestedVersion==null,autoMask:requestedMask==null,symbol:fixed};
+  }
+
+  function parityBigInt(v) { let p=0; while(v){p^=1;v&=v-1n;} return p; }
+  function randomBits(n) {
+    const words=new Uint32Array(Math.ceil(n/32)); crypto.getRandomValues(words); let x=0n;
+    for(let i=0;i<words.length;i++) x|=BigInt(words[i])<<BigInt(i*32);
+    if(n===0)return 0n; return x&((1n<<BigInt(n))-1n);
+  }
+  function applyX(model,x) {
+    const out=new Uint8Array(model.baselineBytes);
+    for(let i=0;i<model.variables.length;i++) if((x>>BigInt(i))&1n) out[model.variables[i].offset]^=model.variables[i].vector;
+    return out;
+  }
+
+  async function buildAffineMapping(model,config,statusId='problem-status') {
+    if(!config.symbol.modules.reservedBit) throw new Error('QRライブラリがreservedBitを公開していないため、構造固定モジュールを検証できません。');
+    const m0=Uint8Array.from(config.symbol.modules.data,b=>b?1:0); const reserved=Uint8Array.from(config.symbol.modules.reservedBit,b=>b?1:0);
+    const size=config.symbol.modules.size; const coeff=Array(m0.length).fill(0n); const n=model.variables.length;
+    for(let i=0;i<n;i++) {
+      setStatus(statusId,`差分基底 Di を実エンコーダから構築中: ${i+1}/${n}`);
+      const b=new Uint8Array(model.baselineBytes); const d=model.variables[i]; b[d.offset]^=d.vector;
+      const s=qrCreate(b,config.version,config.ecc,config.mask);
+      if(s.modules.size!==size||s.version!==config.version||s.maskPattern!==config.mask) throw new Error(`自由変数 ${i} の差分生成時にQR構造条件が変化しました。`);
+      const data=s.modules.data; const bit=1n<<BigInt(i);
+      for(let j=0;j<m0.length;j++) if((data[j]?1:0)!==m0[j]) coeff[j]|=bit;
+      if((i&3)===3) await new Promise(r=>setTimeout(r,0));
+    }
+    return {m0,reserved,size,coeff};
+  }
+
+  async function selfTestMapping(model,config,mapping,count) {
+    let failures=0; let totalDiff=0;
+    for(let t=0;t<count;t++) {
+      const x=randomBits(model.variables.length); const bytes=applyX(model,x); const s=qrCreate(bytes,config.version,config.ecc,config.mask); const data=s.modules.data;
+      let diff=0;
+      for(let j=0;j<mapping.m0.length;j++) { const pred=mapping.m0[j]^parityBigInt(mapping.coeff[j]&x); if(pred!==(data[j]?1:0))diff++; }
+      if(diff){failures++;totalDiff+=diff;}
+      if((t&3)===3)await new Promise(r=>setTimeout(r,0));
+    }
+    return {count,failures,totalDiff};
+  }
+
+  $('build-problem').onclick = async () => {
+    try {
+      const model=buildPayloadModel(); const config=resolveQrConfig(model.baselineBytes);
+      const estimated=model.variables.length+1+Math.max(0,parseInt($('selftest-count').value||'0',10));
+      setStatus('problem-status',`固定問題を構築します。概算QRエンコーダ呼出し ${estimated} 回（基準 + Di + セルフテスト）。`);
+      const mapping=await buildAffineMapping(model,config);
+      const structuralChanged=mapping.coeff.reduce((n,c,j)=>n+(mapping.reserved[j]&&c!==0n?1:0),0);
+      if(structuralChanged) throw new Error(`不変条件違反: reservedBitの構造モジュール ${structuralChanged} 個が可変ペイロードで変化しました。`);
+      const testCount=Math.max(0,parseInt($('selftest-count').value||'0',10)); const test=await selfTestMapping(model,config,mapping,testCount);
+      if(test.failures) throw new Error(`アフィン写像セルフテスト失敗: ${test.failures}/${test.count} ケース、合計差分 ${test.totalDiff} モジュール。`);
+      problem={model,config,mapping,test}; constraints.clear(); mappingCache.clear(); mappingCache.set(mappingKey(config.mask), problem); initPhase2State(); renderProblemSummary(); renderMatrix(); $('matrix-card').style.display='block'; $('candidate-card').style.display='none';
+      $('image-card').style.display='block'; $('weight-card').style.display='block'; $('optimize-card').style.display='block'; $('phase2-candidate-card').style.display='none';
+      setStatus('problem-status',`構築完了。Version=${config.version}, ECC=${config.ecc}, Mask=${config.mask}, payload=${model.baselineBytes.length} bytes, 自由変数=${model.variables.length}。セルフテスト ${test.count} ケースすべて一致。`,'ok');
+    } catch(e){problem=null;$('matrix-card').style.display='none';setStatus('problem-status',e.message||String(e),'error');}
+  };
+
+  function renderProblemSummary() {
+    const {model,config,mapping}=problem; let structural=0,payloadFixed=0,variable=0;
+    for(let j=0;j<mapping.m0.length;j++){if(mapping.reserved[j])structural++;else if(mapping.coeff[j]===0n)payloadFixed++;else variable++;}
+    $('problem-summary').innerHTML=`<table class="summary-table" style="margin-top:12px">
+      <tr><th>固定QR条件</th><td>Version ${config.version} / ECC ${config.ecc} / Mask ${config.mask} / Byte Mode / ${model.baselineBytes.length} bytes</td></tr>
+      <tr><th>Auto解決</th><td>Version: ${config.autoVersion?'基準ペイロードの最小収容Version':'明示指定'} / Mask: ${config.autoMask?'QR標準ペナルティで選択後固定':'明示指定'}</td></tr>
+      <tr><th>自由変数</th><td>${model.variables.length} bit</td></tr>
+      <tr><th>QR構造上固定</th><td>${structural} modules</td></tr>
+      <tr><th>固定ペイロード/符号条件で固定</th><td>${payloadFixed} modules</td></tr>
+      <tr><th>可変</th><td>${variable} modules</td></tr>
+      <tr><th>アフィン写像検査</th><td>${problem.test.count} ランダム点でエンコーダ実出力との差分0</td></tr>
+    </table>`;
+  }
+
+  function renderMatrix() {
+    if(!problem)return; const {mapping}=problem; const c=$('matrix'); const scale=Math.max(5,Math.min(18,Math.floor(760/mapping.size))); c.width=c.height=mapping.size*scale; c.dataset.scale=scale;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    for(let r=0;r<mapping.size;r++) for(let col=0;col<mapping.size;col++) {
+      const j=r*mapping.size+col; const x=col*scale,y=r*scale; let bg;
+      if(mapping.reserved[j]) bg='#e9d5ff'; else if(mapping.coeff[j]===0n) bg='#dbeafe'; else bg='#dcfce7';
+      ctx.fillStyle=bg;ctx.fillRect(x,y,scale,scale);
+      const pad=Math.max(1,Math.floor(scale*.28));ctx.fillStyle=mapping.m0[j]?'#111827':'#ffffff';ctx.fillRect(x+pad,y+pad,scale-2*pad,scale-2*pad);
+      if(constraints.has(j)){ctx.lineWidth=Math.max(2,Math.floor(scale*.18));ctx.strokeStyle=constraints.get(j)?'#ef4444':'#3b82f6';ctx.strokeRect(x+1,y+1,scale-2,scale-2);}
+    }
+    updateConstraintSummary();
+  }
+
+  $('matrix').addEventListener('click',e=>{
+    if(!problem)return; const c=e.currentTarget,rect=c.getBoundingClientRect(); const px=(e.clientX-rect.left)*c.width/rect.width,py=(e.clientY-rect.top)*c.height/rect.height; const scale=parseInt(c.dataset.scale,10); const col=Math.floor(px/scale),row=Math.floor(py/scale); if(row<0||col<0||row>=problem.mapping.size||col>=problem.mapping.size)return; const j=row*problem.mapping.size+col;
+    if(!constraints.has(j))constraints.set(j,1);else if(constraints.get(j)===1)constraints.set(j,0);else constraints.delete(j); renderMatrix(); $('candidate-card').style.display='none'; setStatus('solve-status','制約が変更されました。再求解してください。');
+  });
+  $('clear-constraints').onclick=()=>{constraints.clear();renderMatrix();$('candidate-card').style.display='none';setStatus('solve-status','制約を消去しました。');};
+
+  function updateConstraintSummary() {
+    if(!problem)return; let black=0,white=0,impossible=0; const samples=[];
+    for(const [j,target] of constraints){target?black++:white++; if(problem.mapping.coeff[j]===0n&&problem.mapping.m0[j]!==target){impossible++;const r=Math.floor(j/problem.mapping.size),c=j%problem.mapping.size;samples.push(`(${r},${c})`);}}
+    setStatus('constraint-summary',`絶対制約: ${constraints.size}（黒 ${black} / 白 ${white}）\n現在の写像だけで即時不可能と分かる固定モジュール制約: ${impossible}${samples.length?' '+samples.slice(0,12).join(', '):''}`,impossible?'error':'');
+  }
+
+  function xorSets(a,b){const out=new Set(a);for(const x of b){if(out.has(x))out.delete(x);else out.add(x);}return out;}
+
+  function solveGf2(equations,nVars) {
+    const rows=equations.map((e,i)=>({a:e.a,b:e.b,origins:new Set([i])})); const pivots=[]; let r=0;
+    for(let col=0;col<nVars&&r<rows.length;col++) {
+      const bit=1n<<BigInt(col); let p=-1; for(let i=r;i<rows.length;i++)if(rows[i].a&bit){p=i;break;} if(p<0)continue;
+      [rows[r],rows[p]]=[rows[p],rows[r]];
+      for(let i=0;i<rows.length;i++) if(i!==r&&(rows[i].a&bit)){rows[i].a^=rows[r].a;rows[i].b^=rows[r].b;rows[i].origins=xorSets(rows[i].origins,rows[r].origins);}
+      pivots.push(col);r++;
+    }
+    const bad=rows.find(row=>row.a===0n&&row.b===1); if(bad)return {ok:false,conflict:[...bad.origins].sort((a,b)=>a-b),rank:pivots.length};
+    let particular=0n; for(let i=0;i<pivots.length;i++) if(rows[i].b)particular|=1n<<BigInt(pivots[i]);
+    const pivotSet=new Set(pivots); const free=[]; for(let col=0;col<nVars;col++)if(!pivotSet.has(col))free.push(col);
+    const nullBasis=[];
+    for(const f of free){let v=1n<<BigInt(f);const fb=1n<<BigInt(f);for(let i=0;i<pivots.length;i++)if(rows[i].a&fb)v|=1n<<BigInt(pivots[i]);nullBasis.push(v);}
+    return {ok:true,rank:pivots.length,particular,nullBasis,freeCols:free};
+  }
+
+  function randomSolution(sol) { let x=sol.particular; if(sol.nullBasis.length){const z=randomBits(sol.nullBasis.length);for(let i=0;i<sol.nullBasis.length;i++)if((z>>BigInt(i))&1n)x^=sol.nullBasis[i];} return x; }
+  function predictMatrix(mapping,x){const out=new Uint8Array(mapping.m0.length);for(let j=0;j<out.length;j++)out[j]=mapping.m0[j]^parityBigInt(mapping.coeff[j]&x);return out;}
+
+  function drawPlainMatrix(canvas,data,size) {
+    const quiet=4,scale=5,total=size+quiet*2;canvas.width=canvas.height=total*scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(data[r*size+c])ctx.fillRect((c+quiet)*scale,(r+quiet)*scale,scale,scale);
+  }
+
+  $('solve').onclick=()=>{
+    if(!problem)return;
+    const eqs=[]; const labels=[];
+    for(const [j,target] of constraints){eqs.push({a:problem.mapping.coeff[j],b:target^problem.mapping.m0[j]});const r=Math.floor(j/problem.mapping.size),c=j%problem.mapping.size;labels.push(`(${r},${c})=${target?'黒':'白'}`);}
+    const sol=solveGf2(eqs,problem.model.variables.length);
+    if(!sol.ok){const conflict=sol.conflict.map(i=>labels[i]).join(', ');setStatus('solve-status',`解なし。制約 ${constraints.size} 件、rank ${sol.rank}。矛盾を導く制約集合の一例: ${conflict||'特定不能'}`,'error');$('candidate-card').style.display='none';return;}
+    const requested=Math.max(1,parseInt($('solution-count').value||'1',10)); const xs=[];const seen=new Set();
+    const add=x=>{const k=x.toString(16);if(!seen.has(k)){seen.add(k);xs.push(x);}}; add(sol.particular);
+    let attempts=0; while(xs.length<requested&&attempts<requested*20&&sol.nullBasis.length){add(randomSolution(sol));attempts++;}
+    renderCandidates(xs,sol); $('candidate-card').style.display='block';
+    setStatus('solve-status',`解あり。絶対制約 ${constraints.size} 件、rank=${sol.rank}、残り自由度=${sol.nullBasis.length}。一般解 x=xp⊕Nz から ${xs.length} 候補を生成しました。`,'ok');
+  };
+
+  function renderCandidates(xs,sol) {
+    const root=$('candidates');root.innerHTML='';
+    xs.forEach((x,idx)=>{
+      const bytes=applyX(problem.model,x);const symbol=qrCreate(bytes,problem.config.version,problem.config.ecc,problem.config.mask);const actual=Uint8Array.from(symbol.modules.data,b=>b?1:0);const predicted=predictMatrix(problem.mapping,x);let affineDiff=0;for(let j=0;j<actual.length;j++)if(actual[j]!==predicted[j])affineDiff++;
+      let sat=0;for(const [j,target] of constraints)if(actual[j]===target)sat++;const text=decoder.decode(bytes);
+      const box=document.createElement('div');box.className='candidate';box.innerHTML=`<strong>候補 ${idx+1}</strong><div class="candidate-grid" style="margin-top:10px"><canvas></canvas><div>
+        <label>実際のQR文字列</label><textarea readonly>${escapeHtml(text)}</textarea>
+        <table class="summary-table">
+          <tr><th>Version / ECC / Mask</th><td>${problem.config.version} / ${problem.config.ecc} / ${problem.config.mask}</td></tr>
+          <tr><th>使用した自由変数数</th><td>${problem.model.variables.length}</td></tr>
+          <tr><th>残った自由度</th><td>${sol.nullBasis.length}</td></tr>
+          <tr><th>絶対制約達成率</th><td>${constraints.size?`${sat}/${constraints.size} (${(sat/constraints.size*100).toFixed(1)}%)`:'制約なし'}</td></tr>
+          <tr><th>実エンコーダ vs アフィン予測</th><td>${affineDiff===0?'差分0':'差分 '+affineDiff+' modules'}</td></tr>
+          <tr><th>RS誤り語数</th><td>未実測（Phase 2.5）。この候補ではエンコーダ出力行列を一切改変していません。</td></tr>
+          <tr><th>独立デコード検証</th><td>未実装（Phase 2.5）</td></tr>
+        </table></div></div>`;
+      drawPlainMatrix(box.querySelector('canvas'),actual,problem.mapping.size);root.appendChild(box);
+    });
+  }
+
+  // ---------- Phase 2: image target, weights, absolute constraints, greedy soft constraints ----------
+  function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+  function mappingKey(mask){return `${problem?.config.version}|${problem?.config.ecc}|${mask}|${problem?.model.baselineBytes.length}|${problem?.model.variables.length}`;}
+  function initPhase2State(){
+    if(!problem)return;
+    const d=clamp(parseFloat($('default-weight').value||'1'),0,1);
+    weights=new Float32Array(problem.mapping.m0.length);weights.fill(d);targetBits=null;
+    if(sourceImage) refreshTarget(); else { setStatus('image-status','画像を選択してください。'); drawEmptyTarget(); }
+    renderPaintCanvas(); updatePaintStatus();
+  }
+  function drawEmptyTarget(){if(!problem)return;const c=$('target-canvas'),n=problem.mapping.size,scale=Math.max(4,Math.min(14,Math.floor(700/n)));c.width=c.height=n*scale;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);}
+  function grayValue(r,g,b,method){if(method==='average')return(r+g+b)/3;if(method==='max')return Math.max(r,g,b);return .2126*r+.7152*g+.0722*b;}
+  function imageParams(){return{
+    threshold:clamp(parseFloat($('threshold').value||128),0,255),brightness:clamp(parseFloat($('brightness').value||0),-255,255),contrast:Math.max(0,parseFloat($('contrast').value||1)),invert:$('invert-target').checked,
+    cropX:clamp(parseFloat($('crop-x').value||0),0,100),cropY:clamp(parseFloat($('crop-y').value||0),0,100),cropW:clamp(parseFloat($('crop-w').value||100),.1,100),cropH:clamp(parseFloat($('crop-h').value||100),.1,100),
+    zoom:Math.max(.01,parseFloat($('image-zoom').value||100)/100),offX:parseFloat($('image-offset-x').value||0),offY:parseFloat($('image-offset-y').value||0),fit:$('fit-mode').value,smoothing:$('image-smoothing').checked,outside:clamp(parseFloat($('outside-level').value||255),0,255),gray:$('gray-method').value
+  };}
+  function buildTargetForSize(size){
+    if(!sourceImage)throw new Error('元画像を選択してください。');const p=imageParams();const off=document.createElement('canvas');off.width=off.height=size;const ctx=off.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=p.smoothing;ctx.fillStyle=`rgb(${p.outside},${p.outside},${p.outside})`;ctx.fillRect(0,0,size,size);
+    const sx=sourceImage.naturalWidth*p.cropX/100,sy=sourceImage.naturalHeight*p.cropY/100;const cw=Math.min(p.cropW,100-p.cropX),ch=Math.min(p.cropH,100-p.cropY);const sw=Math.max(.1,sourceImage.naturalWidth*cw/100),sh=Math.max(.1,sourceImage.naturalHeight*ch/100);
+    let dw=size,dh=size;if(p.fit!=='stretch'){const base=p.fit==='contain'?Math.min(size/sw,size/sh):Math.max(size/sw,size/sh);dw=sw*base*p.zoom;dh=sh*base*p.zoom;}else{dw*=p.zoom;dh*=p.zoom;}
+    const dx=(size-dw)/2+p.offX,dy=(size-dh)/2+p.offY;ctx.drawImage(sourceImage,sx,sy,sw,sh,dx,dy,dw,dh);
+    const img=ctx.getImageData(0,0,size,size).data;const bits=new Uint8Array(size*size);for(let i=0;i<bits.length;i++){let y=grayValue(img[i*4],img[i*4+1],img[i*4+2],p.gray);y=(y-128)*p.contrast+128+p.brightness;let black=y<p.threshold?1:0;if(p.invert)black^=1;bits[i]=black;}return bits;
+  }
+  function drawBitMatrix(canvas,bits,size,scaleLimit=14){const scale=Math.max(4,Math.min(scaleLimit,Math.floor(700/size)));canvas.width=canvas.height=size*scale;canvas.dataset.scale=scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#111827';for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(bits[r*size+c])ctx.fillRect(c*scale,r*scale,scale,scale);}
+  function refreshTarget(){try{if(!problem)return;targetBits=buildTargetForSize(problem.mapping.size);drawBitMatrix($('target-canvas'),targetBits,problem.mapping.size);renderPaintCanvas();setStatus('image-status',`目標白黒配置を ${problem.mapping.size}×${problem.mapping.size} modules で生成しました。これは目標値でありQRとして成立する必要はありません。`,'ok');$('phase2-candidate-card').style.display='none';}catch(e){setStatus('image-status',e.message||String(e),'error');}}
+  $('source-image').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{sourceImage=img;URL.revokeObjectURL(url);refreshTarget();};img.onerror=()=>{URL.revokeObjectURL(url);setStatus('image-status','画像を読み込めませんでした。','error');};img.src=url;});
+  $('refresh-target').onclick=refreshTarget;
+  ['threshold','brightness','contrast','invert-target','crop-x','crop-y','crop-w','crop-h','image-zoom','image-offset-x','image-offset-y','fit-mode','image-smoothing','outside-level','gray-method'].forEach(id=>$(id).addEventListener('change',refreshTarget));
+
+  function renderPaintCanvas(){if(!problem)return;const size=problem.mapping.size,c=$('paint-canvas'),scale=Math.max(5,Math.min(16,Math.floor(720/size)));c.width=c.height=size*scale;c.dataset.scale=scale;const ctx=c.getContext('2d');for(let r=0;r<size;r++)for(let col=0;col<size;col++){const j=r*size+col,x=col*scale,y=r*scale,bit=targetBits?targetBits[j]:problem.mapping.m0[j],w=weights?weights[j]:1;ctx.fillStyle=bit?'#111827':'#ffffff';ctx.fillRect(x,y,scale,scale);ctx.fillStyle=`rgba(34,197,94,${.08+.34*w})`;ctx.fillRect(x,y,scale,scale);if(constraints.has(j)){ctx.lineWidth=Math.max(2,Math.floor(scale*.18));ctx.strokeStyle=constraints.get(j)?'#ef4444':'#3b82f6';ctx.strokeRect(x+1,y+1,scale-2,scale-2);}}}
+  function paintAtEvent(e){if(!problem||!weights)return;const c=$('paint-canvas'),rect=c.getBoundingClientRect(),px=(e.clientX-rect.left)*c.width/rect.width,py=(e.clientY-rect.top)*c.height/rect.height,scale=parseInt(c.dataset.scale,10),cc=Math.floor(px/scale),rr=Math.floor(py/scale),size=problem.mapping.size,rad=Math.max(0,parseInt($('brush-radius').value||0,10)),mode=$('brush-mode').value,w=clamp(parseFloat($('brush-weight').value||1),0,1);for(let r=Math.max(0,rr-rad);r<=Math.min(size-1,rr+rad);r++)for(let col=Math.max(0,cc-rad);col<=Math.min(size-1,cc+rad);col++){if((r-rr)*(r-rr)+(col-cc)*(col-cc)>rad*rad)continue;const j=r*size+col;if(mode==='weight')weights[j]=w;else if(mode==='black')constraints.set(j,1);else if(mode==='white')constraints.set(j,0);else constraints.delete(j);}renderPaintCanvas();renderMatrix();updatePaintStatus();$('phase2-candidate-card').style.display='none';}
+  let painting=false;$('paint-canvas').addEventListener('pointerdown',e=>{painting=true;e.currentTarget.setPointerCapture(e.pointerId);paintAtEvent(e);});$('paint-canvas').addEventListener('pointermove',e=>{if(painting)paintAtEvent(e);});$('paint-canvas').addEventListener('pointerup',()=>{painting=false;});$('paint-canvas').addEventListener('pointercancel',()=>{painting=false;});
+  $('reset-weights').onclick=()=>{if(!problem)return;const d=clamp(parseFloat($('default-weight').value||1),0,1);weights=new Float32Array(problem.mapping.m0.length);weights.fill(d);renderPaintCanvas();updatePaintStatus();};
+  $('clear-absolute').onclick=()=>{constraints.clear();renderPaintCanvas();renderMatrix();updatePaintStatus();};
+  function updatePaintStatus(){if(!problem||!weights)return;let sum=0,min=1,max=0;for(const w of weights){sum+=w;min=Math.min(min,w);max=Math.max(max,w);}setStatus('paint-status',`重要度: min=${min.toFixed(2)}, max=${max.toFixed(2)}, mean=${(sum/weights.length).toFixed(3)} / 絶対制約 ${constraints.size} modules`);}
+
+  function lowestBitIndex(x){let i=0;while((x&1n)===0n){x>>=1n;i++;}return i;}
+  class IncrementalGF2{
+    constructor(){this.pivots=new Map();this.rank=0;}
+    add(a,b){while(a!==0n){const p=lowestBitIndex(a),row=this.pivots.get(p);if(row){a^=row.a;b^=row.b;}else{this.pivots.set(p,{a,b});this.rank++;return 'added';}}return b?'conflict':'implied';}
+  }
+  function mulberry32(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function shuffleEqualWeights(indices,ws,rng){let start=0;while(start<indices.length){let end=start+1;while(end<indices.length&&ws[indices[end]]===ws[indices[start]])end++;for(let i=end-1;i>start;i--){const j=start+Math.floor(rng()*(i-start+1));[indices[i],indices[j]]=[indices[j],indices[i]];}start=end;}}
+  function greedySoftSystem(prob,tgt,ws,reserve,seed){
+    const eqs=[],labels=[],basis=new IncrementalGF2();for(const [j,target] of constraints){const e={a:prob.mapping.coeff[j],b:target^prob.mapping.m0[j]};eqs.push(e);labels.push(j);const st=basis.add(e.a,e.b);if(st==='conflict'){const exact=solveGf2(eqs,prob.model.variables.length);return{ok:false,exact,labels};}}
+    const maxRank=Math.max(basis.rank,prob.model.variables.length-Math.max(0,reserve));const idx=[];for(let j=0;j<tgt.length;j++)if(ws[j]>0&&!constraints.has(j))idx.push(j);idx.sort((a,b)=>ws[b]-ws[a]||a-b);shuffleEqualWeights(idx,ws,mulberry32(seed));let accepted=0,implied=0,skippedConflict=0;
+    for(const j of idx){if(basis.rank>=maxRank)break;const e={a:prob.mapping.coeff[j],b:tgt[j]^prob.mapping.m0[j]},st=basis.add(e.a,e.b);if(st==='added'){eqs.push(e);labels.push(j);accepted++;}else if(st==='implied')implied++;else skippedConflict++;}
+    const sol=solveGf2(eqs,prob.model.variables.length);return{ok:true,sol,eqs,labels,accepted,implied,skippedConflict,rank:basis.rank};
+  }
+  function randomSolutionWithRng(sol,rng){let x=sol.particular;for(let i=0;i<sol.nullBasis.length;i++)if(rng()<.5)x^=sol.nullBasis[i];return x;}
+  function scoreX(prob,x,tgt,ws){const mat=predictMatrix(prob.mapping,x);let match=0,wmatch=0,wsum=0,abs=0;for(let j=0;j<mat.length;j++){const good=mat[j]===tgt[j];if(good)match++;wsum+=ws[j];if(good)wmatch+=ws[j];}for(const [j,t] of constraints)if(mat[j]===t)abs++;return{mat,raw:match/mat.length,weighted:wsum?wmatch/wsum:match/mat.length,absRate:constraints.size?abs/constraints.size:1,abs};}
+  async function problemForMask(mask){const key=mappingKey(mask);if(mappingCache.has(key))return mappingCache.get(key);const config={...problem.config,mask,autoMask:false,symbol:qrCreate(problem.model.baselineBytes,problem.config.version,problem.config.ecc,mask)};setStatus('optimize-status',`Mask ${mask}: 独立した Di 写像を構築中…`);const mapping=await buildAffineMapping(problem.model,config,'optimize-status');const structuralChanged=mapping.coeff.reduce((n,c,j)=>n+(mapping.reserved[j]&&c!==0n?1:0),0);if(structuralChanged)throw new Error(`Mask ${mask}: 構造固定モジュール ${structuralChanged} 個が変化しました。`);const testCount=Math.max(0,parseInt($('selftest-count').value||'0',10));const test=await selfTestMapping(problem.model,config,mapping,testCount);if(test.failures)throw new Error(`Mask ${mask}: アフィン写像セルフテスト失敗 ${test.failures}/${test.count}`);const p={model:problem.model,config,mapping,test};mappingCache.set(key,p);return p;}
+  function absoluteCompatibleLowerBound(prob){const basis=new IncrementalGF2();let count=0;for(const [j,t] of constraints){const st=basis.add(prob.mapping.coeff[j],t^prob.mapping.m0[j]);if(st!=='conflict')count++;}return count;}
+
+  $('optimize-image').onclick=async()=>{
+    try{
+      if(!problem)throw new Error('先にQR写像を構築してください。');if(!targetBits)throw new Error('元画像から目標白黒配置を作成してください。');if(!weights)throw new Error('重要度マップがありません。');
+      const reserve=Math.max(0,parseInt($('reserve-free').value||0,10)),passes=Math.max(1,parseInt($('soft-passes').value||1,10)),samples=Math.max(1,parseInt($('null-samples').value||1,10)),outCount=Math.max(1,parseInt($('phase2-candidate-count').value||1,10)),seed=parseInt($('optimizer-seed').value||1,10)|0;
+      const masks=$('all-masks').checked?[0,1,2,3,4,5,6,7]:[problem.config.mask];const pool=new Map();let failedAbs=null;
+      for(const mask of masks){const prob=await problemForMask(mask);const tgt=buildTargetForSize(prob.mapping.size);let ws=weights;if(ws.length!==tgt.length){ws=new Float32Array(tgt.length);ws.fill(clamp(parseFloat($('default-weight').value||1),0,1));}
+        for(let pass=0;pass<passes;pass++){const g=greedySoftSystem(prob,tgt,ws,reserve,(seed+mask*1009+pass*9176)|0);if(!g.ok){failedAbs={prob,g};break;}const rng=mulberry32((seed^mask*2654435761^pass*2246822519)|0);const xs=[g.sol.particular];for(let k=1;k<samples;k++)xs.push(randomSolutionWithRng(g.sol,rng));for(const x of xs){const sc=scoreX(prob,x,tgt,ws);if(sc.absRate<1)continue;const key=`${mask}:${x.toString(16)}`;const old=pool.get(key);const item={prob,x,score:sc,sol:g.sol,greedy:g,target:tgt,weights:ws,pass};if(!old||sc.weighted>old.score.weighted)pool.set(key,item);}}
+        if(failedAbs)break;
+      }
+      if(failedAbs){const {prob,g}=failedAbs,exact=g.exact,conflict=exact&&!exact.ok?exact.conflict:[];const desc=conflict.map(i=>{const j=g.labels[i];return`(${Math.floor(j/prob.mapping.size)},${j%prob.mapping.size})`;}).join(', ');const achievable=absoluteCompatibleLowerBound(prob);setStatus('optimize-status',`絶対制約が矛盾しています。指定 ${constraints.size}、入力順の貪欲な同時達成可能下限 ${achievable}（${constraints.size?(achievable/constraints.size*100).toFixed(1):'100'}%）。矛盾を導く制約集合の一例: ${desc||'特定不能'}。最大同時達成数を厳密最適化した値ではありません。`,'error');$('phase2-candidate-card').style.display='none';return;}
+      const list=[...pool.values()].sort((a,b)=>b.score.weighted-a.score.weighted||b.score.raw-a.score.raw||b.sol.nullBasis.length-a.sol.nullBasis.length).slice(0,outCount);await renderPhase2Candidates(list);$('phase2-candidate-card').style.display='block';setStatus('optimize-status',`${masks.length} 個の固定Mask問題 × ${passes} パスを独立に求解。各パスで最大 ${samples} 個の零空間解を評価し、重み付き一致で上位 ${list.length} 件を表示しました。厳密な重み付き最適解の保証はありません。`,'ok');
+    }catch(e){setStatus('optimize-status',e.message||String(e),'error');}
+  };
+
+  async function renderPhase2Candidates(list){const root=$('phase2-candidates');root.innerHTML='';let idx=0;for(const item of list){idx++;const {prob,x,score,sol,greedy}=item,bytes=applyX(prob.model,x),symbol=qrCreate(bytes,prob.config.version,prob.config.ecc,prob.config.mask),actual=Uint8Array.from(symbol.modules.data,b=>b?1:0);let affineDiff=0;for(let j=0;j<actual.length;j++)if(actual[j]!==score.mat[j])affineDiff++;const text=decoder.decode(bytes);const box=document.createElement('div');box.className='candidate';box.innerHTML=`<strong>候補 ${idx}</strong><div class="candidate-grid" style="margin-top:10px"><canvas></canvas><div><label>実際のQR文字列</label><textarea readonly>${escapeHtml(text)}</textarea><table class="summary-table">
+      <tr><th>Version / ECC / Mask</th><td>${prob.config.version} / ${prob.config.ecc} / ${prob.config.mask}</td></tr><tr><th>総自由変数</th><td>${prob.model.variables.length}</td></tr><tr><th>ソフト条件で追加した独立式</th><td>${greedy.accepted}</td></tr><tr><th>残った自由度</th><td>${sol.nullBasis.length}</td></tr><tr><th>目標一致率</th><td>${(score.raw*100).toFixed(2)}%</td></tr><tr><th>重要度付き一致スコア</th><td>${(score.weighted*100).toFixed(2)}%</td></tr><tr><th>絶対制約</th><td>${score.abs}/${constraints.size} (${(score.absRate*100).toFixed(1)}%)</td></tr><tr><th>実エンコーダ vs 求解行列</th><td>${affineDiff===0?'差分0':`差分 ${affineDiff} modules`}</td></tr><tr><th>最適化方式</th><td>重要度順の両立独立条件追加 + 残存零空間サンプリング（ヒューリスティック、最適性保証なし）</td></tr><tr><th>RS誤り語数 / 独立復号</th><td>Phase 2.5で実測予定。現時点でQRエンコーダ行列は無改変。</td></tr></table></div></div>`;drawPlainMatrix(box.querySelector('canvas'),actual,prob.mapping.size);root.appendChild(box);await new Promise(r=>setTimeout(r,0));}}
+
+  // QR standard ranges are fixed by the specification; these options are not implementation thresholds.
+  const vSel=$('version'); vSel.innerHTML='<option value="auto">Auto（基準ペイロードの最小収容Version → 固定）</option>'; for(let v=1;v<=40;v++){const o=document.createElement('option');o.value=String(v);o.textContent=String(v);vSel.appendChild(o);}
+  const mSel=$('mask'); for(let m=0;m<8;m++){const o=document.createElement('option');o.value=String(m);o.textContent=String(m);mSel.appendChild(o);}
+  ['version','ecc','mask','affine-limit','selftest-count'].forEach(id=>$(id).addEventListener('change',()=>invalidate(id!=='selftest-count')));
+
+  renderSegments();
+})();
+</script>
