@@ -4,20 +4,25 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const { PNG } = require('pngjs');
+const jsQR = require('../../assets/vendor/image-qr/jsQR.js');
 const E = require('../../assets/image-qr-engine.js');
 const root = path.resolve(__dirname, '../..');
 const html = fs.readFileSync(path.join(root, 'apps/image-qr-optimizer/image-qr-optimizer.html'), 'utf8');
 
 // These are data-flow regression tests, not a browser or visual-quality test.
 function application() {
-  const errors = [], requests = [];
+  const errors = [], requests = [], downloads = [], blobs = new Map();
   const virtualConsole = new VirtualConsole(); virtualConsole.on('jsdomError', e => errors.push(e));
   const dom = new JSDOM(html, {
     url: 'file:///offline/image-qr-optimizer.html', runScripts: 'dangerously', virtualConsole,
     beforeParse(w) {
       w.TextEncoder = TextEncoder; w.TextDecoder = TextDecoder; w.structuredClone = structuredClone;
+      w.Blob = Blob;
       w.ImageData = class { constructor(data, width, height) { this.data = data; this.width = width; this.height = height; } };
-      w.URL.createObjectURL = () => 'blob:unit-test'; w.URL.revokeObjectURL = () => {};
+      w.URL.createObjectURL = blob => { const url = 'blob:unit-test-' + blobs.size; blobs.set(url, blob); return url; }; w.URL.revokeObjectURL = () => {};
+      w.HTMLAnchorElement.prototype.click = function () { downloads.push({ name: this.download, blob: blobs.get(this.href) }); };
+      w.HTMLCanvasElement.prototype.toBlob = function (callback) { callback(new Blob([PNG.sync.write({ width: this.width, height: this.height, data: Buffer.from(this._data) })], { type: 'image/png' })); };
       w.Worker = class {
         constructor() { this.terminated = false; }
         terminate() { this.terminated = true; }
@@ -48,7 +53,7 @@ function application() {
   });
   const w = dom.window, d = w.document;
   function set(id, value) { const el = d.getElementById(id); if (el.type === 'checkbox') el.checked = value; else el.value = String(value); el.dispatchEvent(new w.Event(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', { bubbles: true })); }
-  return { dom, w, d, errors, requests, set };
+  return { dom, w, d, errors, requests, downloads, set };
 }
 test('standalone contains every runtime dependency and no live network imports', () => {
   assert(!/<script[^>]+src=|<link[^>]+href=|\{%|\{\{/.test(html));
@@ -134,4 +139,34 @@ test('numeric setup rejects incompatible alphabets without overwriting the user 
   const before = w.ImageQrApp.snapshot(); d.getElementById('prepare-numeric').click();
   assert.equal(d.getElementById('encoding').value, 'byte'); assert.deepEqual(w.ImageQrApp.snapshot(), before);
   assert.match(d.getElementById('search-status').textContent, /0〜9/); app.dom.window.close();
+});
+
+test('regular and artistic results have separate downloads with the same URL, and edits clear both', async () => {
+  const app = application(), { w, d, set } = app;
+  assert.equal(d.getElementById('encoding').value, 'byte'); assert.equal(d.getElementById('segment-1-length').value, '128');
+  set('segment-0-text', 'https://example.com/p?q='); set('segment-1-length', 6); set('segment-1-allowed', 'ABCdef-12');
+  set('version', 5); set('mask', 3); set('candidate-count', 1); set('search-seconds', 1);
+  set('brush-mode', 'soft-white'); d.getElementById('apply-all').click();
+  const before = w.ImageQrApp.snapshot(); await w.ImageQrApp.generate();
+  assert.equal(d.getElementById('export-controls').hidden, false, d.getElementById('search-status').textContent);
+  assert.equal(d.getElementById('artistic-export-controls').hidden, false, d.getElementById('artistic-summary').textContent);
+  assert.deepEqual(w.ImageQrApp.snapshot(), before);
+  const url = d.getElementById('result-text').value; assert.match(url, /^https:\/\/example\.com\/p\?q=[ABCdef12-]{6}$/);
+  for (const id of ['save-png', 'save-artistic-png', 'save-svg', 'save-artistic-svg']) { d.getElementById(id).click(); await new Promise(setImmediate); }
+  assert.equal(app.downloads.length, 4);
+  const [regular, artistic, svg, artisticSVG] = app.downloads;
+  assert(!regular.name.includes('artistic')); assert(artistic.name.includes('-artistic-'));
+  const normalPNG = PNG.sync.read(Buffer.from(await regular.blob.arrayBuffer())), artPNG = PNG.sync.read(Buffer.from(await artistic.blob.arrayBuffer()));
+  assert.equal(normalPNG.width, artPNG.width); assert.notDeepEqual(normalPNG.data, artPNG.data);
+  for (const png of [normalPNG, artPNG]) assert.equal(jsQR(new Uint8ClampedArray(png.data), png.width, png.height).data, url);
+  assert(!svg.name.includes('artistic')); assert(artisticSVG.name.includes('-artistic-'));
+  const art = await artisticSVG.blob.text(), size = 37, scale = 8, quiet = 4;
+  // Read the exported vector paths, not the in-memory candidate, into a matrix.
+  const matrix = new Uint8Array(size * size);
+  for (const match of art.matchAll(/M(\d+),(\d+)h1v1h-1z/g)) matrix[(Number(match[2]) - quiet) * size + Number(match[1]) - quiet] = 1;
+  assert.match(art, /width="360" height="360" viewBox="0 0 45 45"/);
+  const raster = E.renderRGBA(matrix, size, scale, quiet); assert.deepEqual(Buffer.from(raster.data), artPNG.data);
+  set('segment-0-text', 'https://example.com/changed?q=');
+  assert.equal(d.getElementById('export-controls').hidden, true); assert.equal(d.getElementById('artistic-section').hidden, true);
+  assert.deepEqual(app.errors, []); app.dom.window.close();
 });

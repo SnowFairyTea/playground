@@ -4,7 +4,8 @@
   "scripts": {
     "test": "node --test --test-concurrency=1 *.test.cjs",
     "benchmark": "node benchmark.cjs",
-    "benchmark:numeric": "node benchmark-numeric.cjs"
+    "benchmark:numeric": "node benchmark-numeric.cjs",
+    "benchmark:artistic": "node benchmark-artistic.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0",
