@@ -75,6 +75,8 @@
   </div>
   <section class="qr-card" aria-labelledby="search-title">
     <h2 id="search-title">3. 生成条件</h2>
+    <div class="qr-grid-2 qr-spaced"><div><label for="encoding">可変部分の使い方</label><select id="encoding"><option value="numeric" selected>数字で絵を優先（おすすめ）</option><option value="byte">Byte・任意のASCII文字</option></select></div><div><label>&nbsp;</label><button id="prepare-numeric" type="button" class="secondary">このサイズで数字を最大限使う</button></div></div>
+    <p class="qr-note">数字0〜9をすべて許可した可変部分を数字列として使います。固定文字列は保持し、数字が使えない部分はByteで処理します。「最大限使う」で現在のマス数に収まる長さへ調整できます。</p>
     <div class="qr-grid-3">
       <div><label for="version">QRのサイズ（Version）</label><select id="version"><option value="auto">自動</option></select></div>
       <div><label for="ecc">誤り訂正レベル</label><select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select></div>
@@ -95,7 +97,7 @@
         <div><label for="candidate-count">表示候補数</label><input id="candidate-count" type="number" min="1" max="24" value="6"></div>
         <div><label for="optimizer-seed">乱数seed</label><input id="optimizer-seed" type="number" value="1"></div>
       </div>
-      <p class="qr-note">探索時間は最適化の目安です。最後の読み取り検証には追加の時間がかかります。時間内で候補を比較し、採用した絶対指定は緩和しません。可変部はByteモードです。</p>
+      <p class="qr-note">探索時間は最適化の目安です。最後の読み取り検証には追加の時間がかかります。絶対指定は緩和しません。探索スコアは候補を並べる指標で、見た目の再現率ではありません。</p>
       <button id="analyze-charsets" class="secondary" type="button">文字集合の自由度を確認</button><div id="charset-status" class="qr-note" role="status"></div>
     </details>
     <div class="qr-toolbar qr-spaced"><button id="generate" class="qr-primary" type="button">生成する</button><button id="cancel" type="button" class="secondary" disabled>中断</button></div>

@@ -4,7 +4,7 @@ self.onmessage = async event => {
   const { id, type, input } = event.data;
   try {
     let result;
-    if (type === 'analyze') result = ImageQrEngine.makeModel(input.segments).analyses;
+    if (type === 'analyze') result = ImageQrEngine.makeModel(input.segments, undefined, input.settings).analyses;
     else if (type === 'search') result = await ImageQrEngine.search(input, progress => self.postMessage({ id, type: 'progress', progress }));
     else throw new Error('不明な処理です。');
     self.postMessage({ id, type: 'result', result });

@@ -6,6 +6,7 @@
   'use strict';
   const utf8 = new TextEncoder(), text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   const URLSAFE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const DIGITS = Array.from({ length: 10 }, (_, i) => 48 + i);
   const affineCache = new Map();
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const now = () => performance.now();
@@ -76,18 +77,41 @@
     }
     throw new Error('文字集合を解析できませんでした。');
   }
-  function makeModel(segments, lengths) {
-    const bytes = [], positions = [], variables = [], analyses = []; let vi = 0;
+  function makeModel(segments, lengths, options = {}) {
+    const bytes = [], positions = [], variables = [], analyses = [], parts = [], numericUnits = []; let vi = 0;
+    function addPart(mode, offset, length) {
+      if (!length) return;
+      const previous = parts[parts.length - 1];
+      if (mode === 'byte' && previous?.mode === 'byte') previous.length += length;
+      else parts.push({ mode, offset, length });
+    }
     for (let si = 0; si < segments.length; si++) {
       const seg = segments[si];
       if (seg.kind === 'fixed') {
         const fixed = String(seg.text || ''), encoded = utf8.encode(fixed);
         if (text.decode(encoded) !== fixed) throw new Error('固定文字列に不正なUnicode文字があります。');
+        addPart('byte', bytes.length, encoded.length);
         bytes.push(...encoded);
       } else if (seg.kind === 'variable') {
-        const allowed = allowedBytes(seg), analysis = analyzeCharset(allowed);
+        const allowed = allowedBytes(seg), numeric = options.encoding === 'numeric' && DIGITS.every(b => allowed.includes(b));
+        const length = integer(lengths?.[vi] ?? seg.length ?? 8, 1, numeric ? 7089 : 2953, '可変部分の長さ'), start = bytes.length;
+        if (numeric) {
+          addPart('numeric', start, length);
+          const before = variables.length;
+          for (let offset = 0; offset < length; offset += 3) {
+            const digits = Math.min(3, length - offset), width = [0, 4, 7, 10][digits], unit = numericUnits.length;
+            numericUnits.push({ offset: start + offset, length: digits, width, max: 10 ** digits - 1, base: 0, part: parts.length - 1 });
+            // A guaranteed-valid initial subspace: 000–511, 00–63 or 0–7.
+            for (let bit = 0; bit < width - 1; bit++) variables.push({ unit, vector: 1 << bit });
+          }
+          for (let p = 0; p < length; p++) { bytes.push(48); positions.push({ offset: start + p, allowed: DIGITS, segment: si, charIndex: p, numeric: true }); }
+          analyses.push({ segment: si, encoding: 'numeric', allowed: allowed.length, selected: 10, dimension: (variables.length - before) / length, totalBits: variables.length - before, selectedCharacters: '0123456789', candidates: [] });
+          vi++; continue;
+        }
+        const analysis = analyzeCharset(allowed);
         const choice = seg.affineChoice === 'auto' || seg.affineChoice == null ? 0 : integer(seg.affineChoice, 0, analysis.candidates.length - 1, 'アフィン候補');
-        const affine = analysis.candidates[choice], length = integer(lengths?.[vi] ?? seg.length ?? 8, 1, 2953, '可変部分の長さ');
+        const affine = analysis.candidates[choice];
+        addPart('byte', start, length);
         analyses.push({ segment: si, allowed: allowed.length, dimension: affine.dim, selected: affine.elements.length, selectedCharacters: String.fromCharCode(...affine.elements), candidates: analysis.candidates.map(a => ({ characters: String.fromCharCode(...a.elements), dimension: a.dim })) });
         for (let p = 0; p < length; p++) {
           const offset = bytes.length; bytes.push(affine.base);
@@ -97,19 +121,47 @@
         vi++;
       } else throw new Error('セグメントの種類が不正です。');
     }
-    if (bytes.length > 2953) throw new Error('Byteモードの最大容量（2953バイト）を超えています。');
-    return { baseline: Uint8Array.from(bytes), positions, variables, analyses };
+    if (bytes.length > (numericUnits.length ? 7089 : 2953)) throw new Error('QRコードの最大容量を超えています。');
+    return { baseline: Uint8Array.from(bytes), positions, variables, analyses, parts, numericUnits };
   }
-  function encode(bytes, version, ecc, mask) {
+  function encode(bytes, version, ecc, mask, model) {
     const opts = { errorCorrectionLevel: ecc || 'M' };
     if (version != null) opts.version = version;
     if (mask != null) opts.maskPattern = mask;
-    return QRCode.create([{ data: text.decode(bytes), mode: 'byte' }], opts);
+    const parts = model?.parts?.length ? model.parts : [{ mode: 'byte', offset: 0, length: bytes.length }];
+    return QRCode.create(parts.map(p => ({ data: text.decode(bytes.slice(p.offset, p.offset + p.length)), mode: p.mode })), opts);
+  }
+  function numericValues(model, x) {
+    const values = model.numericUnits.map(u => u.base);
+    for (const i of bitIndices(x)) { const v = model.variables[i]; if (v.unit != null) values[v.unit] ^= v.vector; }
+    return values;
   }
   function applyX(model, x) {
     const bytes = model.baseline.slice();
-    for (const i of bitIndices(x)) bytes[model.variables[i].offset] ^= model.variables[i].vector;
+    for (const i of bitIndices(x)) { const v = model.variables[i]; if (v.unit == null) bytes[v.offset] ^= v.vector; }
+    if (model.numericUnits?.length) numericValues(model, x).forEach((value, i) => {
+      const unit = model.numericUnits[i];
+      if (value > unit.max) throw new Error('数字用の符号化範囲を超えた候補です。');
+      bytes.set(utf8.encode(String(value).padStart(unit.length, '0')), unit.offset);
+    });
     return bytes;
+  }
+  function payloadBits(model, version) {
+    return model.parts.reduce((sum, p) => sum + 4 + (p.mode === 'numeric' ? (version < 10 ? 10 : version < 27 ? 12 : 14) + Math.floor(p.length / 3) * 10 + [0, 4, 7][p.length % 3] : (version < 10 ? 8 : 16) + p.length * 8), 0);
+  }
+  function maxVariableLength(segments, index, settings) {
+    if (segments[index]?.kind !== 'variable') throw new Error('可変部分を指定してください。');
+    const version = settings.version === 'auto' ? settings.versionMax : settings.version;
+    const capacity = qrcodegen.QrCode.getNumDataCodewords(version, eccInfo(settings.ecc)) * 8;
+    const numeric = settings.encoding === 'numeric' && DIGITS.every(b => allowedBytes(segments[index]).includes(b));
+    let low = 0, high = numeric ? 7089 : 2953;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2), parts = segments.map((s, i) => i === index ? { ...s, length: mid } : s); let fits = false;
+      try { fits = payloadBits(makeModel(parts, undefined, settings), version) <= capacity; } catch { /* Over capacity. */ }
+      if (fits) low = mid; else high = mid - 1;
+    }
+    if (!low) throw new Error('他の固定・可変部分だけで、このVersionの容量に達しています。');
+    return low;
   }
   function payloadOK(bytes, model) {
     if (bytes.length !== model.baseline.length) return false;
@@ -162,12 +214,11 @@
     return Uint32Array.from([...new Set(touched)].filter(j => flags[j]));
   }
   function buildMapping(model, version, ecc, report = () => {}) {
-    const symbol = encode(model.baseline, version, ecc, 0), size = symbol.modules.size, total = size * size;
+    const symbol = encode(model.baseline, version, ecc, 0, model), size = symbol.modules.size, total = size * size;
     const cells = placement(symbol), layout = blockLayout(version, ecc), impulseCache = new Map(), fullColumns = new Map();
-    const header = 4 + (version < 10 ? 8 : 16);
     // Construct the RS-linear difference directly, rather than re-encoding a whole QR per variable.
-    for (const p of model.positions) for (let bit = 0; bit < 7; bit++) {
-      const index = header + p.offset * 8 + 7 - bit, dataIndex = index >>> 3, value = 128 >>> (index & 7);
+    function column(index) {
+      const dataIndex = index >>> 3, value = 128 >>> (index & 7);
       const [b, pos] = layout.dataLocations[dataIndex], block = layout.blocks[b], key = block.data + ':' + pos + ':' + block.ec;
       if (!impulseCache.has(key)) { const impulse = new Uint8Array(block.data); impulse[pos] = 1; impulseCache.set(key, rsRemainder(impulse, block.ec)); }
       const changes = [cells[block.slots[pos] * 8 + (index & 7)]], ec = impulseCache.get(key);
@@ -175,11 +226,28 @@
         const v = gfMul(ec[k], value), slot = block.slots[block.data + k];
         for (let t = 0; t < 8; t++) if (v & (128 >>> t)) changes.push(cells[slot * 8 + t]);
       }
-      fullColumns.set(p.offset + ':' + bit, Uint32Array.from(changes));
+      return Uint32Array.from(changes);
+    }
+    let cursor = 0;
+    for (const [partIndex, part] of model.parts.entries()) {
+      cursor += 4 + (part.mode === 'numeric' ? (version < 10 ? 10 : version < 27 ? 12 : 14) : (version < 10 ? 8 : 16));
+      if (part.mode === 'numeric') {
+        model.numericUnits.forEach((u, i) => {
+          if (u.part !== partIndex) return;
+          for (let bit = 0; bit < u.width; bit++) fullColumns.set('n' + i + ':' + bit, column(cursor + Math.floor((u.offset - part.offset) / 3) * 10 + u.width - 1 - bit));
+        });
+        cursor += Math.floor(part.length / 3) * 10 + [0, 4, 7][part.length % 3];
+      } else {
+        for (const p of model.positions) if (!p.numeric && p.offset >= part.offset && p.offset < part.offset + part.length) {
+          for (let bit = 0; bit < 7; bit++) fullColumns.set(p.offset + ':' + bit, column(cursor + (p.offset - part.offset) * 8 + 7 - bit));
+        }
+        cursor += part.length * 8;
+      }
     }
     const columns = [], rows = Array(total).fill(0n);
     model.variables.forEach((v, i) => {
-      const selected = []; for (let bit = 0; bit < 7; bit++) if (v.vector & (1 << bit)) selected.push(fullColumns.get(v.offset + ':' + bit));
+      const prefix = v.unit == null ? v.offset : 'n' + v.unit;
+      const selected = []; for (let bit = 0; bit < 10; bit++) if (v.vector & (1 << bit)) selected.push(fullColumns.get(prefix + ':' + bit));
       const col = xorColumns(selected, selected.map((_, k) => k), total); columns.push(col);
       const x = 1n << BigInt(i); for (const j of col) rows[j] |= x;
       if ((i & 255) === 0) report({ stage: 'mapping', message: `画像に使える自由度を構築中 ${i + 1}/${model.variables.length}` });
@@ -190,7 +258,7 @@
     if (model.variables.length) samples.push(1n, 1n << BigInt(model.variables.length - 1));
     for (let t = 0; t < 2; t++) { let x = 0n; for (let i = 0; i < model.variables.length; i++) if (random() < .5) x |= 1n << BigInt(i); samples.push(x); }
     for (const x of samples) {
-      const actual = encode(applyX(model, x), version, ecc, 0).modules.data, predicted = predict(result, x);
+      const actual = encode(applyX(model, x), version, ecc, 0, model).modules.data, predicted = predict(result, x);
       if (predicted.some((v, j) => v !== actual[j])) throw new Error('QR差分の自己検証に失敗しました。候補を出力しません。');
     }
     return result;
@@ -237,11 +305,80 @@
   function mappingWithVariables(mapping, variables, m0) {
     const columns = [], rows = Array(mapping.rows.length).fill(0n);
     variables.forEach((v, i) => {
-      const cols = []; for (let bit = 0; bit < 7; bit++) if (v.vector & (1 << bit)) cols.push(mapping.fullColumns.get(v.offset + ':' + bit));
+      const prefix = v.unit == null ? v.offset : 'n' + v.unit;
+      const cols = []; for (let bit = 0; bit < 10; bit++) if (v.vector & (1 << bit)) cols.push(mapping.fullColumns.get(prefix + ':' + bit));
       const col = xorColumns(cols, cols.map((_, k) => k), rows.length); columns.push(col);
       const flag = 1n << BigInt(i); col.forEach(j => { rows[j] |= flag; });
     });
     return { ...mapping, rows, columns, m0 };
+  }
+  function numericSubspace(mapping, model, target) {
+    if (!model.numericUnits.length) return { mapping, model };
+    const variables = model.variables.filter(v => v.unit == null);
+    model.numericUnits.forEach((u, unit) => {
+      // Fix one suitable data bit to 0. Every remaining combination is a valid
+      // decimal group. Pick its location to agree with this mask's target.
+      let excluded = u.width - 1, best = Infinity;
+      for (let bit = 0; bit < u.width; bit++) {
+        if ((2 ** u.width - 1) - 2 ** bit > u.max) continue;
+        const j = mapping.fullColumns.get('n' + unit + ':' + bit)[0];
+        const cost = target.hard[j] >= 0 ? (target.hard[j] ^ mapping.m0[j]) * 1e6 : (target.bits[j] ^ mapping.m0[j]) * target.weights[j];
+        if (cost < best) { best = cost; excluded = bit; }
+      }
+      for (let bit = 0; bit < u.width; bit++) if (bit !== excluded) variables.push({ unit, vector: 1 << bit });
+    });
+    return { model: { ...model, variables }, mapping: mappingWithVariables(mapping, variables, mapping.m0) };
+  }
+  const numericCubes = new Map();
+  function numericCube(width, maximum, base) {
+    const key = width + ':' + maximum + ':' + base;
+    if (numericCubes.has(key)) return numericCubes.get(key);
+    let best = 0, dimensions = -1;
+    for (let mask = 0; mask < 2 ** width; mask++) if ((base | mask) <= maximum) {
+      const count = bitIndices(BigInt(mask)).length;
+      if (count > dimensions) { dimensions = count; best = mask; }
+    }
+    numericCubes.set(key, best); return best;
+  }
+  function repairNumericHard(mapping, model, hard, deadline) {
+    const bytePositions = model.positions.filter(p => !p.numeric), byteStarts = new Map(), variables = [], starts = [];
+    for (const p of bytePositions) { byteStarts.set(p.offset, variables.length); for (let bit = 0; bit < 7; bit++) variables.push({ offset: p.offset, vector: 1 << bit }); }
+    model.numericUnits.forEach((u, unit) => { starts.push(variables.length); for (let bit = 0; bit < u.width; bit++) variables.push({ unit, vector: 1 << bit }); });
+    const wideModel = { ...model, variables }, wide = mappingWithVariables(mapping, variables, mapping.m0), h = hardSystem(wide, hard);
+    if (!h.ok) return null;
+    let system = h.system, found = null; const stack = [];
+    while (system && now() < deadline) {
+      const x = system.solve(variables.length, false).particular, values = numericValues(wideModel, x);
+      const invalid = values.findIndex((v, i) => v > model.numericUnits[i].max);
+      if (invalid >= 0) {
+        // A valid value must turn off at least one of this invalid value's 1s.
+        stack.push({ system, unit: invalid, choices: bitIndices(BigInt(values[invalid])).reverse(), next: 0 });
+      } else {
+        const bytes = applyX(wideModel, x), p = bytePositions.find(p => !p.allowed.includes(bytes[p.offset]));
+        if (!p) { found = { x, values, bytes }; break; }
+        // Mixed payloads must also search the full allowed Byte domain.
+        const choices = p.allowed.slice().sort((a, b) => bitIndices(BigInt(a ^ bytes[p.offset])).length - bitIndices(BigInt(b ^ bytes[p.offset])).length);
+        stack.push({ system, position: p, choices, next: 0 });
+      }
+      system = null;
+      while (stack.length && now() < deadline) {
+        const frame = stack[stack.length - 1];
+        if (frame.next === frame.choices.length) { stack.pop(); continue; }
+        const choice = frame.choices[frame.next++], branch = new LinearSystem(); branch.rows = new Map(frame.system.rows); let ok = true;
+        if (frame.position) {
+          const offset = frame.position.offset;
+          for (let bit = 0; bit < 7; bit++) if (branch.add(1n << BigInt(byteStarts.get(offset) + bit), ((choice ^ model.baseline[offset]) >>> bit) & 1) === 'conflict') { ok = false; break; }
+        } else {
+          ok = branch.add(1n << BigInt(starts[frame.unit] + choice), (model.numericUnits[frame.unit].base >>> choice) & 1) !== 'conflict';
+        }
+        if (ok) { system = branch; break; }
+      }
+    }
+    if (!found) return null;
+    const localVariables = [], numericUnits = model.numericUnits.map((u, i) => ({ ...u, base: found.values[i] }));
+    for (const p of bytePositions) for (const vector of anchoredBasis(p.allowed, found.bytes[p.offset])) localVariables.push({ offset: p.offset, vector });
+    numericUnits.forEach((u, unit) => { const cube = numericCube(u.width, u.max, u.base); for (let bit = 0; bit < u.width; bit++) if (cube & (1 << bit)) localVariables.push({ unit, vector: 1 << bit }); });
+    return { model: { ...model, baseline: found.bytes, variables: localVariables, numericUnits }, mapping: mappingWithVariables(mapping, localVariables, predict(wide, found.x)) };
   }
   const anchoredCache = new Map();
   function anchoredBasis(allowed, anchor) {
@@ -319,9 +456,13 @@
       return ((1 - this.perception) * pixel + this.perception * coarse / this.scales.length) / this.sum;
     }
     metrics(reserved) {
-      let match = 0, fixedMismatch = 0, black = 0, targetBlack = 0;
-      for (let j = 0; j < this.matrix.length; j++) { if (this.matrix[j] === this.target[j]) match++; else if (reserved?.[j]) fixedMismatch++; black += this.matrix[j]; targetBlack += this.target[j]; }
-      return { visual: clamp(1 - this.value(), 0, 1), weighted: clamp(1 - this.pixel / this.sum, 0, 1), raw: match / this.matrix.length, fixedMismatch, blackRate: black / this.matrix.length, targetBlackRate: targetBlack / this.matrix.length };
+      let match = 0, fixedMismatch = 0, black = 0, targetBlack = 0, trueBlack = 0, backgroundBlack = 0;
+      for (let j = 0; j < this.matrix.length; j++) {
+        if (this.matrix[j] === this.target[j]) match++; else if (reserved?.[j]) fixedMismatch++;
+        black += this.matrix[j]; targetBlack += this.target[j];
+        if (this.target[j]) trueBlack += this.matrix[j]; else backgroundBlack += this.matrix[j];
+      }
+      return { visual: clamp(1 - this.value(), 0, 1), weighted: clamp(1 - this.pixel / this.sum, 0, 1), raw: match / this.matrix.length, fixedMismatch, blackRate: black / this.matrix.length, targetBlackRate: targetBlack / this.matrix.length, blackRecall: targetBlack ? trueBlack / targetBlack : null, backgroundBlack: targetBlack < this.matrix.length ? backgroundBlack / (this.matrix.length - targetBlack) : null };
     }
   }
   function projectField(field, src, dst) {
@@ -375,7 +516,7 @@
     }
     const bytes = applyX(model, x); let charsetMoves = 0;
     if (settings.fullCharset) {
-      const positions = shuffle(model.positions.slice(), random);
+      const positions = shuffle(model.positions.filter(p => !p.numeric), random);
       for (let round = 0; round < 2 && now() < deadline; round++) {
         let changed = false;
         for (const p of positions) {
@@ -391,6 +532,21 @@
           if (chosenEffect) { loss.delta(chosenEffect, true); bytes[p.offset] = chosen; charsetMoves++; changed = true; }
         }
         if (!changed) break;
+      }
+      for (const unit of shuffle((model.numericUnits || []).map((_, i) => i), random)) {
+        if (now() >= deadline) break;
+        const u = model.numericUnits[unit], current = Number(text.decode(bytes.slice(u.offset, u.offset + u.length)));
+        const cols = Array.from({ length: u.width }, (_, bit) => mapping.fullColumns.get('n' + unit + ':' + bit));
+        let best = 0, chosen = current, chosenEffect = null;
+        for (const value of shuffle(Array.from({ length: u.max + 1 }, (_, i) => i), random)) {
+          if (now() >= deadline) break;
+          const difference = value ^ current; if (!difference) continue;
+          const effect = xorColumns(cols, bitIndices(BigInt(difference)), n * n);
+          if (effect.some(j => tgt.hard[j] >= 0)) continue;
+          const delta = loss.delta(effect);
+          if (delta < best - 1e-10) { best = delta; chosen = value; chosenEffect = effect; }
+        }
+        if (chosenEffect) { loss.delta(chosenEffect, true); bytes.set(utf8.encode(String(chosen).padStart(u.length, '0')), u.offset); charsetMoves++; }
       }
     }
     return { bytes, matrix: loss.matrix, metrics: loss.metrics(mapping.reserved), charsetMoves };
@@ -431,8 +587,9 @@
   }
   function verify(candidate, model, target) {
     const { version, ecc, mask, rotation = 0, bytes, matrix } = candidate, size = version * 4 + 17;
-    const payload = payloadOK(bytes, model), symbol = encode(bytes, version, ecc, mask);
-    const independent = qrcodegen.QrCode.encodeSegments([qrcodegen.QrSegment.makeBytes(Array.from(bytes))], eccInfo(ecc), version, version, mask, false);
+    const payload = payloadOK(bytes, model), symbol = encode(bytes, version, ecc, mask, model);
+    const parts = model.parts?.length ? model.parts : [{ mode: 'byte', offset: 0, length: bytes.length }];
+    const independent = qrcodegen.QrCode.encodeSegments(parts.map(p => p.mode === 'numeric' ? qrcodegen.QrSegment.makeNumeric(text.decode(bytes.slice(p.offset, p.offset + p.length))) : qrcodegen.QrSegment.makeBytes(Array.from(bytes.slice(p.offset, p.offset + p.length)))), eccInfo(ecc), version, version, mask, false);
     const reference = Uint8Array.from({ length: size * size }, (_, j) => Number(independent.getModule(j % size, Math.floor(j / size))));
     const raster = renderRGBA(matrix, size), reload = reloadModules(raster, size), canonical = rotate(reload, size, (4 - rotation) % 4);
     const moduleReloadDiff = reload.reduce((s, v, j) => s + Number(v !== matrix[j]), 0);
@@ -454,8 +611,8 @@
     const vars = segments.filter(s => s.kind === 'variable');
     if (!settings.autoLength || !vars.length) return [vars.map(s => s.length)];
     const axes = vars.map(s => {
-      const end = integer(s.length, 1, 2953, '探索終了'), start = integer(s.start ?? 1, 1, end, '探索開始');
-      const step = integer(s.step || Math.max(1, Math.ceil((end - start) / Math.max(1, settings.coarsePoints - 1))), 1, 2953, '探索Step');
+      const end = integer(s.length, 1, 7089, '探索終了'), start = integer(s.start ?? 1, 1, end, '探索開始');
+      const step = integer(s.step || Math.max(1, Math.ceil((end - start) / Math.max(1, settings.coarsePoints - 1))), 1, 7089, '探索Step');
       const a = []; for (let i = start; i <= end; i += step) a.push(i); if (a[a.length - 1] !== end) a.push(end); return a;
     });
     const total = axes.reduce((n, a) => n * BigInt(a.length), 1n), cap = BigInt(settings.lengthTrials), out = [], seen = new Set();
@@ -466,7 +623,8 @@
     return out;
   }
   function normalizeSettings(input = {}) {
-    const s = { ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, ...input };
+    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, ...input };
+    if (!['byte', 'numeric'].includes(s.encoding)) throw new Error('符号化方式が不正です。');
     if (!eccInfo(s.ecc)) throw new Error('誤り訂正レベルが不正です。');
     s.versionMin = integer(s.versionMin, 1, 40, '最小Version'); s.versionMax = integer(s.versionMax, s.versionMin, 40, '最大Version');
     if (s.version !== 'auto') s.version = integer(s.version, 1, 40, 'Version');
@@ -489,7 +647,7 @@
     for (let qi = 0; qi < queue.length; qi++) {
       if (attempted && now() >= deadline) break;
       const lengths = queue[qi]; let model, minimum;
-      try { model = makeModel(options.segments, lengths); minimum = encode(model.baseline, null, settings.ecc, 0).version; }
+      try { model = makeModel(options.segments, lengths, settings); minimum = encode(model.baseline, null, settings.ecc, 0, model).version; }
       catch (e) { failures.push(e.message); continue; }
       const versions = settings.version !== 'auto' ? [settings.version] : settings.compareVersions ? Array.from({ length: Math.max(0, settings.versionMax - Math.max(minimum, settings.versionMin) + 1) }, (_, i) => Math.max(minimum, settings.versionMin) + i) : [Math.max(minimum, settings.versionMin)];
       let lengthBest = -Infinity;
@@ -498,7 +656,7 @@
         let target, mapping;
         try { target = getTarget(options, version); mapping = buildMapping(model, version, settings.ecc, report); }
         catch (e) { failures.push(e.message); continue; }
-        const masks = settings.masks === 'all' ? [0, 1, 2, 3, 4, 5, 6, 7] : [settings.masks === 'auto' ? encode(model.baseline, version, settings.ecc, null).maskPattern : settings.masks];
+        const masks = settings.masks === 'all' ? [0, 1, 2, 3, 4, 5, 6, 7] : [settings.masks === 'auto' ? encode(model.baseline, version, settings.ecc, null, model).maskPattern : settings.masks];
         let orientationIndex = 0;
         for (const rotation of settings.rotations) for (const mask of masks) {
           if (attempted && now() >= deadline) break;
@@ -507,9 +665,11 @@
           const remaining = Math.max(1, (queue.length - qi - 1) * versions.length * orientations + (versions.length - versionIndex - 1) * orientations + orientations - orientationIndex++);
           const problemDeadline = Math.min(deadline, now() + Math.max(5, (deadline - now()) / remaining));
           report({ stage: 'search', message: `長さ ${lengths.join(' / ') || '固定'} · Version ${version} · Mask ${mask} · ${rotation * 90}° を比較中`, attempted, elapsed: (now() - started) / 1000 });
-          let activeModel = model, m = orient(mapping, Uint8Array.from(encode(model.baseline, version, settings.ecc, mask).modules.data), rotation), h = hardSystem(m, target.hard);
+          let activeModel = model, m = orient(mapping, Uint8Array.from(encode(model.baseline, version, settings.ecc, mask, model).modules.data), rotation);
+          const adapted = numericSubspace(m, model, target); activeModel = adapted.model; m = adapted.mapping;
+          let h = hardSystem(m, target.hard);
           if (!h.ok && settings.fullCharset) {
-            const repair = repairHardCharset(m, model, target.hard, problemDeadline);
+            const repair = model.numericUnits.length ? repairNumericHard(m, activeModel, target.hard, problemDeadline) : repairHardCharset(m, model, target.hard, problemDeadline);
             if (repair) { activeModel = repair.model; m = repair.mapping; h = hardSystem(m, target.hard); }
           }
           if (!h.ok) { infeasible++; continue; }
@@ -517,7 +677,7 @@
           baselineBest = Math.max(baselineBest, original.metrics().visual);
           const classification = { structural: 0, fixed: 0, variable: 0 };
           for (let j = 0; j < m.rows.length; j++) classification[m.reserved[j] ? 'structural' : m.rows[j] === 0n ? 'fixed' : 'variable']++;
-          const meta = { version, ecc: settings.ecc, mask, rotation, size: m.size, lengths: lengths.slice(), variables: activeModel.variables.length, hardRank: hard.rank, analyses: model.analyses, classification };
+          const meta = { version, ecc: settings.ecc, mask, rotation, size: m.size, lengths: lengths.slice(), encoding: model.numericUnits.length ? 'numeric' : 'byte', modes: model.parts.map(p => p.mode), variables: activeModel.variables.length, hardRank: hard.rank, analyses: model.analyses, classification };
           let best = null;
           for (let pass = 0; pass < settings.passes; pass++) {
             if (pass && now() >= problemDeadline) break;
@@ -566,5 +726,5 @@
     if (!candidates.length) throw new Error(infeasible && !solved ? '今回の探索では絶対黒白指定を満たす解が見つかりませんでした。時間・マスク・Version・可変長の範囲を広げるか、指定を見直してください。指定は保持されています。' : failures[0] || '指定を満たし、独立した読み取り検証にも合格する候補が見つかりませんでした。探索時間や範囲を広げてください。');
     return { candidates, stats: { seconds: (now() - started) / 1000, searchSeconds, budgetSeconds: settings.seconds, timedOut, attempted, solved, infeasible, rejected, lengthsPlanned: queue.length, baselineBest: Number.isFinite(baselineBest) ? baselineBest : null, greedyBest: Number.isFinite(greedyBest) ? greedyBest : null, failures: [...new Set(failures)].slice(0, 8) }, settings };
   }
-  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, svg, lengthPlan, normalizeSettings, search };
+  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, svg, lengthPlan, normalizeSettings, search };
 });
