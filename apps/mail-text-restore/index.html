@@ -99,6 +99,34 @@ permalink: /apps/mail-text-restore/
   table.hdr th { width: 110px; color: var(--muted); font-weight: 600; white-space: nowrap; }
   table.hdr tr:last-child th, table.hdr tr:last-child td { border-bottom: none; }
 
+  /* --- images --- */
+  #images-card { display: none; }
+  .img-warn { font-size: .8rem; color: var(--muted); margin: 0 0 12px; line-height: 1.7; }
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .img-tile {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); padding: 8px; min-width: 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .img-tile .thumb {
+    height: 120px; background: var(--card); border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .img-tile .thumb img { max-width: 100%; max-height: 120px; object-fit: contain; display: block; }
+  .img-tile .cap { font-size: .74rem; color: var(--muted); line-height: 1.5; word-break: break-all; }
+  .img-tile .cap b { display: block; color: var(--text); font-weight: 600; }
+  .img-tile .links { display: flex; gap: 10px; font-size: .74rem; }
+  .img-tile a { color: var(--link); }
+  .img-ph { color: var(--muted); font-size: .74rem; text-align: center; padding: 0 8px; line-height: 1.6; }
+  .img-ph button { margin-top: 6px; }
+  .badge {
+    font-size: .68rem; font-weight: 600; border-radius: var(--radius-pill);
+    padding: 2px 9px; align-self: flex-start;
+    background: var(--accent-light); color: var(--accent-hover);
+  }
+  .badge.remote { background: #fef3c7; color: #92400e; }
+  .badge.danger { background: var(--error-bg); color: var(--error); }
+
   /* --- output --- */
   .out {
     background: var(--surface); border: 1.5px solid var(--border);
@@ -184,6 +212,21 @@ permalink: /apps/mail-text-restore/
       </label>
     </h2>
     <table class="hdr"><tbody id="hdr-body"></tbody></table>
+  </div>
+
+  <!-- ========== 画像 ========== -->
+  <div class="card" id="images-card">
+    <h2>画像 <span class="badge" id="img-count"></span>
+      <span class="spacer"></span>
+      <label style="font-size:.82rem;font-weight:400;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="load-remote">外部画像を読み込む
+      </label>
+    </h2>
+    <p class="img-warn">
+      メールに埋め込まれた画像（<code>cid:</code> の添付・<code>data:</code> URI）は、通信せずにそのまま表示します。<br>
+      外部サーバー上の画像は、読み込むと送信元に開封を知らせてしまうこと（トラッキング画像）があるため、既定では読み込みません。
+    </p>
+    <div class="img-grid" id="img-grid"></div>
   </div>
 
   <!-- ========== 出力 ========== -->
@@ -377,6 +420,42 @@ f?token=3Dabcdef123456
     } catch (e) { return null; }
   }
 
+  function bytesToBase64(bytes) {
+    var s = "", CH = 8192;
+    for (var i = 0; i < bytes.length; i += CH) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    try { return btoa(s); } catch (e) { return ""; }
+  }
+
+  /* ---------- 画像パート → data: URL ---------- */
+  var MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+  function tagAttr(tag, name) {
+    var m = new RegExp("(?:^|\\s)" + name + "\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(tag);
+    if (!m) return "";
+    return decodeEntities(m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3])).trim();
+  }
+
+  function partToDataUrl(node, mime) {
+    if (!/^image\/[a-z0-9.+-]+$/.test(mime)) return "";
+    var cte = (node.headers["content-transfer-encoding"] || "").trim().toLowerCase();
+    var bytes = null;
+    if (cte === "base64") bytes = b64ToBytes(node.body);
+    else if (cte === "quoted-printable") bytes = qpToBytes(node.body);
+    if (!bytes) bytes = toBytes(node.body);
+    if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) return "";
+    var b64 = bytesToBase64(bytes);
+    return b64 ? "data:" + mime + ";base64," + b64 : "";
+  }
+
+  /* 表示してよい画像URLか（javascript: などを弾く） */
+  function safeImageSrc(src) {
+    if (/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(src)) return src;
+    if (/^https?:\/\//i.test(src)) return src;
+    return "";
+  }
+
   /* 復号結果がテキストとして妥当かどうかの簡易判定 */
   function looksLikeText(s) {
     if (!s) return false;
@@ -422,7 +501,7 @@ f?token=3Dabcdef123456
     });
   }
 
-  function htmlToText(s) {
+  function htmlToText(s, ctx) {
     /* タグに隣接するソース上の改行はレイアウト用なので取り除き、
        それ以外の改行（テキスト化のときに入った本物の改行）は残す */
     var x = s
@@ -433,6 +512,14 @@ f?token=3Dabcdef123456
       .replace(/[ \t]*\n?[ \t]*<\s*(p|div|tr|h[1-6]|blockquote|section|article)\b[^>]*>[ \t]*\n?/gi, "\n")
       .replace(/[ \t]*\n?[ \t]*<\s*li\b[^>]*>[ \t]*/gi, "\n・")
       .replace(/<\s*(td|th)\b[^>]*>/gi, "\t")
+      .replace(/<\s*img\b[^>]*>/gi, function (tag) {
+        var src = tagAttr(tag, "src"), alt = tagAttr(tag, "alt");
+        if (src && ctx && ctx.imgRefs) {
+          ctx.imgRefs.push({ src: src, alt: alt, w: tagAttr(tag, "width"), h: tagAttr(tag, "height") });
+        }
+        /* alt がある画像だけ本文に印を残す（トラッキング画像で本文が汚れないように） */
+        return alt ? "[画像: " + alt + "]" : "";
+      })
       .replace(/<[^>]*>/g, "");
     x = decodeEntities(x);
     return x.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+/, "");
@@ -599,9 +686,18 @@ f?token=3Dabcdef123456
       }
     }
 
-    var filename = paramOf(disp, "filename") || paramOf(ct, "name");
+    var filename = decodeEncodedWords(paramOf(disp, "filename") || paramOf(ct, "name"));
+
+    if (mime.indexOf("image/") === 0) {
+      var cid = (node.headers["content-id"] || "").trim().replace(/^</, "").replace(/>$/, "");
+      var url = partToDataUrl(node, mime);
+      if (url) ctx.images.push({ cid: cid, name: filename || cid || "画像", mime: mime, url: url });
+      if (filename && !cid) ctx.attachments.push(filename + " [" + mime + "]");
+      return null;
+    }
+
     if (filename || /^attachment/i.test(disp)) {
-      ctx.attachments.push(decodeEncodedWords(filename || "(名称不明)") + (mime ? " [" + mime + "]" : ""));
+      ctx.attachments.push((filename || "(名称不明)") + (mime ? " [" + mime + "]" : ""));
       if (mime.indexOf("text/") !== 0) return null;
     }
     if (mime.indexOf("text/") !== 0 && mime !== "message/rfc822" && mime !== "") return null;
@@ -698,7 +794,7 @@ f?token=3Dabcdef123456
     {
       id: "html", name: "HTMLをテキスト化", desc: "タグを除去して改行・箇条書きに変換",
       detect: function (t) { return /<\s*\/?\s*(html|body|div|p|br|span|table|td|tr|ul|li|a|b|strong|font|img|meta)\b[^>]*>/i.test(t); },
-      apply: function (t) { return htmlToText(t); }
+      apply: function (t, ctx) { return htmlToText(t, ctx); }
     },
     {
       id: "entity", name: "HTMLエンティティ復号", desc: "&amp;gt; &amp;nbsp; などを元の文字に戻す",
@@ -786,7 +882,7 @@ f?token=3Dabcdef123456
   }
 
   function restore(input) {
-    var ctx = { headers: null, attachments: [], charset: "", partMime: "" };
+    var ctx = { headers: null, attachments: [], images: [], imgRefs: [], charset: "", partMime: "" };
     var auto = $("auto").checked;
     var text = input.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     var applied = [];
@@ -812,6 +908,180 @@ f?token=3Dabcdef123456
 
   var lastResult = "";
 
+  /* ============================================================
+     画像ギャラリー
+     ============================================================ */
+  var IMG_URL_RE = /https?:\/\/[^\s"'<>()\[\]]+\.(?:png|jpe?g|gif|webp|bmp|avif|svg)(?:\?[^\s"'<>()\[\]]*)?/gi;
+
+  /* 本文とMIMEパートから表示できる画像を集める */
+  function collectImages(ctx, text) {
+    var list = [], seen = {}, usedCid = {};
+
+    function push(item) {
+      var key = item.url || item.src;
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      list.push(item);
+    }
+
+    (ctx.imgRefs || []).forEach(function (ref) {
+      var src = ref.src;
+      var cidMatch = /^cid:(.+)$/i.exec(src);
+      if (cidMatch) {
+        var cid = decodeURIComponent(cidMatch[1]).trim().toLowerCase();
+        var part = null;
+        for (var i = 0; i < ctx.images.length; i++) {
+          if (ctx.images[i].cid && ctx.images[i].cid.toLowerCase() === cid) { part = ctx.images[i]; break; }
+        }
+        if (part) {
+          usedCid[part.cid] = true;
+          push({ kind: "embedded", url: part.url, name: ref.alt || part.name, note: part.mime });
+        } else {
+          push({ kind: "missing", src: src, name: ref.alt || "", note: "添付が見つかりません" });
+        }
+        return;
+      }
+      var safe = safeImageSrc(src);
+      if (!safe) return;
+      if (/^data:/i.test(safe)) {
+        push({ kind: "embedded", url: safe, name: ref.alt || "埋め込み画像", note: "data: URI" });
+      } else {
+        /* 1x1 などの極小画像は開封トラッキング用とみなし、自動では読み込まない */
+        var tracker = !!(ref.w && ref.h && +ref.w <= 3 && +ref.h <= 3);
+        push({ kind: "remote", tracker: tracker, url: safe, name: ref.alt || "", note: shortUrl(safe) });
+      }
+    });
+
+    /* 本文中に直書きされた画像URL */
+    var m;
+    IMG_URL_RE.lastIndex = 0;
+    while ((m = IMG_URL_RE.exec(text)) !== null) {
+      push({ kind: "remote", url: m[0], name: "", note: shortUrl(m[0]) });
+    }
+
+    /* どこからも参照されていない画像パート（画像添付） */
+    (ctx.images || []).forEach(function (img) {
+      if (img.cid && usedCid[img.cid]) return;
+      push({ kind: "embedded", url: img.url, name: img.name, note: img.mime });
+    });
+
+    return list;
+  }
+
+  function shortUrl(url) {
+    return url.length > 90 ? url.slice(0, 90) + "…" : url;
+  }
+
+  function fileNameOf(item) {
+    if (item.name) return item.name;
+    if (item.kind === "remote") {
+      var m = /\/([^\/?#]+)(?:[?#]|$)/.exec(item.url || "");
+      if (m) return decodeURIComponent(m[1]);
+    }
+    return "画像";
+  }
+
+  function makeThumb(item, loadRemote) {
+    var thumb = document.createElement("div");
+    thumb.className = "thumb";
+    if (item.kind === "missing") {
+      var ph = document.createElement("div");
+      ph.className = "img-ph";
+      ph.textContent = "参照先の添付がありません";
+      thumb.appendChild(ph);
+      return thumb;
+    }
+    if (item.kind === "remote" && !item.forceLoad && (!loadRemote || item.tracker)) {
+      var box = document.createElement("div");
+      box.className = "img-ph";
+      box.textContent = item.tracker ? "トラッキング画像の可能性（未読み込み）" : "外部画像（未読み込み）";
+      var btn = document.createElement("button");
+      btn.className = "ghost sm";
+      btn.textContent = "この画像を表示";
+      btn.addEventListener("click", function () {
+        item.forceLoad = true;
+        thumb.replaceWith(makeThumb(item, loadRemote));
+      });
+      box.appendChild(document.createElement("br"));
+      box.appendChild(btn);
+      thumb.appendChild(box);
+      return thumb;
+    }
+    var img = document.createElement("img");
+    img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    img.alt = fileNameOf(item);
+    img.addEventListener("error", function () {
+      var e = document.createElement("div");
+      e.className = "img-ph";
+      e.textContent = "読み込めませんでした";
+      thumb.innerHTML = "";
+      thumb.appendChild(e);
+    });
+    img.src = item.url;
+    thumb.appendChild(img);
+    return thumb;
+  }
+
+  function renderImages(ctx, text) {
+    var grid = $("img-grid");
+    grid.innerHTML = "";
+    var items = collectImages(ctx, text);
+    if (!items.length) {
+      $("images-card").style.display = "none";
+      return;
+    }
+    var loadRemote = $("load-remote").checked;
+
+    items.forEach(function (item) {
+      var tile = document.createElement("div");
+      tile.className = "img-tile";
+
+      var badge = document.createElement("span");
+      badge.className = "badge" + (item.kind === "embedded" ? "" : (item.tracker ? " danger" : " remote"));
+      badge.textContent = item.kind === "embedded" ? "埋め込み"
+        : (item.kind === "missing" ? "リンク切れ" : (item.tracker ? "トラッキング" : "外部"));
+      tile.appendChild(badge);
+
+      tile.appendChild(makeThumb(item, loadRemote));
+
+      var cap = document.createElement("div");
+      cap.className = "cap";
+      var b = document.createElement("b");
+      b.textContent = fileNameOf(item);
+      cap.appendChild(b);
+      cap.appendChild(document.createTextNode(item.note || ""));
+      tile.appendChild(cap);
+
+      if (item.url) {
+        var links = document.createElement("div");
+        links.className = "links";
+        var open = document.createElement("a");
+        open.href = item.url;
+        open.target = "_blank";
+        open.rel = "noopener noreferrer";
+        open.textContent = "開く";
+        links.appendChild(open);
+        if (item.kind === "embedded") {
+          var dl = document.createElement("a");
+          dl.href = item.url;
+          dl.download = fileNameOf(item);
+          dl.textContent = "保存";
+          links.appendChild(dl);
+        }
+        tile.appendChild(links);
+      }
+
+      grid.appendChild(tile);
+    });
+
+    var embedded = items.filter(function (i) { return i.kind === "embedded"; }).length;
+    var trackers = items.filter(function (i) { return i.tracker; }).length;
+    $("img-count").textContent = items.length + " 件（埋め込み " + embedded +
+      (trackers ? " / トラッキング " + trackers : "") + "）";
+    $("images-card").style.display = "block";
+  }
+
   function run() {
     var input = $("input").value;
     $("in-count").textContent = input.length.toLocaleString() + " 文字";
@@ -820,6 +1090,8 @@ f?token=3Dabcdef123456
       $("log").innerHTML = "";
       $("out-count").textContent = "0 文字";
       $("headers-card").style.display = "none";
+      $("images-card").style.display = "none";
+      $("img-grid").innerHTML = "";
       STEPS.forEach(function (st) { $("step-" + st.id).classList.remove("applied"); });
       lastResult = "";
       return;
@@ -874,6 +1146,8 @@ f?token=3Dabcdef123456
     if (ctx.charset) html += '<br>文字コード: <code>' + ctx.charset + "</code>";
     if (ctx.partMime) html += (ctx.charset ? " / " : "<br>") + "パート: <code>" + ctx.partMime + "</code>";
     $("log").innerHTML = html;
+
+    renderImages(ctx, text);
   }
 
   /* ---------- トースト / コピー ---------- */
@@ -906,6 +1180,7 @@ f?token=3Dabcdef123456
   $("input").addEventListener("input", run);
   $("auto").addEventListener("change", function () { setAutoMode(this.checked); run(); });
   $("with-header").addEventListener("change", run);
+  $("load-remote").addEventListener("change", run);
   $("mono").addEventListener("change", function () { $("output").classList.toggle("mono", this.checked); });
   $("btn-run").addEventListener("click", run);
 
