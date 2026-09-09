@@ -26,7 +26,7 @@ function application() {
           setImmediate(async () => {
             if (this.terminated) return;
             try {
-              const result = message.type === 'analyze' ? E.makeModel(message.input.segments).analyses : await E.search(message.input);
+              const result = message.type === 'analyze' ? E.makeModel(message.input.segments, undefined, message.input.settings).analyses : await E.search(message.input);
               if (!this.terminated) this.onmessage?.({ data: { id: message.id, type: 'result', result } });
             } catch (e) { if (!this.terminated) this.onmessage?.({ data: { id: message.id, type: 'error', message: e.message } }); }
           });
@@ -66,15 +66,19 @@ test('the embedded worker really runs independently with no imported files', asy
   await context.onmessage({ data: { id: 5, type: 'search', input: { segments: seg, target: { size: 29, bits: Uint8Array.from(symbol.modules.data) }, settings: { version: 3, masks: 0, seconds: 2, candidates: 1 } } } });
   const result = messages.find(m => m.type === 'result'); assert(result, JSON.stringify(messages)); assert.equal(result.result.candidates[0].text, 'https://example.com/#8'); assert(result.result.candidates[0].validation.ok);
 });
-test('UI initializes offline and retains exact painted weights and hard constraints through length/Version search', async () => {
+for (const encoding of ['byte', 'numeric']) test(`UI retains exact painted weights and hard constraints through ${encoding} length/Version search`, async () => {
   const app = application(), { w, d, set } = app;
   assert(w.ImageQrApp); assert.deepEqual(app.errors, []);
+  set('encoding', encoding); set('version', 3);
   set('segment-0-text', 'https://example.com/#'); set('segment-1-length', 6); set('segment-1-start', 1); set('segment-1-step', 2);
   set('brush-mode', 'soft-black'); d.getElementById('apply-all').click();
   set('brush-mode', 'weight'); set('brush-weight', .15); d.getElementById('apply-all').click();
   set('brush-mode', 'black'); set('region-shape', 'brush'); set('brush-radius', 0);
   d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerdown', { clientX: 1, clientY: 1, bubbles: true }));
   d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerup', { clientX: 1, clientY: 1, bubbles: true }));
+  // Start both encodings on the same edit grid. Projecting a Version 2 corner
+  // cell to Version 3 also covers the finder's white inner ring and is infeasible.
+  set('version', 'auto');
   set('auto-length', true); set('compare-versions', true); set('version-min', 3); set('version-max', 4); set('length-trials', 3); set('soft-passes', 1); set('reserve-free', 3); set('null-samples', 8); set('search-seconds', 3);
   const before = w.ImageQrApp.snapshot(); await w.ImageQrApp.generate(); const after = w.ImageQrApp.snapshot();
   assert.equal(d.getElementById('search-status').classList.contains('error'), false, d.getElementById('search-status').textContent);
@@ -108,4 +112,26 @@ test('cancel settles the pending generation and a subsequent generation works wi
   assert.equal(d.getElementById('validation-badge').hidden, false, d.getElementById('search-status').textContent);
   assert.deepEqual(Object.keys(app.requests.at(-1).input.targets), ['2']);
   assert.deepEqual(app.errors, []); app.dom.window.close();
+});
+test('drawing setup fills the current QR size without changing fixed text, ECC or painted constraints', async () => {
+  const app = application(), { w, d, set } = app;
+  set('encoding', 'byte'); set('segment-1-length', 128); set('segment-0-text', 'https://x.test/#'); set('version', 8);
+  set('brush-mode', 'soft-black'); d.getElementById('apply-all').click();
+  set('brush-mode', 'black'); set('brush-radius', 0); set('region-shape', 'brush');
+  d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerdown', { clientX: 1, clientY: 1, bubbles: true }));
+  d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerup', { clientX: 1, clientY: 1, bubbles: true }));
+  const before = w.ImageQrApp.snapshot(); d.getElementById('prepare-numeric').click(); const after = w.ImageQrApp.snapshot();
+  assert.equal(d.getElementById('encoding').value, 'numeric'); assert.equal(d.getElementById('version').value, '8'); assert.equal(d.getElementById('ecc').value, 'M');
+  assert.equal(after.segments[0].text, 'https://x.test/#'); assert(after.segments[1].length > 128);
+  for (const key of ['weights', 'hard', 'soft']) assert.deepEqual(Array.from(after[key]), Array.from(before[key]));
+  const m = E.makeModel(after.segments, undefined, { encoding: 'numeric' }); assert.equal(E.encode(m.baseline, 8, 'M', 0, m).version, 8);
+  assert.equal(after.segments[1].length, E.maxVariableLength(after.segments, 1, { encoding: 'numeric', version: 8, ecc: 'M' }));
+  assert.deepEqual(app.errors, []); app.dom.window.close();
+});
+test('numeric setup rejects incompatible alphabets without overwriting the user configuration', () => {
+  const app = application(), { w, d, set } = app;
+  set('encoding', 'byte'); set('segment-1-length', 5); set('segment-1-allowed', 'ABC');
+  const before = w.ImageQrApp.snapshot(); d.getElementById('prepare-numeric').click();
+  assert.equal(d.getElementById('encoding').value, 'byte'); assert.deepEqual(w.ImageQrApp.snapshot(), before);
+  assert.match(d.getElementById('search-status').textContent, /0〜9/); app.dom.window.close();
 });

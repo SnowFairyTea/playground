@@ -3,18 +3,20 @@
   const E = window.ImageQrEngine, $ = id => document.getElementById(id), root = $('image-qr-app');
   if (!root || !E) return;
   const state = {
-    segments: [{ kind: 'fixed', text: '' }, { kind: 'variable', length: 128, start: 1, step: 0, refineRadius: 2, allowed: E.URLSAFE, forbidden: '', affineChoice: 'auto' }],
+    segments: [{ kind: 'fixed', text: '' }, { kind: 'variable', length: 365, start: 1, step: 0, refineRadius: 2, allowed: E.URLSAFE, forbidden: '', affineChoice: 'auto' }],
     source: null, sourceURL: null, size: 49, weights: new Float32Array(49 * 49).fill(1), hard: new Int8Array(49 * 49).fill(-1), soft: new Int8Array(49 * 49).fill(-1),
     bits: null, worker: null, workerURL: null, workerReject: null, busy: false, request: 0, revision: 0, candidates: [], selected: null, analyses: [], disabled: new Map()
   };
   const imageFields = ['fit-mode', 'threshold', 'contrast', 'brightness', 'image-zoom', 'outside-level', 'image-offset-x', 'image-offset-y', 'gray-method', 'crop-x', 'crop-y', 'crop-w', 'crop-h', 'target-safe-inset', 'invert-target', 'image-smoothing', 'avoid-corner-patterns'];
-  const settingFields = ['version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed'];
+  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed'];
   const number = id => Number($(id).value);
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const percent = value => (value * 100).toFixed(1) + '%';
+  const percent = value => value == null ? '対象なし' : (value * 100).toFixed(1) + '%';
+  const score = value => (value * 100).toFixed(1) + ' / 100';
   function status(message, error = false) { $('search-status').textContent = message; $('search-status').classList.toggle('error', error); }
   function settings() {
     return E.normalizeSettings({
+      encoding: $('encoding').value,
       version: $('version').value, ecc: $('ecc').value, masks: $('mask').value,
       versionMin: number('version-min'), versionMax: number('version-max'), compareVersions: $('compare-versions').checked,
       rotations: $('rotation').value === 'all' ? [0, 1, 2, 3] : [Number($('rotation').value)],
@@ -38,11 +40,11 @@
       if (seg.kind === 'fixed') card.insertAdjacentHTML('beforeend', `<label for="segment-${i}-text" class="qr-spaced">保持する文字列 / URL</label><textarea id="segment-${i}-text" rows="2" data-field="text" placeholder="例: https://example.com/#"></textarea>`);
       else {
         card.insertAdjacentHTML('beforeend', `<div class="qr-grid-3 qr-spaced">
-          <div><label for="segment-${i}-length">長さ / 探索終了</label><input id="segment-${i}-length" data-field="length" type="number" min="1" max="2953"></div>
-          <div><label for="segment-${i}-start">探索開始</label><input id="segment-${i}-start" data-field="start" type="number" min="1" max="2953"></div>
-          <div><label for="segment-${i}-step">粗探索Step（0で自動）</label><input id="segment-${i}-step" data-field="step" type="number" min="0" max="2953"></div>
+          <div><label for="segment-${i}-length">長さ / 探索終了</label><input id="segment-${i}-length" data-field="length" type="number" min="1" max="7089"></div>
+          <div><label for="segment-${i}-start">探索開始</label><input id="segment-${i}-start" data-field="start" type="number" min="1" max="7089"></div>
+          <div><label for="segment-${i}-step">粗探索Step（0で自動）</label><input id="segment-${i}-step" data-field="step" type="number" min="0" max="7089"></div>
         </div><label for="segment-${i}-allowed" class="qr-spaced">使用可能文字</label><textarea id="segment-${i}-allowed" data-field="allowed" rows="2"></textarea>
-        <div class="qr-toolbar qr-spaced"><button type="button" class="secondary" data-preset="url">URL-safe</button><button type="button" class="secondary" data-preset="extended">URL-safe + .~</button><button type="button" class="secondary" data-preset="digits">0–9</button><button type="button" class="secondary" data-preset="upper">A–Z</button><button type="button" class="secondary" data-preset="lower">a–z</button><button type="button" class="secondary" data-action="max">収まる最大長にする</button></div>
+        <div class="qr-toolbar qr-spaced"><button type="button" class="secondary" data-preset="url">URL-safe</button><button type="button" class="secondary" data-preset="extended">URL-safe + .~</button><button type="button" class="secondary" data-preset="digits">0–9</button><button type="button" class="secondary" data-preset="upper">A–Z</button><button type="button" class="secondary" data-preset="lower">a–z</button><button type="button" class="secondary" data-action="max">このサイズで使える長さにする</button></div>
         <details class="qr-details"><summary>この部分の詳細</summary><div class="qr-grid-3 qr-spaced"><div><label for="segment-${i}-forbidden">禁止文字</label><input id="segment-${i}-forbidden" data-field="forbidden" type="text"></div><div><label for="segment-${i}-refine">細探索の±幅</label><input id="segment-${i}-refine" data-field="refineRadius" type="number" min="0" max="100"></div><div><label for="segment-${i}-affine">初期求解の部分集合</label><select id="segment-${i}-affine" data-field="affineChoice"><option value="auto">自動（最大自由度）</option></select></div></div></details>`);
         const analysis = state.analyses.find(a => a.segment === i);
         if (analysis?.candidates) analysis.candidates.forEach((a, k) => { const option = document.createElement('option'); option.value = k; option.textContent = `${k + 1}: ${a.characters}`; card.querySelector('[data-field="affineChoice"]').appendChild(option); });
@@ -75,16 +77,11 @@
       container.appendChild(card);
     });
   }
-  function previewPayload() {
-    return state.segments.map(s => s.kind === 'fixed' ? String(s.text || '') : String.fromCharCode(E.allowedBytes(s)[0]).repeat(Math.max(1, Math.min(2953, s.length || 1)))).join('');
-  }
   function setMaxLength(index) {
-    const s = settings(), version = s.version === 'auto' ? s.versionMax : s.version;
-    const ecl = { L: qrcodegen.QrCode.Ecc.LOW, M: qrcodegen.QrCode.Ecc.MEDIUM, Q: qrcodegen.QrCode.Ecc.QUARTILE, H: qrcodegen.QrCode.Ecc.HIGH }[s.ecc];
-    const capacity = Math.floor((qrcodegen.QrCode.getNumDataCodewords(version, ecl) * 8 - 4 - (version < 10 ? 8 : 16)) / 8);
-    let other = 0; state.segments.forEach((seg, i) => { if (i !== index) other += seg.kind === 'fixed' ? new TextEncoder().encode(seg.text || '').length : seg.length; });
-    const length = capacity - other; if (length < 1) throw new Error('他の固定・可変部分だけで、このVersionの容量に達しています。');
-    state.segments[index].length = length;
+    const s = settings(), version = s.version === 'auto' ? (state.size - 17) / 4 : s.version;
+    const length = E.maxVariableLength(state.segments, index, { ...s, version });
+    state.segments[index].length = length; state.segments[index].start = Math.min(state.segments[index].start || 1, length);
+    $('version').value = String(version);
   }
   function imageParameters() {
     for (const id of imageFields) if ($(id).type === 'number' && (!$(id).checkValidity() || !Number.isFinite(number(id)))) throw new Error('画像の変換値を確認してください。');
@@ -121,7 +118,8 @@
   function refreshTarget() {
     try {
       const version = $('version').value === 'auto' ? undefined : Number($('version').value);
-      const q = QRCode.create([{ data: previewPayload(), mode: 'byte' }], { errorCorrectionLevel: $('ecc').value, version, maskPattern: 0 });
+      const model = E.makeModel(state.segments, undefined, { encoding: $('encoding').value });
+      const q = E.encode(model.baseline, version, $('ecc').value, 0, model);
       const next = q.modules.size;
       if (next !== state.size) {
         // The edit grid is a stable coordinate system. Candidate sizes are projected from it.
@@ -231,10 +229,10 @@
     const c = state.candidates[index]; if (!c) return; state.selected = c;
     drawResult($('result-canvas'), c); $('result-text').value = c.text;
     $('validation-badge').hidden = false; $('export-controls').hidden = false;
-    $('result-summary').textContent = `絵の一致 ${percent(c.metrics.visual)} · 画素一致 ${percent(c.metrics.weighted)} · ${c.size}×${c.size}マス`;
+    $('result-summary').textContent = `画素一致 ${percent(c.metrics.raw)} · 黒領域の再現 ${percent(c.metrics.blackRecall)} · 背景への黒混入 ${percent(c.metrics.backgroundBlack)} · ${c.size}×${c.size}マス`;
     for (const [i, button] of [...$('candidates').children].entries()) button.setAttribute('aria-pressed', String(i === index));
     const v = c.validation;
-    const rows = [['Version / 誤り訂正 / Mask / 向き', `${c.version} / ${c.ecc} / ${c.mask} / ${c.rotation * 90}°`], ['可変部分の長さ', c.lengths.join(' / ') || 'なし'], ['初期求解の自由変数 / 絶対指定のrank', `${c.variables} / ${c.hardRank}`], ['初期求解の構造固定 / 条件固定 / 可変マス', `${c.classification.structural} / ${c.classification.fixed} / ${c.classification.variable}`], ['画素一致（重要度あり）', percent(c.metrics.weighted)], ['全画素の一致', percent(c.metrics.raw)], ['濃淡を含む評価', percent(c.metrics.visual)], ['QR全体の黒率 / 目標の黒率', `${percent(c.metrics.blackRate)} / ${percent(c.metrics.targetBlackRate)}`], ['固定文字列・許可文字 / 絶対指定', '一致 / 全件達成'], ['独立エンコーダ / 画像のマス再読込', `差分 ${v.encoderDiff} / ${v.moduleReloadDiff} マス`], ['画像から独立復号', '元のバイト列と完全一致'], ['許可文字全体からの改善回数', c.charsetMoves]];
+    const rows = [['Version / 誤り訂正 / Mask / 向き', `${c.version} / ${c.ecc} / ${c.mask} / ${c.rotation * 90}°`], ['可変部分の長さ', c.lengths.join(' / ') || 'なし'], ['初期求解の自由変数 / 絶対指定のrank', `${c.variables} / ${c.hardRank}`], ['初期求解の構造固定 / 条件固定 / 可変マス', `${c.classification.structural} / ${c.classification.fixed} / ${c.classification.variable}`], ['画素一致（重要度あり）', percent(c.metrics.weighted)], ['全画素の一致', percent(c.metrics.raw)], ['探索スコア（見た目の再現率ではありません）', score(c.metrics.visual)], ['黒領域の再現 / 背景への黒混入', `${percent(c.metrics.blackRecall)} / ${percent(c.metrics.backgroundBlack)}`], ['符号化の組み合わせ', c.modes.join(' + ')], ['QR全体の黒率 / 目標の黒率', `${percent(c.metrics.blackRate)} / ${percent(c.metrics.targetBlackRate)}`], ['固定文字列・許可文字 / 絶対指定', '一致 / 全件達成'], ['独立エンコーダ / 画像のマス再読込', `差分 ${v.encoderDiff} / ${v.moduleReloadDiff} マス`], ['画像から独立復号', '元のバイト列と完全一致'], ['許可文字全体からの改善回数', c.charsetMoves]];
     $('candidate-details').innerHTML = `<table><tbody>${rows.map(([k, value]) => `<tr><th>${escape(k)}</th><td>${escape(value)}</td></tr>`).join('')}</tbody></table><p class="qr-note">RSブロックごとの実測。訂正余力は、誤り位置が未知の場合の理論上の語数です。</p><table><thead><tr><th>ブロック</th><th>誤り語</th><th>非零シンドローム</th><th>訂正余力</th></tr></thead><tbody>${v.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.nonzeroSyndromes}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
   }
   async function generate() {
@@ -248,12 +246,12 @@
       for (let version = first; version <= last; version++) { try { targets[version] = targetAt(version * 4 + 17); } catch (e) { targets[version] = { error: e.message }; } }
       const input = { segments: structuredClone(state.segments), settings: config, targets }, revision = state.revision;
       busy(true); status('画像に近いQRコードを探索しています。'); $('export-controls').hidden = true; $('validation-badge').hidden = true;
-      const task = runWorker('search', input, p => { status(p.message); if (p.candidate) { drawResult($('result-canvas'), p.candidate); $('result-summary').textContent = `探索中 · 絵の一致 ${percent(p.candidate.metrics.visual)}（最終検証前）`; } });
+      const task = runWorker('search', input, p => { status(p.message); if (p.candidate) { drawResult($('result-canvas'), p.candidate); $('result-summary').textContent = `探索中 · スコア ${score(p.candidate.metrics.visual)}（最終検証前）`; } });
       request = state.request;
       const result = await task;
       if (revision !== state.revision) return;
       state.candidates = result.candidates; const container = $('candidates'); container.replaceChildren();
-      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'); drawResult(canvas, c, 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · ${percent(c.metrics.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
+      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'); drawResult(canvas, c, 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · スコア ${score(c.metrics.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
       $('candidates-section').hidden = false; selectCandidate(0);
       const s = result.stats; $('search-stats').textContent = `${s.seconds.toFixed(1)}秒 · ${s.attempted}条件を比較 · 絶対指定の解が見つからなかった ${s.infeasible}条件 · 読み取り検証で除外 ${s.rejected}候補${s.timedOut ? ' · 時間の目安に達したため、その時点までの最良候補を表示' : ''}`;
       status(`検証に合格した${result.candidates.length}候補を生成しました。PNG・SVGとして保存できます。${s.failures.length ? '\n探索できなかった条件: ' + s.failures.join(' / ') : ''}`);
@@ -287,13 +285,25 @@
   $('clear-soft').addEventListener('click', () => { state.soft.fill(-1); invalidate(); refreshTarget(); });
   $('reset-weights').addEventListener('click', () => { state.weights.fill(1); invalidate(); refreshTarget(); });
   for (const button of root.querySelectorAll('.radius-preset')) button.addEventListener('click', () => { $('brush-radius').value = button.dataset.radius; $('region-shape').value = 'brush'; });
-  for (const id of [...imageFields, ...settingFields]) $(id).addEventListener('change', () => { invalidate(); refreshTarget(); });
+  for (const id of [...imageFields, ...settingFields]) $(id).addEventListener('change', () => { if (id === 'encoding') { state.analyses = []; state.segments.forEach(s => { s.affineChoice = 'auto'; }); renderSegments(); } invalidate(); refreshTarget(); });
+  $('prepare-numeric').addEventListener('click', () => {
+    try {
+      const eligible = state.segments.map((s, i) => s.kind === 'variable' && Array.from({ length: 10 }, (_, n) => 48 + n).every(b => E.allowedBytes(s).includes(b)) ? i : -1).filter(i => i >= 0);
+      if (!eligible.length) throw new Error('数字0〜9をすべて許可した可変部分が必要です。');
+      const index = eligible[eligible.length - 1], s = settings(), version = s.version === 'auto' ? (state.size - 17) / 4 : s.version;
+      const length = E.maxVariableLength(state.segments, index, { ...s, version, encoding: 'numeric' });
+      $('encoding').value = 'numeric'; $('version').value = String(version);
+      state.segments[index].length = length; state.segments[index].start = Math.min(state.segments[index].start || 1, length);
+      state.analyses = []; state.segments.forEach(s => { s.affineChoice = 'auto'; }); renderSegments(); invalidate(); refreshTarget();
+      status(`Version ${version}・誤り訂正${s.ecc}のまま、部分${index + 1}を数字${length}桁に設定しました。固定文字列と領域指定は保持しています。`);
+    } catch (e) { status(e.message, true); }
+  });
   $('generate').addEventListener('click', generate);
   $('cancel').addEventListener('click', () => { stopWorker(new DOMException('探索を中断しました。', 'AbortError')); state.request++; state.revision++; busy(false); $('export-controls').hidden = true; $('validation-badge').hidden = true; status('探索を中断しました。画像・文字列・領域指定は保持されています。'); });
   $('analyze-charsets').addEventListener('click', async () => {
     if (state.busy) return; busy(true);
     let request;
-    try { const task = runWorker('analyze', { segments: structuredClone(state.segments) }); request = state.request; const analyses = await task; state.analyses = analyses; $('charset-status').textContent = analyses.map(a => `部分${a.segment + 1}: 許可${a.allowed}文字 / 初期集合${a.selected}文字 / ${a.dimension}bit/文字`).join('\n') || '固定文字列のみです。'; }
+    try { const task = runWorker('analyze', { segments: structuredClone(state.segments), settings: settings() }); request = state.request; const analyses = await task; state.analyses = analyses; $('charset-status').textContent = analyses.map(a => a.encoding === 'numeric' ? `部分${a.segment + 1}: 数字用 / 初期自由度${a.totalBits}bit` : `部分${a.segment + 1}: Byte / 許可${a.allowed}文字 / 初期集合${a.selected}文字 / ${a.dimension}bit/文字`).join('\n') || '固定文字列のみです。'; }
     catch (e) { if (e.name !== 'AbortError') $('charset-status').textContent = e.message; }
     finally { if (request === undefined || request === state.request) { busy(false); renderSegments(); } }
   });

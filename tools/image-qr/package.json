@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "node --test --test-concurrency=1 *.test.cjs",
-    "benchmark": "node benchmark.cjs"
+    "benchmark": "node benchmark.cjs",
+    "benchmark:numeric": "node benchmark-numeric.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0",
