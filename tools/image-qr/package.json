@@ -1,0 +1,12 @@
+{
+  "name": "image-qr-verification",
+  "private": true,
+  "scripts": {
+    "test": "node --test --test-concurrency=1 *.test.cjs",
+    "benchmark": "node benchmark.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "pngjs": "7.0.0"
+  }
+}

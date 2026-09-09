@@ -49,3 +49,9 @@ accounts:
   - service: pokemon GO
     name: Snowfairy2002
     id: 206082336128
+
+# Development-only QR regression dependencies and sources.
+exclude:
+  - tools/image-qr
+  - tools/build-image-qr.mjs
+  - assets/vendor/image-qr/qrcodegen.ts

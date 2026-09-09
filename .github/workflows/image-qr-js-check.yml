@@ -1,10 +1,14 @@
-name: Image QR JavaScript Check
+name: Image QR Verification
 
 on:
   pull_request:
     paths:
       - "assets/image-qr-*.js"
+      - "assets/image-qr.css"
+      - "assets/vendor/image-qr/**"
       - "apps/image-qr-optimizer/**"
+      - "tools/image-qr/**"
+      - "tools/build-image-qr.mjs"
       - "_layouts/artifacts.html"
       - ".github/workflows/image-qr-js-check.yml"
   workflow_dispatch:
@@ -17,6 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: tools/image-qr/package-lock.json
       - name: Check image QR helper JavaScript syntax
         shell: bash
         run: |
@@ -30,3 +39,9 @@ jobs:
             echo "node --check $file"
             node --check "$file"
           done
+      - name: Install verification dependencies
+        run: npm ci --prefix tools/image-qr --ignore-scripts --no-audit --no-fund
+      - name: Verify QR generation, constraints, exports and standalone application
+        run: npm --prefix tools/image-qr test
+      - name: Verify reproducible standalone HTML
+        run: node tools/build-image-qr.mjs --check

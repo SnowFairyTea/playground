@@ -1,0 +1,85 @@
+{
+  "baselineCommit": "79b4ce97f8a726b5a4b173cee8f93cb45b41ba85",
+  "node": "v24.19.0",
+  "settings": {
+    "version": 8,
+    "ecc": "M",
+    "masks": "all",
+    "rotations": [
+      0
+    ],
+    "passes": 3,
+    "reserve": 8,
+    "samples": 64,
+    "seed": 7,
+    "seconds": 20,
+    "candidates": 1,
+    "perception": 0,
+    "fullCharset": true
+  },
+  "segments": [
+    {
+      "kind": "fixed",
+      "text": "https://example.com/#"
+    },
+    {
+      "kind": "variable",
+      "length": 128,
+      "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    }
+  ],
+  "method": "The previous greedy candidate-selection algorithm is reconstructed using shared mapping/linear algebra. Its automatic safety reduction is disabled. Both runs use all masks, three passes and the same seed; the new run adds exact residual enumeration and local refinement within 20 seconds. This compares achieved quality, not equal runtime or equal evaluation count. Uniform weights, no hard constraints; objective is pixel agreement (perception=0).",
+  "rows": [
+    {
+      "shape": "ring",
+      "legacy": {
+        "weighted": 0.6434818825489379,
+        "seconds": 1.304736334,
+        "decoded": true
+      },
+      "completed": {
+        "weighted": 0.6459808413161183,
+        "seconds": 18.025536092,
+        "decoded": true,
+        "encoderDiff": 0,
+        "charsetMoves": 0,
+        "conditions": 8
+      },
+      "percentagePointChange": 0.2498958767180426
+    },
+    {
+      "shape": "diagonal",
+      "legacy": {
+        "weighted": 0.6438983756768013,
+        "seconds": 1.2131091879999985,
+        "decoded": true
+      },
+      "completed": {
+        "weighted": 0.6505622657226156,
+        "seconds": 19.710714681,
+        "decoded": true,
+        "encoderDiff": 0,
+        "charsetMoves": 1,
+        "conditions": 8
+      },
+      "percentagePointChange": 0.6663890045814247
+    },
+    {
+      "shape": "heart",
+      "legacy": {
+        "weighted": 0.6422324031653478,
+        "seconds": 1.0685173700000015,
+        "decoded": true
+      },
+      "completed": {
+        "weighted": 0.6430653894210745,
+        "seconds": 18.141533963,
+        "decoded": true,
+        "encoderDiff": 0,
+        "charsetMoves": 0,
+        "conditions": 8
+      },
+      "percentagePointChange": 0.08329862557266976
+    }
+  ]
+}
