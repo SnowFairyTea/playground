@@ -3,12 +3,12 @@
   const E = window.ImageQrEngine, $ = id => document.getElementById(id), root = $('image-qr-app');
   if (!root || !E) return;
   const state = {
-    segments: [{ kind: 'fixed', text: '' }, { kind: 'variable', length: 365, start: 1, step: 0, refineRadius: 2, allowed: E.URLSAFE, forbidden: '', affineChoice: 'auto' }],
+    segments: [{ kind: 'fixed', text: '' }, { kind: 'variable', length: 128, start: 1, step: 0, refineRadius: 2, allowed: E.URLSAFE, forbidden: '', affineChoice: 'auto' }],
     source: null, sourceURL: null, size: 49, weights: new Float32Array(49 * 49).fill(1), hard: new Int8Array(49 * 49).fill(-1), soft: new Int8Array(49 * 49).fill(-1),
     bits: null, worker: null, workerURL: null, workerReject: null, busy: false, request: 0, revision: 0, candidates: [], selected: null, analyses: [], disabled: new Map()
   };
   const imageFields = ['fit-mode', 'threshold', 'contrast', 'brightness', 'image-zoom', 'outside-level', 'image-offset-x', 'image-offset-y', 'gray-method', 'crop-x', 'crop-y', 'crop-w', 'crop-h', 'target-safe-inset', 'invert-target', 'image-smoothing', 'avoid-corner-patterns'];
-  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed'];
+  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed', 'make-artistic', 'artistic-budget'];
   const number = id => Number($(id).value);
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const percent = value => value == null ? '対象なし' : (value * 100).toFixed(1) + '%';
@@ -17,6 +17,7 @@
   function settings() {
     return E.normalizeSettings({
       encoding: $('encoding').value,
+      artistic: $('make-artistic').checked, artisticBudget: number('artistic-budget'),
       version: $('version').value, ecc: $('ecc').value, masks: $('mask').value,
       versionMin: number('version-min'), versionMax: number('version-max'), compareVersions: $('compare-versions').checked,
       rotations: $('rotation').value === 'all' ? [0, 1, 2, 3] : [Number($('rotation').value)],
@@ -28,6 +29,7 @@
   function invalidate() {
     state.revision++;
     $('export-controls').hidden = true; $('validation-badge').hidden = true;
+    $('artistic-section').hidden = true;
     $('candidates-section').hidden = true; state.selected = null; state.candidates = [];
     $('result-summary').textContent = '条件を変更しました。「生成する」で新しい候補を比較できます。';
   }
@@ -234,6 +236,16 @@
     const v = c.validation;
     const rows = [['Version / 誤り訂正 / Mask / 向き', `${c.version} / ${c.ecc} / ${c.mask} / ${c.rotation * 90}°`], ['可変部分の長さ', c.lengths.join(' / ') || 'なし'], ['初期求解の自由変数 / 絶対指定のrank', `${c.variables} / ${c.hardRank}`], ['初期求解の構造固定 / 条件固定 / 可変マス', `${c.classification.structural} / ${c.classification.fixed} / ${c.classification.variable}`], ['画素一致（重要度あり）', percent(c.metrics.weighted)], ['全画素の一致', percent(c.metrics.raw)], ['探索スコア（見た目の再現率ではありません）', score(c.metrics.visual)], ['黒領域の再現 / 背景への黒混入', `${percent(c.metrics.blackRecall)} / ${percent(c.metrics.backgroundBlack)}`], ['符号化の組み合わせ', c.modes.join(' + ')], ['QR全体の黒率 / 目標の黒率', `${percent(c.metrics.blackRate)} / ${percent(c.metrics.targetBlackRate)}`], ['固定文字列・許可文字 / 絶対指定', '一致 / 全件達成'], ['独立エンコーダ / 画像のマス再読込', `差分 ${v.encoderDiff} / ${v.moduleReloadDiff} マス`], ['画像から独立復号', '元のバイト列と完全一致'], ['許可文字全体からの改善回数', c.charsetMoves]];
     $('candidate-details').innerHTML = `<table><tbody>${rows.map(([k, value]) => `<tr><th>${escape(k)}</th><td>${escape(value)}</td></tr>`).join('')}</tbody></table><p class="qr-note">RSブロックごとの実測。訂正余力は、誤り位置が未知の場合の理論上の語数です。</p><table><thead><tr><th>ブロック</th><th>誤り語</th><th>非零シンドローム</th><th>訂正余力</th></tr></thead><tbody>${v.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.nonzeroSyndromes}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
+    const a = c.artistic, available = !!a?.validation.ok;
+    $('artistic-section').hidden = c.artistic === undefined;
+    $('artistic-image').hidden = $('artistic-badge').hidden = $('artistic-export-controls').hidden = !available;
+    if (available) {
+      drawResult($('artistic-canvas'), a);
+      const gain = (100 * (a.metrics.raw - c.metrics.raw)).toFixed(1);
+      $('artistic-summary').textContent = `画素一致 ${percent(a.metrics.raw)}（正規版から +${gain}ポイント） · 黒領域の再現 ${percent(a.metrics.blackRecall)} · 背景への黒混入 ${percent(a.metrics.backgroundBlack)}`;
+      const checks = a.validation;
+      $('artistic-details').innerHTML = `<p class="qr-note">${a.changedModules}マス・${a.changedWords}語を変更。1マス2 / 4 / 8px、白い余白4マスで、すべて元の文字列に復号できました。四隅などの構造と絶対指定は保持しています。</p><table><thead><tr><th>ブロック</th><th>変更した語</th><th>加工の上限</th><th>残る訂正余力</th></tr></thead><tbody>${checks.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.budget}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
+    } else $('artistic-summary').textContent = c.artisticNote || '';
   }
   async function generate() {
     if (state.busy) return;
@@ -245,7 +257,7 @@
       const first = config.version === 'auto' ? config.versionMin : config.version, last = config.version === 'auto' ? config.versionMax : config.version;
       for (let version = first; version <= last; version++) { try { targets[version] = targetAt(version * 4 + 17); } catch (e) { targets[version] = { error: e.message }; } }
       const input = { segments: structuredClone(state.segments), settings: config, targets }, revision = state.revision;
-      busy(true); status('画像に近いQRコードを探索しています。'); $('export-controls').hidden = true; $('validation-badge').hidden = true;
+      busy(true); status('画像に近いQRコードを探索しています。'); $('export-controls').hidden = true; $('validation-badge').hidden = true; $('artistic-section').hidden = true;
       const task = runWorker('search', input, p => { status(p.message); if (p.candidate) { drawResult($('result-canvas'), p.candidate); $('result-summary').textContent = `探索中 · スコア ${score(p.candidate.metrics.visual)}（最終検証前）`; } });
       request = state.request;
       const result = await task;
@@ -259,8 +271,8 @@
     finally { if (request === undefined || request === state.request) busy(false); }
   }
   function download(blob, filename) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
-  async function save(kind) {
-    const c = state.selected; if (!c?.validation.ok) return;
+  async function save(kind, artistic = false) {
+    const c = artistic ? state.selected?.artistic : state.selected; if (!c?.validation.ok) return;
     try {
       const scale = number('export-scale'), quiet = number('export-quiet');
       if (!$('export-scale').checkValidity() || !$('export-quiet').checkValidity()) throw new Error('保存サイズと余白を確認してください。');
@@ -269,7 +281,7 @@
       const modules = E.reloadModules({ ...raster, data: actual.data }, c.size), decoded = jsQR(actual.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
       if (modules.some((v, j) => v !== c.matrix[j]) || !decoded || decoded.binaryData.length !== c.bytes.length || decoded.binaryData.some((b, i) => b !== c.bytes[i])) throw new Error('この保存サイズでの読み取り検証に失敗しました。1マスのピクセル数を大きくしてください。');
       const blob = kind === 'svg' ? new Blob([E.svg(c.matrix, c.size, scale, quiet)], { type: 'image/svg+xml' }) : await new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('PNGを作成できませんでした。')), 'image/png'));
-      download(blob, `image-qr-v${c.version}-m${c.mask}.${kind}`); status(`${kind.toUpperCase()}を保存しました。読み取り文字列も検証済みです。`);
+      download(blob, `image-qr${artistic ? '-artistic' : ''}-v${c.version}-m${c.mask}.${kind}`); status(`${artistic ? '加工版' : '正規版'}${kind.toUpperCase()}を保存しました。読み取り文字列も検証済みです。`);
     } catch (e) { status(e.message, true); }
   }
   $('source-image').addEventListener('change', () => {
@@ -299,7 +311,7 @@
     } catch (e) { status(e.message, true); }
   });
   $('generate').addEventListener('click', generate);
-  $('cancel').addEventListener('click', () => { stopWorker(new DOMException('探索を中断しました。', 'AbortError')); state.request++; state.revision++; busy(false); $('export-controls').hidden = true; $('validation-badge').hidden = true; status('探索を中断しました。画像・文字列・領域指定は保持されています。'); });
+  $('cancel').addEventListener('click', () => { stopWorker(new DOMException('探索を中断しました。', 'AbortError')); state.request++; state.revision++; busy(false); $('export-controls').hidden = true; $('validation-badge').hidden = true; $('artistic-section').hidden = true; status('探索を中断しました。画像・文字列・領域指定は保持されています。'); });
   $('analyze-charsets').addEventListener('click', async () => {
     if (state.busy) return; busy(true);
     let request;
@@ -308,6 +320,7 @@
     finally { if (request === undefined || request === state.request) { busy(false); renderSegments(); } }
   });
   $('save-png').addEventListener('click', () => save('png')); $('save-svg').addEventListener('click', () => save('svg'));
+  $('save-artistic-png').addEventListener('click', () => save('png', true)); $('save-artistic-svg').addEventListener('click', () => save('svg', true));
   $('copy-text').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('result-text').value); status('文字列をコピーしました。'); } catch { $('result-text').focus(); $('result-text').select(); if (document.execCommand('copy')) status('文字列をコピーしました。'); else status('文字列を選択しました。コピー操作で保存できます。'); } });
   for (let v = 1; v <= 40; v++) { const option = document.createElement('option'); option.value = v; option.textContent = `${v}（${v * 4 + 17}×${v * 4 + 17}）`; $('version').appendChild(option); }
   for (let m = 0; m < 8; m++) { const option = document.createElement('option'); option.value = m; option.textContent = String(m); $('mask').appendChild(option); }

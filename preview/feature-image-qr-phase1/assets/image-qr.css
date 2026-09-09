@@ -48,6 +48,9 @@
 .qr-status { border-left: 3px solid #16a34a; background: #f0fdf4; padding: 12px 14px; margin-top: 16px; white-space: pre-wrap; font-size: .9rem; }
 .qr-status.error { border-color: #dc2626; background: #fef2f2; }
 .qr-badge { color: #166534; background: #dcfce7; border-radius: 999px; padding: 3px 10px; font-size: .8rem; font-weight: 600; }
+.qr-artistic { border-top: 2px solid #dbe2ea; margin-top: 24px; padding-top: 20px; }
+.qr-artistic h3 { font-size: 1.1rem; margin: 0 0 14px; }
+.qr-artistic .qr-badge { color: #854d0e; background: #fef9c3; }
 .qr-mono { font-family: var(--font-mono, ui-monospace, monospace) !important; font-size: .875rem !important; overflow-wrap: anywhere; }
 .qr-app table { border-collapse: collapse; width: 100%; font-size: .875rem; margin-top: 10px; }
 .qr-app td, .qr-app th { border-bottom: 1px solid #e5e7eb; padding: 7px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }

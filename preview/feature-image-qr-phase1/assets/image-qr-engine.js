@@ -1,4 +1,4 @@
-/* Image QR optimizer. All search changes payload bytes, never an encoded QR. */
+/* Payload search produces pristine QR codes. Optional artwork is verified separately. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./qrcode.min.js'), require('./vendor/image-qr/qrcodegen.js'), require('./vendor/image-qr/jsQR.js'));
   else root.ImageQrEngine = factory(root.QRCode, root.qrcodegen, root.jsQR);
@@ -601,6 +601,76 @@
     const blocks = rsReport(canonical, reference, symbol, ecc, mask), rsOK = blocks.every(b => b.errors === 0 && b.nonzeroSyndromes === 0);
     return { ok: payload && absolute && !encoderDiff && !actualDiff && !moduleReloadDiff && decodeOK && rsOK, payload, absolute, encoderDiff, actualDiff, moduleReloadDiff, decodeOK, rsOK, blocks };
   }
+  function artworkBudget(value = .7) {
+    const fraction = Number(value);
+    if (!Number.isFinite(fraction) || fraction < 0 || fraction > .9) throw new Error('加工に使う訂正余力は0〜90%で指定してください。');
+    return fraction;
+  }
+  function wordBudget(ec, fraction) { return Math.min(Math.floor(ec / 2) - 1, Math.floor(Math.floor(ec / 2) * fraction)); }
+  function verifyArtistic(variant, original, model, target, budget = .7) {
+    const fraction = artworkBudget(budget), { version, ecc, mask, rotation = 0, bytes } = original, size = version * 4 + 17;
+    const samePayload = variant.bytes.length === bytes.length && variant.bytes.every((b, i) => b === bytes[i]) && payloadOK(bytes, model);
+    const sameShape = variant.version === version && variant.ecc === ecc && variant.mask === mask && (variant.rotation || 0) === rotation && variant.size === size && variant.matrix.length === size * size && variant.matrix.every(v => v === 0 || v === 1);
+    if (!sameShape) return { ok: false, samePayload, sameShape };
+    const symbol = encode(bytes, version, ecc, mask, model), reference = Uint8Array.from(symbol.modules.data), canonical = rotate(variant.matrix, size, (4 - rotation) % 4);
+    const cells = placement(symbol), layout = blockLayout(version, ecc), editable = new Uint8Array(size * size);
+    for (let bit = 0; bit < layout.raw * 8; bit++) editable[cells[bit]] = 1;
+    // Finder, alignment, timing, format, version and remainder modules stay exact.
+    const structuralOK = canonical.every((v, j) => editable[j] || v === reference[j]);
+    const absolute = target.hard.every((v, j) => v < 0 || v === variant.matrix[j]);
+    const blocks = rsReport(canonical, reference, symbol, ecc, mask).map(b => ({ ...b, budget: wordBudget(b.eccWords, fraction) }));
+    const withinBudget = blocks.every(b => b.errors <= b.budget && b.remaining >= 1);
+    const changedModules = canonical.reduce((sum, v, j) => sum + Number(v !== reference[j]), 0), scans = [];
+    let moduleReloadDiff = 0;
+    if (samePayload && structuralOK && absolute && withinBudget) for (const scale of [2, 4, 8]) {
+      const raster = renderRGBA(variant.matrix, size, scale, 4), decoded = jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' });
+      moduleReloadDiff += reloadModules(raster, size).reduce((sum, v, j) => sum + Number(v !== variant.matrix[j]), 0);
+      scans.push({ scale, quiet: 4, ok: !!decoded && decoded.binaryData.length === bytes.length && decoded.binaryData.every((b, i) => b === bytes[i]) });
+    }
+    const decodeOK = scans.length === 3 && scans.every(s => s.ok);
+    return { ok: samePayload && sameShape && structuralOK && absolute && withinBudget && decodeOK && !moduleReloadDiff, samePayload, sameShape, structuralOK, absolute, withinBudget, decodeOK, moduleReloadDiff, changedModules, scans, blocks };
+  }
+  async function makeArtistic(original, model, target, options = {}) {
+    const fraction = artworkBudget(options.budget), perception = options.perception ?? .35;
+    if (!verify(original, model, target).ok) throw new Error('加工元の正規QRが検証に合格しませんでした。');
+    const { version, ecc, mask, rotation = 0, bytes } = original, size = version * 4 + 17;
+    const symbol = encode(bytes, version, ecc, mask, model), cells = placement(symbol), layout = blockLayout(version, ecc);
+    const loss = new Loss(original.matrix, target.bits, target.weights, size, perception), groups = [];
+    for (let slot = 0; slot < layout.raw; slot++) {
+      const indices = [];
+      for (let bit = 0; bit < 8; bit++) {
+        const j = rotateIndex(cells[slot * 8 + bit], size, rotation);
+        if (target.hard[j] < 0 && target.weights[j] > 0 && original.matrix[j] !== target.bits[j]) indices.push(j);
+      }
+      if (indices.length) groups.push({ block: layout.order[slot][0], indices, used: false });
+    }
+    const used = layout.blocks.map(() => 0), limits = layout.blocks.map(b => wordBudget(b.ec, fraction)), moves = [], deadline = now() + 2000;
+    // A whole codeword costs one correction regardless of how many of its bits
+    // change. Re-rank its target-matching edits after each move for coarse loss.
+    while (now() < deadline) {
+      let best = null, delta = -1e-10;
+      for (const group of groups) {
+        if (group.used || used[group.block] >= limits[group.block]) continue;
+        const value = loss.delta(group.indices);
+        if (value < delta) { best = group; delta = value; }
+      }
+      if (!best) break;
+      loss.delta(best.indices, true); best.used = true; used[best.block]++; moves.push(best);
+      if (moves.length % 16 === 0) await tick();
+    }
+    let attempts = 0;
+    while (moves.length) {
+      const variant = { version, ecc, mask, rotation, size, bytes: bytes.slice(), text: text.decode(bytes), kind: 'artistic', matrix: loss.matrix.slice(), metrics: loss.metrics(rotate(symbol.modules.reservedBit, size, rotation)), budget: fraction };
+      const validation = verifyArtistic(variant, original, model, target, fraction); attempts++;
+      if (validation.ok) return { variant: { ...variant, validation, changedModules: validation.changedModules, changedWords: validation.blocks.reduce((sum, b) => sum + b.errors, 0), backoffSteps: attempts - 1 }, reason: '' };
+      // Detection may fail despite correctable codewords. Back off and decode
+      // the actual modified image again; never output a failed variant.
+      const keep = Math.floor(moves.length * .7);
+      while (moves.length > keep) loss.delta(moves.pop().indices, true);
+      await tick();
+    }
+    return { variant: null, reason: attempts ? '加工量を減らしても読み取り検証を通る改善版が見つかりませんでした。正規版を保存できます。' : '指定と訂正余力の範囲内では、さらに絵へ近づけられるマスがありませんでした。正規版を保存できます。' };
+  }
   function svg(matrix, size, scale = 8, quiet = 4) {
     integer(scale, 1, 32, '1マスのピクセル数'); integer(quiet, 4, 32, '余白');
     const total = size + quiet * 2, paths = [];
@@ -623,7 +693,7 @@
     return out;
   }
   function normalizeSettings(input = {}) {
-    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, ...input };
+    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, artistic: false, artisticBudget: .7, ...input };
     if (!['byte', 'numeric'].includes(s.encoding)) throw new Error('符号化方式が不正です。');
     if (!eccInfo(s.ecc)) throw new Error('誤り訂正レベルが不正です。');
     s.versionMin = integer(s.versionMin, 1, 40, '最小Version'); s.versionMax = integer(s.versionMax, s.versionMin, 40, '最大Version');
@@ -633,6 +703,7 @@
     if (!Array.isArray(s.rotations) || !s.rotations.length) throw new Error('回転角度を指定してください。');
     s.rotations = [...new Set(s.rotations.map(x => integer(x, 0, 3, '回転')))];
     s.perception = Number(s.perception); if (!Number.isFinite(s.perception) || s.perception < 0 || s.perception > 1) throw new Error('濃淡の評価割合が不正です。');
+    s.artisticBudget = artworkBudget(s.artisticBudget);
     s.seed = Number(s.seed) | 0; return s;
   }
   async function search(options, report = () => {}) {
@@ -719,12 +790,18 @@
     for (const { candidate, model, target } of entries) {
       const validation = verify(candidate, model, target);
       if (!validation.ok) { rejected++; continue; }
-      candidate.validation = validation; candidate.text = text.decode(candidate.bytes); candidates.push(candidate);
+      candidate.validation = validation; candidate.text = text.decode(candidate.bytes);
+      if (settings.artistic) {
+        report({ stage: 'artistic', message: `候補${candidates.length + 1}の加工版を作成し、元の文字列に読み取れるか検証しています。` }); await tick();
+        try { const art = await makeArtistic(candidate, model, target, { budget: settings.artisticBudget, perception: settings.perception }); candidate.artistic = art.variant; candidate.artisticNote = art.reason; }
+        catch (e) { candidate.artistic = null; candidate.artisticNote = `加工版を作成できませんでした: ${e.message} 正規版は保存できます。`; }
+      }
+      candidates.push(candidate);
       if (candidates.length >= settings.candidates) break;
       await tick();
     }
     if (!candidates.length) throw new Error(infeasible && !solved ? '今回の探索では絶対黒白指定を満たす解が見つかりませんでした。時間・マスク・Version・可変長の範囲を広げるか、指定を見直してください。指定は保持されています。' : failures[0] || '指定を満たし、独立した読み取り検証にも合格する候補が見つかりませんでした。探索時間や範囲を広げてください。');
     return { candidates, stats: { seconds: (now() - started) / 1000, searchSeconds, budgetSeconds: settings.seconds, timedOut, attempted, solved, infeasible, rejected, lengthsPlanned: queue.length, baselineBest: Number.isFinite(baselineBest) ? baselineBest : null, greedyBest: Number.isFinite(greedyBest) ? greedyBest : null, failures: [...new Set(failures)].slice(0, 8) }, settings };
   }
-  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, svg, lengthPlan, normalizeSettings, search };
+  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, verifyArtistic, makeArtistic, svg, lengthPlan, normalizeSettings, search };
 });

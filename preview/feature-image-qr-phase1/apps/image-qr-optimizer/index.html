@@ -62,7 +62,7 @@
       </details>
     </section>
     <section class="qr-card qr-result" aria-labelledby="result-title">
-      <div class="qr-section-heading"><h2 id="result-title">生成結果</h2><span id="validation-badge" class="qr-badge" hidden>読み取り検証済み</span></div>
+      <div class="qr-section-heading"><h2 id="result-title">生成結果・正規版</h2><span id="validation-badge" class="qr-badge" hidden>読み取り検証済み</span></div>
       <div class="qr-canvas-wrap"><canvas id="result-canvas" width="420" height="420" aria-label="生成されたQRコード"></canvas></div>
       <p id="result-summary" class="qr-note">「生成する」で、絵に近い候補を比較します。</p>
       <div id="export-controls" hidden>
@@ -71,12 +71,23 @@
         <div class="qr-grid-2 qr-spaced"><div><label for="export-scale">1マスのピクセル数</label><input id="export-scale" type="number" min="2" max="32" value="8"></div><div><label for="export-quiet">白い余白（マス）</label><input id="export-quiet" type="number" min="4" max="32" value="4"></div></div>
         <details class="qr-details"><summary>精度と検証の詳細</summary><div id="candidate-details"></div></details>
       </div>
+      <div id="artistic-section" class="qr-artistic" hidden>
+        <div class="qr-section-heading"><h3>絵に近づけた加工版</h3><span id="artistic-badge" class="qr-badge" hidden>元の文字列への復号を確認</span></div>
+        <div id="artistic-image" class="qr-canvas-wrap" hidden><canvas id="artistic-canvas" width="420" height="420" aria-label="誤り訂正の余力を使って絵に近づけたQRコード"></canvas></div>
+        <p id="artistic-summary" class="qr-note" role="status"></p>
+        <div id="artistic-export-controls" hidden>
+          <p class="qr-note">読み取れる文字列・URLは上の正規版と同じです。加工には誤り訂正の余力を使うため、汚れや撮影条件への強さは下がります。</p>
+          <div class="qr-toolbar qr-spaced"><button id="save-artistic-png" type="button">加工版PNGを保存</button><button id="save-artistic-svg" type="button">加工版SVGを保存</button></div>
+          <p class="qr-note">保存サイズと白い余白は正規版と共通です。保存時にも読み取りを検証します。</p>
+          <details class="qr-details"><summary>加工量と読み取り検証</summary><div id="artistic-details"></div></details>
+        </div>
+      </div>
     </section>
   </div>
   <section class="qr-card" aria-labelledby="search-title">
     <h2 id="search-title">3. 生成条件</h2>
-    <div class="qr-grid-2 qr-spaced"><div><label for="encoding">可変部分の使い方</label><select id="encoding"><option value="numeric" selected>数字で絵を優先（おすすめ）</option><option value="byte">Byte・任意のASCII文字</option></select></div><div><label>&nbsp;</label><button id="prepare-numeric" type="button" class="secondary">このサイズで数字を最大限使う</button></div></div>
-    <p class="qr-note">数字0〜9をすべて許可した可変部分を数字列として使います。固定文字列は保持し、数字が使えない部分はByteで処理します。「最大限使う」で現在のマス数に収まる長さへ調整できます。</p>
+    <div class="qr-grid-2 qr-spaced"><div><label for="encoding">可変部分の使い方</label><select id="encoding"><option value="byte" selected>指定した文字種を使う（Byte）</option><option value="numeric">数字列を使える場合のみ（Numeric）</option></select></div><div><label for="prepare-numeric">数字列へ変更できる場合</label><button id="prepare-numeric" type="button" class="secondary">このサイズで数字を最大限使う</button></div></div>
+    <p class="qr-note">通常は指定した文字種・長さを使います。数字方式は、URLの可変部分を長い数字列にしても使える場合の選択肢です。「最大限使う」は文字種と長さを数字列へ変更します。</p>
     <div class="qr-grid-3">
       <div><label for="version">QRのサイズ（Version）</label><select id="version"><option value="auto">自動</option></select></div>
       <div><label for="ecc">誤り訂正レベル</label><select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select></div>
@@ -86,6 +97,7 @@
       <div><label for="rotation">QRの向き</label><select id="rotation"><option value="0">0°</option><option value="all">4方向を比較</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></div>
     </div>
     <div class="qr-toolbar qr-spaced"><label class="qr-check"><input id="full-charset" type="checkbox" checked>許可文字全体を使って追加改善</label><label class="qr-check"><input id="auto-length" type="checkbox">可変部分の長さも探索</label><label class="qr-check"><input id="compare-versions" type="checkbox">Versionの範囲も比較</label></div>
+    <div class="qr-grid-2 qr-spaced"><div><label class="qr-check"><input id="make-artistic" type="checkbox" checked>生成後に加工版も作る</label><p class="qr-note">正規版を残し、読み取り検証を通った加工版を別に表示します。</p></div><div><label for="artistic-budget">加工に使う誤り訂正の余力</label><select id="artistic-budget"><option value="0.5">50%・余力を多く残す</option><option value="0.7" selected>70%・バランス</option><option value="0.9">90%・絵を優先</option></select><p class="qr-note">ブロックごとの訂正可能な語数に対する上限です。黒く塗れる面積の割合ではありません。</p></div></div>
     <details class="qr-details"><summary>探索範囲と詳細設定</summary>
       <div class="qr-grid-3 qr-spaced">
         <div><label for="version-min">最小Version</label><input id="version-min" type="number" min="1" max="40" value="1"></div><div><label for="version-max">最大Version</label><input id="version-max" type="number" min="1" max="40" value="40"></div>
@@ -104,7 +116,7 @@
     <div id="search-status" class="qr-status" role="status" aria-live="polite">画像と文字列を入力してください。</div>
   </section>
   <section id="candidates-section" class="qr-card" hidden><h2>候補を比較</h2><div id="candidates" class="qr-candidates"></div><p id="search-stats" class="qr-note"></p></section>
-  <p class="qr-footnote">保存するQRの白黒配置は、文字列から正しく符号化したものです。独立したエンコーダとの一致、画像からの復号、RSブロックを検証します。実際の印刷・撮影条件での読み取り率を保証するものではありません。</p>
+  <p class="qr-footnote">正規版は文字列から正しく符号化し、独立したエンコーダとの一致と復号を検証します。加工版はその配置の一部を目標の絵に近づけ、構造の保持・訂正余力・画像からの復号を別に検証します。実際の印刷・撮影条件での読み取り率を保証するものではありません。</p>
 </main>
 <script src="/preview/feature-image-qr-phase1/assets/qrcode.min.js"></script>
 <script src="/preview/feature-image-qr-phase1/assets/vendor/image-qr/qrcodegen.js"></script>
