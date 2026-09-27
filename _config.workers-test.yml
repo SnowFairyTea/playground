@@ -1,0 +1,4 @@
+url: "https://playground-workers-test.snowfairytea.workers.dev"
+baseurl: ""
+exclude:
+  - wrangler.jsonc
