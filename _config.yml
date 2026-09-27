@@ -14,6 +14,8 @@ description: Personal playground / demos / notes
 theme: null
 plugins: []
 encoding: utf-8
+exclude:
+  - wrangler.jsonc
 
 google_fonts_url: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&family=Noto+Sans+JP:wght@400;600;700&display=swap"
 
