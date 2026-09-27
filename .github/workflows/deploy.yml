@@ -1,33 +1,24 @@
-name: Deploy to GitHub Pages
+name: Validate Jekyll build
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3"
+          ruby-version: "3.3.8"
           bundler-cache: true
 
       - name: Build
-        run: bundle exec jekyll build
-        env:
-          JEKYLL_ENV: production
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          cname: snowfairytea.dev
-          keep_files: true
+        run: bash .cloudflare/build.sh
