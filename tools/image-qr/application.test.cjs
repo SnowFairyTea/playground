@@ -144,6 +144,7 @@ test('numeric setup rejects incompatible alphabets without overwriting the user 
 test('regular and artistic results have separate downloads with the same URL, and edits clear both', async () => {
   const app = application(), { w, d, set } = app;
   assert.equal(d.getElementById('encoding').value, 'byte'); assert.equal(d.getElementById('segment-1-length').value, '128');
+  assert.equal(d.getElementById('adaptive-charset').checked, true);
   set('segment-0-text', 'https://example.com/p?q='); set('segment-1-length', 6); set('segment-1-allowed', 'ABCdef-12');
   set('version', 5); set('mask', 3); set('candidate-count', 1); set('search-seconds', 1);
   set('brush-mode', 'soft-white'); d.getElementById('apply-all').click();
@@ -159,6 +160,10 @@ test('regular and artistic results have separate downloads with the same URL, an
   const normalPNG = PNG.sync.read(Buffer.from(await regular.blob.arrayBuffer())), artPNG = PNG.sync.read(Buffer.from(await artistic.blob.arrayBuffer()));
   assert.equal(normalPNG.width, artPNG.width); assert.notDeepEqual(normalPNG.data, artPNG.data);
   for (const png of [normalPNG, artPNG]) assert.equal(jsQR(new Uint8ClampedArray(png.data), png.width, png.height).data, url);
+  const thumbnail = d.querySelector('#candidates canvas');
+  assert.match(d.querySelector('#candidates span').textContent, /加工版 · 画素一致/);
+  assert.deepEqual(E.reloadModules({ data: thumbnail._data, width: thumbnail.width, scale: 3, quiet: 4 }, 37), E.reloadModules({ data: artPNG.data, width: artPNG.width, scale: 8, quiet: 4 }, 37));
+  assert.equal(app.requests.find(r => r.type === 'search').input.settings.adaptiveCharset, true);
   assert(!svg.name.includes('artistic')); assert(artisticSVG.name.includes('-artistic-'));
   const art = await artisticSVG.blob.text(), size = 37, scale = 8, quiet = 4;
   // Read the exported vector paths, not the in-memory candidate, into a matrix.
@@ -168,5 +173,6 @@ test('regular and artistic results have separate downloads with the same URL, an
   const raster = E.renderRGBA(matrix, size, scale, quiet); assert.deepEqual(Buffer.from(raster.data), artPNG.data);
   set('segment-0-text', 'https://example.com/changed?q=');
   assert.equal(d.getElementById('export-controls').hidden, true); assert.equal(d.getElementById('artistic-section').hidden, true);
+  set('adaptive-charset', false);
   assert.deepEqual(app.errors, []); app.dom.window.close();
 });

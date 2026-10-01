@@ -121,3 +121,35 @@ test('explicit Version takes precedence over the range used for automatic compar
   const result = await E.search({ segments: seg, target: target(q.modules.data, 29), settings: { version: 3, versionMin: 1, versionMax: 2, masks: 0, seconds: 2, candidates: 1 } });
   assert.equal(result.candidates[0].version, 3); assert(result.candidates[0].validation.ok);
 });
+
+test('image-adapted Byte spaces recover permitted characters outside the global maximum subset', async () => {
+  const segments = [{ kind: 'fixed', text: 'https://example.com/#' }, { kind: 'variable', length: 4, allowed: E.URLSAFE }];
+  const model = E.makeModel(segments), before = structuredClone(model), bytes = model.baseline.slice();
+  bytes.set(new TextEncoder().encode('0xzA'), bytes.length - 4);
+  const mapping = E.buildMapping(model, 3, 'M');
+  for (const [rotation, mask] of [[0, 0], [1, 3], [2, 7], [3, 2]]) {
+    const original = E.encode(model.baseline, 3, 'M', mask, model), expected = E.rotate(Uint8Array.from(E.encode(bytes, 3, 'M', mask, model).modules.data), 29, rotation);
+    const m = E.orient(mapping, Uint8Array.from(original.modules.data), rotation), t = target(expected, 29), adapted = E.byteSubspace(m, model, t);
+    assert.equal(adapted.adapted, 4); assert.deepEqual(adapted.model.baseline, bytes);
+    assert.deepEqual(E.predict(adapted.mapping, 0n), expected);
+    const random = (1n << BigInt(adapted.model.variables.length)) - 1n, changed = E.applyX(adapted.model, random);
+    assert(E.payloadOK(changed, model));
+    assert.deepEqual(E.predict(adapted.mapping, random), E.rotate(Uint8Array.from(E.encode(changed, 3, 'M', mask, adapted.model).modules.data), 29, rotation));
+  }
+  assert.deepEqual(model, before);
+  const exact = E.encode(bytes, 3, 'M', 0, model);
+  const result = await E.search({ segments, target: target(exact.modules.data, 29), settings: { version: 3, masks: 0, fullCharset: false, samples: 1, passes: 1, seconds: 2, candidates: 1 } });
+  assert.equal(result.candidates[0].text, 'https://example.com/#0xzA');
+  assert.equal(result.candidates[0].metrics.raw, 1); assert(result.candidates[0].validation.ok);
+});
+
+test('manual initial spaces and forbidden characters remain authoritative during Byte adaptation', () => {
+  const segments = [{ kind: 'fixed', text: 'fixed/' }, { kind: 'variable', length: 1, allowed: E.URLSAFE, forbidden: '0', affineChoice: '0' }];
+  const model = E.makeModel(segments), mapping = E.buildMapping(model, 2, 'M'), t = target(new Uint8Array(25 * 25), 25);
+  const explicit = E.byteSubspace(mapping, model, t);
+  assert.equal(explicit.adapted, 0); assert.equal(explicit.mapping, mapping); assert.equal(explicit.model, model);
+  segments[1].affineChoice = 'auto';
+  const automatic = E.makeModel(segments), adapted = E.byteSubspace(E.buildMapping(automatic, 2, 'M'), automatic, t);
+  for (let x = 0n; x < 1n << BigInt(adapted.model.variables.length); x++) assert(E.payloadOK(E.applyX(adapted.model, x), automatic));
+  assert(!adapted.model.positions[0].allowed.includes(48));
+});

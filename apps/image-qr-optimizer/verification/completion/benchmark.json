@@ -1,0 +1,805 @@
+{
+  "node": "v24.19.0",
+  "baselineRef": "36be09c07c8ee9bc15be178f51f65fb452aa6d6b",
+  "settings": {
+    "version": 8,
+    "ecc": "M",
+    "masks": "all",
+    "rotations": [
+      0
+    ],
+    "passes": 3,
+    "reserve": 8,
+    "samples": 64,
+    "seed": 1,
+    "seconds": 20,
+    "candidates": 1,
+    "perception": 0.35,
+    "fullCharset": true,
+    "encoding": "byte",
+    "artistic": true,
+    "artisticBudget": 0.7
+  },
+  "method": "Full pipelines, at the same 20-second regular search budget, 49x49 modules, ECC M, Byte encoding, allowed alphabet and variable length. Artwork uses at most 70% of the correction capacity of each RS block. Previous selects a regular candidate first; current ranks a wider queue by completed and verified artwork and adapts automatic Byte spaces to the image. Validation overhead is additional and measured. Variable payloads and selected masks may differ between methods. Fixtures are generated geometry, not a general image-quality or camera benchmark. Timed searches may vary with hardware.",
+  "rows": [
+    {
+      "name": "ring",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "previous": {
+        "text": "https://example.com/#SWOMkHUMPTMnorVMIPUnVkVIuiQjNhprVpMinrTruLKNWiHPqSVIUMjUoVmTwRkWLPTlvQiiPWMoOVsuUtoomRSQQHRptSVKlvupULLhwjNwkjQvpprPtQTQnQRVMRLW",
+        "regular": {
+          "visual": 0.653075107594058,
+          "weighted": 0.6401499375260309,
+          "raw": 0.6401499375260308,
+          "fixedMismatch": 240,
+          "blackRate": 0.45481049562682213,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.6737804878048781,
+          "backgroundBlack": 0.37249283667621774
+        },
+        "finished": {
+          "visual": 0.7077745383867833,
+          "weighted": 0.6967930029154519,
+          "raw": 0.6967930029154519,
+          "fixedMismatch": 240,
+          "blackRate": 0.4314868804664723,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.7347560975609756,
+          "backgroundBlack": 0.3174785100286533
+        },
+        "mask": 7,
+        "changedModules": 136,
+        "changedWords": 28,
+        "seconds": 20.19976222,
+        "artisticTested": 1,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 136,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#4C4LLC4LLHCC9SC4LLC334C4ILc4C4C4CiS4lCHC444CLL4LLBiLC4LC3334CC933lC5334LC34c4C334C33434FllclLLC33344LFc4LcC33LLCC73L0CCLsCC334vS",
+        "regular": {
+          "visual": 0.675315840621963,
+          "weighted": 0.6647230320699709,
+          "raw": 0.6647230320699709,
+          "fixedMismatch": 242,
+          "blackRate": 0.4435651811745106,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.698170731707317,
+          "backgroundBlack": 0.3478510028653295
+        },
+        "finished": {
+          "visual": 0.741038456198806,
+          "weighted": 0.7321949187838401,
+          "raw": 0.73219491878384,
+          "fixedMismatch": 242,
+          "blackRate": 0.43690129112869636,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.8094512195121951,
+          "backgroundBlack": 0.2968481375358166
+        },
+        "mask": 1,
+        "changedModules": 162,
+        "changedWords": 28,
+        "seconds": 16.668861826999997,
+        "artisticTested": 8,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 162,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "percentagePointChange": 3.5401915868388145
+    },
+    {
+      "name": "diagonal",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "previous": {
+        "text": "https://example.com/#oMKSrlSQvVpirNRpLPQnToVnhnMuPjmHWJukRMUWjMTuvQsLpHHTlmhUjNoprVSsNOprpRlvUKMNJiSjPtvjRmMISOMMJSHLLRujuSuHijNiVrsvrkRTjQSInQjWHmLm",
+        "regular": {
+          "visual": 0.6539636262668332,
+          "weighted": 0.6447313619325281,
+          "raw": 0.6447313619325281,
+          "fixedMismatch": 247,
+          "blackRate": 0.40483132028321533,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.6676056338028169,
+          "backgroundBlack": 0.3592375366568915
+        },
+        "finished": {
+          "visual": 0.7064972927946689,
+          "weighted": 0.6980424822990421,
+          "raw": 0.6980424822990421,
+          "fixedMismatch": 247,
+          "blackRate": 0.3665139525197834,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7183098591549296,
+          "backgroundBlack": 0.30547409579667645
+        },
+        "mask": 7,
+        "changedModules": 128,
+        "changedWords": 28,
+        "seconds": 20.129733563000002,
+        "artisticTested": 1,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 128,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 21,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#5Gjq6kQphZ69MBtMIXTnDkVlHNHnHjmINFlkT5GcFiTa6AwlYj2T09XTnFoH7VkvnGhryRveNBMOByWkU4ghRmDhQoMOHMNFdbmhYR4gaNFhV4a62kRVhRSINA7fYnLO",
+        "regular": {
+          "visual": 0.6746078023045954,
+          "weighted": 0.6672219908371512,
+          "raw": 0.6672219908371512,
+          "fixedMismatch": 247,
+          "blackRate": 0.3923365264473136,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7014084507042253,
+          "backgroundBlack": 0.3387096774193548
+        },
+        "finished": {
+          "visual": 0.735762876579203,
+          "weighted": 0.7288629737609329,
+          "raw": 0.7288629737609329,
+          "fixedMismatch": 247,
+          "blackRate": 0.3548521449396085,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7830985915492957,
+          "backgroundBlack": 0.2805474095796676
+        },
+        "mask": 7,
+        "changedModules": 148,
+        "changedWords": 28,
+        "seconds": 18.120768812999994,
+        "artisticTested": 8,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 148,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "percentagePointChange": 3.082049146189081
+    },
+    {
+      "name": "heart",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "previous": {
+        "text": "https://example.com/#tMImRsWKtKqjOKHNjMUqstRlISqtsTKuSIsqKsMLJtSSMIsrpTWMlLISsvSVsSpwRPwjHshLqhsSTLKvSviNHJLiJrHLtLWQjstplIsvrtMKsLrvOKwMMrKSkLqlItIv",
+        "regular": {
+          "visual": 0.6527141468832431,
+          "weighted": 0.6434818825489379,
+          "raw": 0.6434818825489379,
+          "fixedMismatch": 249,
+          "blackRate": 0.46688879633486047,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.71900826446281,
+          "backgroundBlack": 0.3819599109131403
+        },
+        "finished": {
+          "visual": 0.7062057476051645,
+          "weighted": 0.6980424822990421,
+          "raw": 0.6980424822990421,
+          "fixedMismatch": 249,
+          "blackRate": 0.4356518117451062,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.7652892561983471,
+          "backgroundBlack": 0.32461024498886415
+        },
+        "mask": 1,
+        "changedModules": 131,
+        "changedWords": 28,
+        "seconds": 20.1412255,
+        "artisticTested": 1,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 131,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 21,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#4LC4C34C4O3LFc4LLLC334C4IS3734K8CLC4C3CLC4C3LC3S4MUC4LLC3334CC9S2C34C34Ls4C34LC4C34LLCTILsLLlLC33344LIS4C3LC3LC3LS3LL3K33Ls4H4IS",
+        "regular": {
+          "visual": 0.6727613494377342,
+          "weighted": 0.6643065389421074,
+          "raw": 0.6643065389421074,
+          "fixedMismatch": 249,
+          "blackRate": 0.4602249062890462,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.7471074380165289,
+          "backgroundBlack": 0.36358574610244987
+        },
+        "finished": {
+          "visual": 0.7387893933083438,
+          "weighted": 0.7305289462723865,
+          "raw": 0.7305289462723865,
+          "fixedMismatch": 249,
+          "blackRate": 0.4281549354435652,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.8148760330578513,
+          "backgroundBlack": 0.2978841870824053
+        },
+        "mask": 1,
+        "changedModules": 159,
+        "changedWords": 28,
+        "seconds": 19.410353436999998,
+        "artisticTested": 8,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 159,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "percentagePointChange": 3.2486463973344426
+    },
+    {
+      "name": "fixed-url",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/qr-art?theme=green#demo"
+        }
+      ],
+      "previous": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "regular": {
+          "visual": 0.5138553380535889,
+          "weighted": 0.49354435651811746,
+          "raw": 0.49354435651811746,
+          "fixedMismatch": 240,
+          "blackRate": 0.5039566847147022,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.4954268292682927,
+          "backgroundBlack": 0.5071633237822349
+        },
+        "finished": {
+          "visual": 0.5863251423018188,
+          "weighted": 0.5660141607663474,
+          "raw": 0.5660141607663474,
+          "fixedMismatch": 240,
+          "blackRate": 0.4789670970428988,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.5823170731707317,
+          "backgroundBlack": 0.44011461318051576
+        },
+        "mask": 7,
+        "changedModules": 174,
+        "changedWords": 28,
+        "seconds": 0.5052244979999959,
+        "artisticTested": 1,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 174,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "regular": {
+          "visual": 0.5138553380535889,
+          "weighted": 0.49354435651811746,
+          "raw": 0.49354435651811746,
+          "fixedMismatch": 240,
+          "blackRate": 0.5039566847147022,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.4954268292682927,
+          "backgroundBlack": 0.5071633237822349
+        },
+        "finished": {
+          "visual": 0.5863251423018188,
+          "weighted": 0.5660141607663474,
+          "raw": 0.5660141607663474,
+          "fixedMismatch": 240,
+          "blackRate": 0.4789670970428988,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.5823170731707317,
+          "backgroundBlack": 0.44011461318051576
+        },
+        "mask": 7,
+        "changedModules": 174,
+        "changedWords": 28,
+        "seconds": 0.5778348239999904,
+        "artisticTested": 8,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 174,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "percentagePointChange": 0
+    }
+  ]
+}

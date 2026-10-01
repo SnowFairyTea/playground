@@ -85,6 +85,8 @@ permalink: /apps/image-qr-optimizer/
       <div><label for="rotation">QRの向き</label><select id="rotation"><option value="0">0°</option><option value="all">4方向を比較</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></div>
     </div>
     <div class="qr-toolbar qr-spaced"><label class="qr-check"><input id="full-charset" type="checkbox" checked>許可文字全体を使って追加改善</label><label class="qr-check"><input id="auto-length" type="checkbox">可変部分の長さも探索</label><label class="qr-check"><input id="compare-versions" type="checkbox">Versionの範囲も比較</label></div>
+    <div class="qr-toolbar qr-spaced"><label class="qr-check"><input id="adaptive-charset" type="checkbox" checked>画像に合わせて文字の初期集合を選ぶ</label></div>
+    <p class="qr-note">許可文字・禁止文字・長さを保ち、Byte方式の可変部分を画像に合わせます。詳細で初期集合を手動指定した部分は、その指定を使います。</p>
     <div class="qr-grid-2 qr-spaced"><div><label class="qr-check"><input id="make-artistic" type="checkbox" checked>生成後に加工版も作る</label><p class="qr-note">正規版を残し、読み取り検証を通った加工版を別に表示します。</p></div><div><label for="artistic-budget">加工に使う誤り訂正の余力</label><select id="artistic-budget"><option value="0.5">50%・余力を多く残す</option><option value="0.7" selected>70%・バランス</option><option value="0.9">90%・絵を優先</option></select><p class="qr-note">ブロックごとの訂正可能な語数に対する上限です。黒く塗れる面積の割合ではありません。</p></div></div>
     <details class="qr-details"><summary>探索範囲と詳細設定</summary>
       <div class="qr-grid-3 qr-spaced">
@@ -103,7 +105,7 @@ permalink: /apps/image-qr-optimizer/
     <div class="qr-toolbar qr-spaced"><button id="generate" class="qr-primary" type="button">生成する</button><button id="cancel" type="button" class="secondary" disabled>中断</button></div>
     <div id="search-status" class="qr-status" role="status" aria-live="polite">画像と文字列を入力してください。</div>
   </section>
-  <section id="candidates-section" class="qr-card" hidden><h2>候補を比較</h2><div id="candidates" class="qr-candidates"></div><p id="search-stats" class="qr-note"></p></section>
+  <section id="candidates-section" class="qr-card" hidden><h2>候補を比較</h2><p class="qr-note">加工版がある候補は、検証済みの完成画像を表示します。完成画像の探索スコアが高い順に並びます。</p><div id="candidates" class="qr-candidates"></div><p id="search-stats" class="qr-note"></p></section>
   <p class="qr-footnote">正規版は文字列から正しく符号化し、独立したエンコーダとの一致と復号を検証します。加工版はその配置の一部を目標の絵に近づけ、構造の保持・訂正余力・画像からの復号を別に検証します。実際の印刷・撮影条件での読み取り率を保証するものではありません。</p>
 </main>
 <script src="{{ '/assets/qrcode.min.js' | relative_url }}"></script>

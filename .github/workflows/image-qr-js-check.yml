@@ -45,3 +45,7 @@ jobs:
         run: npm --prefix tools/image-qr test
       - name: Verify reproducible standalone HTML
         run: node tools/build-image-qr.mjs --check
+      - name: Install Chromium for offline browser verification
+        run: tools/image-qr/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify native image input, Canvas, Worker, downloads and mobile layout
+        run: npm --prefix tools/image-qr run test:browser

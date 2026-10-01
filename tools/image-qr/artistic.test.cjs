@@ -56,6 +56,10 @@ test('artwork validation rejects damage to structure, remainder modules, payload
   assert.equal(E.verifyArtistic(altered, original, model, target).samePayload, false);
   const hard = structuredClone(target); hard.hard[cells[0]] = original.matrix[cells[0]];
   assert.equal(E.verifyArtistic(change([cells[0]]), original, model, hard).absolute, false);
+  const ignored = structuredClone(target); ignored.weights[cells[0]] = 0;
+  const ignoredReport = E.verifyArtistic(change([cells[0]]), original, model, ignored);
+  assert.equal(ignoredReport.structuralOK, true); assert.equal(ignoredReport.withinBudget, true);
+  assert.equal(ignoredReport.zeroWeightOK, false); assert.equal(ignoredReport.ok, false);
 });
 
 test('no-op or invalid artwork requests never replace a valid pristine output', async () => {
@@ -73,6 +77,27 @@ test('generation attaches an optional verified artwork result while keeping regu
   const result = await E.search({ segments, target, settings: { version: 5, masks: 3, artistic: true, candidates: 1, seconds: 1 } });
   const c = result.candidates[0]; assert(c.validation.ok); assert(c.artistic?.validation.ok, c.artisticNote);
   assert.equal(c.artistic.text, c.text); assert.equal(c.validation.encoderDiff, 0); assert(c.artistic.changedWords > 0);
+});
+
+test('finished-image ranking checks every fixed-payload mask before keeping one candidate', async () => {
+  const { segments, target, original, model } = fixture(), scores = [];
+  for (let mask = 0; mask < 8; mask++) {
+    const regular = { ...original, mask, matrix: Uint8Array.from(E.encode(original.bytes, original.version, 'M', mask, model).modules.data) };
+    const art = await E.makeArtistic(regular, model, target);
+    scores.push(art.variant?.metrics.visual ?? new E.Loss(regular.matrix, target.bits, target.weights, regular.size).metrics().visual);
+  }
+  const result = await E.search({ segments, target, settings: { version: 5, masks: 'all', artistic: true, candidates: 1, seconds: 2 } });
+  assert.equal(result.stats.artisticTested, 8); assert.equal(result.candidates.length, 1);
+  const selected = result.candidates[0], completed = selected.artistic || selected;
+  assert(completed.validation.ok); assert(Math.abs(completed.metrics.visual - Math.max(...scores)) < 1e-10);
+});
+
+test('word exchanges and detection backoff only return a true improvement at high tone priority', async () => {
+  const { original, model, target } = fixture('Q', 2), initial = new E.Loss(original.matrix, target.bits, target.weights, original.size, .8).value();
+  const result = await E.makeArtistic(original, model, target, { perception: .8, budget: .9 });
+  assert(result.variant, result.reason); assert(result.variant.validation.ok);
+  assert(new E.Loss(result.variant.matrix, target.bits, target.weights, original.size, .8).value() < initial);
+  assert(result.variant.validation.blocks.every(b => b.errors <= b.budget && b.remaining >= 1));
 });
 
 test('decoder rejection backs off and never returns an unverified modified image', async () => {

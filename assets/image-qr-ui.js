@@ -8,7 +8,7 @@
     bits: null, worker: null, workerURL: null, workerReject: null, busy: false, request: 0, revision: 0, candidates: [], selected: null, analyses: [], disabled: new Map()
   };
   const imageFields = ['fit-mode', 'threshold', 'contrast', 'brightness', 'image-zoom', 'outside-level', 'image-offset-x', 'image-offset-y', 'gray-method', 'crop-x', 'crop-y', 'crop-w', 'crop-h', 'target-safe-inset', 'invert-target', 'image-smoothing', 'avoid-corner-patterns'];
-  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed', 'make-artistic', 'artistic-budget'];
+  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'adaptive-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed', 'make-artistic', 'artistic-budget'];
   const number = id => Number($(id).value);
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const percent = value => value == null ? '対象なし' : (value * 100).toFixed(1) + '%';
@@ -21,7 +21,7 @@
       version: $('version').value, ecc: $('ecc').value, masks: $('mask').value,
       versionMin: number('version-min'), versionMax: number('version-max'), compareVersions: $('compare-versions').checked,
       rotations: $('rotation').value === 'all' ? [0, 1, 2, 3] : [Number($('rotation').value)],
-      seconds: number('search-seconds'), perception: number('perception'), fullCharset: $('full-charset').checked,
+      seconds: number('search-seconds'), perception: number('perception'), fullCharset: $('full-charset').checked, adaptiveCharset: $('adaptive-charset').checked,
       autoLength: $('auto-length').checked, lengthTrials: number('length-trials'), coarsePoints: number('coarse-points'),
       passes: number('soft-passes'), reserve: number('reserve-free'), samples: number('null-samples'), candidates: number('candidate-count'), seed: number('optimizer-seed')
     });
@@ -241,8 +241,8 @@
     $('artistic-image').hidden = $('artistic-badge').hidden = $('artistic-export-controls').hidden = !available;
     if (available) {
       drawResult($('artistic-canvas'), a);
-      const gain = (100 * (a.metrics.raw - c.metrics.raw)).toFixed(1);
-      $('artistic-summary').textContent = `画素一致 ${percent(a.metrics.raw)}（正規版から +${gain}ポイント） · 黒領域の再現 ${percent(a.metrics.blackRecall)} · 背景への黒混入 ${percent(a.metrics.backgroundBlack)}`;
+      const gain = (100 * (a.metrics.raw - c.metrics.raw)).toFixed(1), signedGain = Number(gain) >= 0 ? '+' + gain : gain;
+      $('artistic-summary').textContent = `画素一致 ${percent(a.metrics.raw)}（正規版から ${signedGain}ポイント） · 黒領域の再現 ${percent(a.metrics.blackRecall)} · 背景への黒混入 ${percent(a.metrics.backgroundBlack)}`;
       const checks = a.validation;
       $('artistic-details').innerHTML = `<p class="qr-note">${a.changedModules}マス・${a.changedWords}語を変更。1マス2 / 4 / 8px、白い余白4マスで、すべて元の文字列に復号できました。四隅などの構造と絶対指定は保持しています。</p><table><thead><tr><th>ブロック</th><th>変更した語</th><th>加工の上限</th><th>残る訂正余力</th></tr></thead><tbody>${checks.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.budget}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
     } else $('artistic-summary').textContent = c.artisticNote || '';
@@ -263,9 +263,9 @@
       const result = await task;
       if (revision !== state.revision) return;
       state.candidates = result.candidates; const container = $('candidates'); container.replaceChildren();
-      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'); drawResult(canvas, c, 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · スコア ${score(c.metrics.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
+      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'), completed = c.artistic?.validation.ok ? c.artistic : c; drawResult(canvas, completed, 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · ${completed === c ? '正規版' : '加工版'} · 画素一致 ${percent(completed.metrics.raw)} · スコア ${score(completed.metrics.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
       $('candidates-section').hidden = false; selectCandidate(0);
-      const s = result.stats; $('search-stats').textContent = `${s.seconds.toFixed(1)}秒 · ${s.attempted}条件を比較 · 絶対指定の解が見つからなかった ${s.infeasible}条件 · 読み取り検証で除外 ${s.rejected}候補${s.timedOut ? ' · 時間の目安に達したため、その時点までの最良候補を表示' : ''}`;
+      const s = result.stats; $('search-stats').textContent = `${s.seconds.toFixed(1)}秒 · ${s.attempted}条件を比較${s.artisticTested ? ` · 加工後の${s.artisticTested}候補を検証・比較` : ''} · 絶対指定の解が見つからなかった ${s.infeasible}条件 · 読み取り検証で除外 ${s.rejected}候補${s.timedOut ? ' · 時間の目安に達したため、その時点までの最良候補を表示' : ''}`;
       status(`検証に合格した${result.candidates.length}候補を生成しました。PNG・SVGとして保存できます。${s.failures.length ? '\n探索できなかった条件: ' + s.failures.join(' / ') : ''}`);
     } catch (e) { if (e.name !== 'AbortError') status(e.message || String(e), true); }
     finally { if (request === undefined || request === state.request) busy(false); }

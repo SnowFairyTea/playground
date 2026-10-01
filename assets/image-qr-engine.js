@@ -115,7 +115,7 @@
         analyses.push({ segment: si, allowed: allowed.length, dimension: affine.dim, selected: affine.elements.length, selectedCharacters: String.fromCharCode(...affine.elements), candidates: analysis.candidates.map(a => ({ characters: String.fromCharCode(...a.elements), dimension: a.dim })) });
         for (let p = 0; p < length; p++) {
           const offset = bytes.length; bytes.push(affine.base);
-          positions.push({ offset, allowed, segment: si, charIndex: p });
+          positions.push({ offset, allowed, segment: si, charIndex: p, adaptive: seg.affineChoice === 'auto' || seg.affineChoice == null });
           affine.basis.forEach(vector => variables.push({ offset, vector }));
         }
         vi++;
@@ -311,6 +311,34 @@
       const flag = 1n << BigInt(i); col.forEach(j => { rows[j] |= flag; });
     });
     return { ...mapping, rows, columns, m0 };
+  }
+  function byteSubspace(mapping, model, target) {
+    const baseline = model.baseline.slice(), m0 = mapping.m0.slice(), variables = model.variables.filter(v => v.unit != null);
+    let adapted = 0;
+    for (const p of model.positions.filter(p => !p.numeric)) {
+      const original = model.variables.filter(v => v.offset === p.offset);
+      if (!p.adaptive || p.allowed.length < 2) { variables.push(...original); continue; }
+      const columns = Array.from({ length: 7 }, (_, bit) => mapping.fullColumns.get(p.offset + ':' + bit));
+      let best = null;
+      for (const value of p.allowed) {
+        const basis = anchoredBasis(p.allowed, value);
+        // A smaller affine space can fit these data modules better, but loses
+        // freedom elsewhere in the RS block. Charge half a mismatch per bit.
+        let cost = .5 * Math.max(0, original.length - basis.length);
+        for (let bit = 0; bit < 7; bit++) {
+          const j = columns[bit][0], actual = mapping.m0[j] ^ (((model.baseline[p.offset] ^ value) >>> bit) & 1);
+          cost += target.hard[j] >= 0 ? (actual ^ target.hard[j]) * 1e6 : (actual ^ target.bits[j]) * target.weights[j];
+        }
+        if (!best || cost < best.cost) best = { value, basis, cost };
+      }
+      const difference = baseline[p.offset] ^ best.value;
+      for (let bit = 0; bit < 7; bit++) if (difference & (1 << bit)) for (const j of columns[bit]) m0[j] ^= 1;
+      baseline[p.offset] = best.value;
+      best.basis.forEach(vector => variables.push({ offset: p.offset, vector }));
+      adapted++;
+    }
+    if (!adapted) return { mapping, model, adapted: 0 };
+    return { model: { ...model, baseline, variables }, mapping: mappingWithVariables(mapping, variables, m0), adapted };
   }
   function numericSubspace(mapping, model, target) {
     if (!model.numericUnits.length) return { mapping, model };
@@ -607,6 +635,29 @@
     return fraction;
   }
   function wordBudget(ec, fraction) { return Math.min(Math.floor(ec / 2) - 1, Math.floor(Math.floor(ec / 2) * fraction)); }
+  function artworkGroups(candidate, model, target) {
+    const { version, ecc, mask, rotation = 0, bytes } = candidate, size = version * 4 + 17;
+    const symbol = encode(bytes, version, ecc, mask, model), cells = placement(symbol), layout = blockLayout(version, ecc), groups = [];
+    for (let slot = 0; slot < layout.raw; slot++) {
+      const indices = [];
+      for (let bit = 0; bit < 8; bit++) {
+        const j = rotateIndex(cells[slot * 8 + bit], size, rotation);
+        if (target.hard[j] < 0 && target.weights[j] > 0 && candidate.matrix[j] !== target.bits[j]) indices.push(j);
+      }
+      if (indices.length) groups.push({ block: layout.order[slot][0], indices, used: false });
+    }
+    return { symbol, layout, groups };
+  }
+  function artworkPotential(candidate, model, target, budget, perception) {
+    const { layout, groups } = artworkGroups(candidate, model, target), loss = new Loss(candidate.matrix, target.bits, target.weights, candidate.size, perception);
+    const gains = layout.blocks.map(() => []);
+    for (const g of groups) gains[g.block].push(Math.max(0, -loss.delta(g.indices)));
+    let gain = 0;
+    gains.forEach((values, b) => { values.sort((a, b) => b - a); gain += values.slice(0, wordBudget(layout.blocks[b].ec, budget)).reduce((a, b) => a + b, 0); });
+    // This is only a queue heuristic: coarse losses interact between words.
+    // Final ranking always uses the actual verified artwork, never this value.
+    return clamp(1 - loss.value() + gain, 0, 1);
+  }
   function verifyArtistic(variant, original, model, target, budget = .7) {
     const fraction = artworkBudget(budget), { version, ecc, mask, rotation = 0, bytes } = original, size = version * 4 + 17;
     const samePayload = variant.bytes.length === bytes.length && variant.bytes.every((b, i) => b === bytes[i]) && payloadOK(bytes, model);
@@ -618,32 +669,25 @@
     // Finder, alignment, timing, format, version and remainder modules stay exact.
     const structuralOK = canonical.every((v, j) => editable[j] || v === reference[j]);
     const absolute = target.hard.every((v, j) => v < 0 || v === variant.matrix[j]);
+    const zeroWeightOK = target.weights.every((w, j) => w > 0 || variant.matrix[j] === original.matrix[j]);
     const blocks = rsReport(canonical, reference, symbol, ecc, mask).map(b => ({ ...b, budget: wordBudget(b.eccWords, fraction) }));
     const withinBudget = blocks.every(b => b.errors <= b.budget && b.remaining >= 1);
     const changedModules = canonical.reduce((sum, v, j) => sum + Number(v !== reference[j]), 0), scans = [];
     let moduleReloadDiff = 0;
-    if (samePayload && structuralOK && absolute && withinBudget) for (const scale of [2, 4, 8]) {
+    if (samePayload && structuralOK && absolute && zeroWeightOK && withinBudget) for (const scale of [2, 4, 8]) {
       const raster = renderRGBA(variant.matrix, size, scale, 4), decoded = jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' });
       moduleReloadDiff += reloadModules(raster, size).reduce((sum, v, j) => sum + Number(v !== variant.matrix[j]), 0);
       scans.push({ scale, quiet: 4, ok: !!decoded && decoded.binaryData.length === bytes.length && decoded.binaryData.every((b, i) => b === bytes[i]) });
     }
     const decodeOK = scans.length === 3 && scans.every(s => s.ok);
-    return { ok: samePayload && sameShape && structuralOK && absolute && withinBudget && decodeOK && !moduleReloadDiff, samePayload, sameShape, structuralOK, absolute, withinBudget, decodeOK, moduleReloadDiff, changedModules, scans, blocks };
+    return { ok: samePayload && sameShape && structuralOK && absolute && zeroWeightOK && withinBudget && decodeOK && !moduleReloadDiff, samePayload, sameShape, structuralOK, absolute, zeroWeightOK, withinBudget, decodeOK, moduleReloadDiff, changedModules, scans, blocks };
   }
   async function makeArtistic(original, model, target, options = {}) {
     const fraction = artworkBudget(options.budget), perception = options.perception ?? .35;
     if (!verify(original, model, target).ok) throw new Error('加工元の正規QRが検証に合格しませんでした。');
     const { version, ecc, mask, rotation = 0, bytes } = original, size = version * 4 + 17;
-    const symbol = encode(bytes, version, ecc, mask, model), cells = placement(symbol), layout = blockLayout(version, ecc);
-    const loss = new Loss(original.matrix, target.bits, target.weights, size, perception), groups = [];
-    for (let slot = 0; slot < layout.raw; slot++) {
-      const indices = [];
-      for (let bit = 0; bit < 8; bit++) {
-        const j = rotateIndex(cells[slot * 8 + bit], size, rotation);
-        if (target.hard[j] < 0 && target.weights[j] > 0 && original.matrix[j] !== target.bits[j]) indices.push(j);
-      }
-      if (indices.length) groups.push({ block: layout.order[slot][0], indices, used: false });
-    }
+    const { symbol, layout, groups } = artworkGroups(original, model, target);
+    const loss = new Loss(original.matrix, target.bits, target.weights, size, perception), initialLoss = loss.value();
     const used = layout.blocks.map(() => 0), limits = layout.blocks.map(b => wordBudget(b.ec, fraction)), moves = [], deadline = now() + 2000;
     // A whole codeword costs one correction regardless of how many of its bits
     // change. Re-rank its target-matching edits after each move for coarse loss.
@@ -658,11 +702,27 @@
       loss.delta(best.indices, true); best.used = true; used[best.block]++; moves.push(best);
       if (moves.length % 16 === 0) await tick();
     }
+    // Replacing one selected word with another in the same block can improve
+    // the image's local density without spending any extra correction words.
+    let exchanges = 0;
+    for (let round = 0; round < 3 && now() < deadline; round++) {
+      let best = null, delta = -1e-10;
+      for (const previous of moves) for (const next of groups) {
+        if (now() >= deadline) break;
+        if (next.used || next.block !== previous.block) continue;
+        const indices = previous.indices.concat(next.indices), value = loss.delta(indices);
+        if (value < delta) { best = { previous, next, indices }; delta = value; }
+      }
+      if (!best) break;
+      loss.delta(best.indices, true); best.previous.used = false; best.next.used = true;
+      moves[moves.indexOf(best.previous)] = best.next; exchanges++;
+      await tick();
+    }
     let attempts = 0;
     while (moves.length) {
       const variant = { version, ecc, mask, rotation, size, bytes: bytes.slice(), text: text.decode(bytes), kind: 'artistic', matrix: loss.matrix.slice(), metrics: loss.metrics(rotate(symbol.modules.reservedBit, size, rotation)), budget: fraction };
       const validation = verifyArtistic(variant, original, model, target, fraction); attempts++;
-      if (validation.ok) return { variant: { ...variant, validation, changedModules: validation.changedModules, changedWords: validation.blocks.reduce((sum, b) => sum + b.errors, 0), backoffSteps: attempts - 1 }, reason: '' };
+      if (validation.ok && loss.value() < initialLoss - 1e-10) return { variant: { ...variant, validation, changedModules: validation.changedModules, changedWords: validation.blocks.reduce((sum, b) => sum + b.errors, 0), backoffSteps: attempts - 1, exchanges }, reason: '' };
       // Detection may fail despite correctable codewords. Back off and decode
       // the actual modified image again; never output a failed variant.
       const keep = Math.floor(moves.length * .7);
@@ -693,7 +753,7 @@
     return out;
   }
   function normalizeSettings(input = {}) {
-    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, artistic: false, artisticBudget: .7, ...input };
+    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, adaptiveCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, artistic: false, artisticBudget: .7, ...input };
     if (!['byte', 'numeric'].includes(s.encoding)) throw new Error('符号化方式が不正です。');
     if (!eccInfo(s.ecc)) throw new Error('誤り訂正レベルが不正です。');
     s.versionMin = integer(s.versionMin, 1, 40, '最小Version'); s.versionMax = integer(s.versionMax, s.versionMin, 40, '最大Version');
@@ -712,8 +772,14 @@
     let attempted = 0, solved = 0, infeasible = 0, baselineBest = -Infinity, greedyBest = -Infinity, refinementsAdded = false;
     function add(candidate, model, target) {
       const key = `${candidate.version}/${candidate.mask}/${candidate.rotation}/${Array.from(candidate.bytes).join(',')}`;
-      const existing = pool.get(key); if (!existing || candidate.metrics.visual > existing.candidate.metrics.visual) pool.set(key, { candidate, model, target });
-      if (pool.size > settings.candidates * 8 + 24) { const sorted = [...pool.entries()].sort((a, b) => b[1].candidate.metrics.visual - a[1].candidate.metrics.visual); pool.clear(); sorted.slice(0, settings.candidates * 6 + 16).forEach(([k, v]) => pool.set(k, v)); }
+      const existing = pool.get(key);
+      if (!existing || candidate.metrics.visual > existing.candidate.metrics.visual) pool.set(key, { candidate, model, target, priority: settings.artistic ? artworkPotential(candidate, model, target, settings.artisticBudget, settings.perception) : candidate.metrics.visual });
+      if (pool.size > settings.candidates * 8 + 24) {
+        const entries = [...pool.entries()], keep = settings.candidates * 3 + 8;
+        const byRegular = entries.slice().sort((a, b) => b[1].candidate.metrics.visual - a[1].candidate.metrics.visual);
+        const byFinished = entries.sort((a, b) => b[1].priority - a[1].priority);
+        pool.clear(); byRegular.slice(0, keep).concat(byFinished.slice(0, keep)).forEach(([k, v]) => pool.set(k, v));
+      }
     }
     for (let qi = 0; qi < queue.length; qi++) {
       if (attempted && now() >= deadline) break;
@@ -737,10 +803,18 @@
           const problemDeadline = Math.min(deadline, now() + Math.max(5, (deadline - now()) / remaining));
           report({ stage: 'search', message: `長さ ${lengths.join(' / ') || '固定'} · Version ${version} · Mask ${mask} · ${rotation * 90}° を比較中`, attempted, elapsed: (now() - started) / 1000 });
           let activeModel = model, m = orient(mapping, Uint8Array.from(encode(model.baseline, version, settings.ecc, mask, model).modules.data), rotation);
-          const adapted = numericSubspace(m, model, target); activeModel = adapted.model; m = adapted.mapping;
+          const baseMapping = m;
+          const byteAdapted = settings.adaptiveCharset ? byteSubspace(m, model, target) : { mapping: m, model, adapted: 0 };
+          const adapted = numericSubspace(byteAdapted.mapping, byteAdapted.model, target); activeModel = adapted.model; m = adapted.mapping;
           let h = hardSystem(m, target.hard);
+          // An image-specific subset must not discard an already feasible
+          // hard solution just because parity constraints favor the old one.
+          if (!h.ok && byteAdapted.adapted) {
+            const fallback = numericSubspace(baseMapping, model, target), possible = hardSystem(fallback.mapping, target.hard);
+            if (possible.ok) { activeModel = fallback.model; m = fallback.mapping; h = possible; }
+          }
           if (!h.ok && settings.fullCharset) {
-            const repair = model.numericUnits.length ? repairNumericHard(m, activeModel, target.hard, problemDeadline) : repairHardCharset(m, model, target.hard, problemDeadline);
+            const repair = model.numericUnits.length ? repairNumericHard(m, activeModel, target.hard, problemDeadline) : repairHardCharset(m, activeModel, target.hard, problemDeadline);
             if (repair) { activeModel = repair.model; m = repair.mapping; h = hardSystem(m, target.hard); }
           }
           if (!h.ok) { infeasible++; continue; }
@@ -785,23 +859,27 @@
       }
     }
     const searchSeconds = (now() - started) / 1000, timedOut = now() >= deadline;
-    const entries = [...pool.values()].sort((a, b) => b.candidate.metrics.visual - a.candidate.metrics.visual || b.candidate.metrics.weighted - a.candidate.metrics.weighted), candidates = []; let rejected = 0;
+    const entries = [...pool.values()].sort((a, b) => b.priority - a.priority || b.candidate.metrics.visual - a.candidate.metrics.visual), candidates = []; let rejected = 0, artisticTested = 0;
+    const verificationLimit = settings.artistic ? Math.max(8, settings.candidates * 3) : settings.candidates;
     report({ stage: 'verify', message: '候補を別のエンコーダ・読み取り器で検証しています。' });
     for (const { candidate, model, target } of entries) {
       const validation = verify(candidate, model, target);
       if (!validation.ok) { rejected++; continue; }
       candidate.validation = validation; candidate.text = text.decode(candidate.bytes);
       if (settings.artistic) {
+        artisticTested++;
         report({ stage: 'artistic', message: `候補${candidates.length + 1}の加工版を作成し、元の文字列に読み取れるか検証しています。` }); await tick();
         try { const art = await makeArtistic(candidate, model, target, { budget: settings.artisticBudget, perception: settings.perception }); candidate.artistic = art.variant; candidate.artisticNote = art.reason; }
         catch (e) { candidate.artistic = null; candidate.artisticNote = `加工版を作成できませんでした: ${e.message} 正規版は保存できます。`; }
       }
       candidates.push(candidate);
-      if (candidates.length >= settings.candidates) break;
+      if (candidates.length >= verificationLimit) break;
       await tick();
     }
     if (!candidates.length) throw new Error(infeasible && !solved ? '今回の探索では絶対黒白指定を満たす解が見つかりませんでした。時間・マスク・Version・可変長の範囲を広げるか、指定を見直してください。指定は保持されています。' : failures[0] || '指定を満たし、独立した読み取り検証にも合格する候補が見つかりませんでした。探索時間や範囲を広げてください。');
-    return { candidates, stats: { seconds: (now() - started) / 1000, searchSeconds, budgetSeconds: settings.seconds, timedOut, attempted, solved, infeasible, rejected, lengthsPlanned: queue.length, baselineBest: Number.isFinite(baselineBest) ? baselineBest : null, greedyBest: Number.isFinite(greedyBest) ? greedyBest : null, failures: [...new Set(failures)].slice(0, 8) }, settings };
+    const finalMetrics = c => c.artistic?.validation.ok ? c.artistic.metrics : c.metrics;
+    candidates.sort((a, b) => finalMetrics(b).visual - finalMetrics(a).visual || finalMetrics(b).weighted - finalMetrics(a).weighted || b.metrics.visual - a.metrics.visual);
+    return { candidates: candidates.slice(0, settings.candidates), stats: { seconds: (now() - started) / 1000, searchSeconds, budgetSeconds: settings.seconds, timedOut, attempted, solved, infeasible, rejected, artisticTested, lengthsPlanned: queue.length, baselineBest: Number.isFinite(baselineBest) ? baselineBest : null, greedyBest: Number.isFinite(greedyBest) ? greedyBest : null, failures: [...new Set(failures)].slice(0, 8) }, settings };
   }
-  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, verifyArtistic, makeArtistic, svg, lengthPlan, normalizeSettings, search };
+  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, byteSubspace, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, verifyArtistic, makeArtistic, svg, lengthPlan, normalizeSettings, search };
 });
