@@ -1,0 +1,123 @@
+{
+  "node": "v24.19.0",
+  "settings": {
+    "version": 8,
+    "ecc": "M",
+    "masks": "all",
+    "rotations": [
+      0
+    ],
+    "passes": 3,
+    "reserve": 8,
+    "samples": 64,
+    "seed": 1,
+    "seconds": 20,
+    "candidates": 1,
+    "perception": 0.35,
+    "fullCharset": true
+  },
+  "input": [
+    {
+      "kind": "fixed",
+      "text": "https://example.com/#"
+    },
+    {
+      "kind": "variable",
+      "length": 1,
+      "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    }
+  ],
+  "method": "Both modes use the same 49×49 QR, ECC M, fixed URL prefix, allowed alphabet, masks, seed and 20-second search budget. Each fills the remaining QR capacity, so the variable character counts differ. Only numeric mode restricts the eligible variable part to digits and encodes it as Numeric. The current optimizer is used on both sides. These are achieved results; timing and candidates may vary with hardware. All targets use uniform weights and no hard constraints.",
+  "rows": [
+    {
+      "shape": "ring",
+      "byte": {
+        "length": 131,
+        "raw": 0.6526447313619326,
+        "weighted": 0.6526447313619326,
+        "blackRecall": 0.6798780487804879,
+        "backgroundBlack": 0.35759312320916903,
+        "score": 0.6661529918089686,
+        "seconds": 20.161914243,
+        "mask": 2,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "numeric": {
+        "length": 311,
+        "raw": 0.7284464806330696,
+        "weighted": 0.7284464806330695,
+        "blackRecall": 0.788109756097561,
+        "backgroundBlack": 0.29398280802292265,
+        "score": 0.7373871997778703,
+        "seconds": 20.105727038,
+        "mask": 7,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "percentagePointChange": 7.580174927113703
+    },
+    {
+      "shape": "diagonal",
+      "byte": {
+        "length": 131,
+        "raw": 0.6480633069554352,
+        "weighted": 0.6480633069554352,
+        "blackRecall": 0.6591549295774648,
+        "backgroundBlack": 0.35386119257087,
+        "score": 0.6579758433985838,
+        "seconds": 20.061928602,
+        "mask": 7,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "numeric": {
+        "length": 311,
+        "raw": 0.7180341524364848,
+        "weighted": 0.7180341524364848,
+        "blackRecall": 0.7408450704225352,
+        "backgroundBlack": 0.2859237536656892,
+        "score": 0.7241566014160766,
+        "seconds": 20.073391603000005,
+        "mask": 7,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "percentagePointChange": 6.99708454810496
+    },
+    {
+      "shape": "heart",
+      "byte": {
+        "length": 131,
+        "raw": 0.648896293211162,
+        "weighted": 0.6488962932111619,
+        "blackRecall": 0.6942148760330579,
+        "backgroundBlack": 0.366369710467706,
+        "score": 0.6573511037067888,
+        "seconds": 20.06738579,
+        "mask": 3,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "numeric": {
+        "length": 311,
+        "raw": 0.7205331112036651,
+        "weighted": 0.7205331112036651,
+        "blackRecall": 0.7801652892561983,
+        "backgroundBlack": 0.29955456570155903,
+        "score": 0.7260724698042482,
+        "seconds": 20.051910831,
+        "mask": 7,
+        "conditions": 8,
+        "decoded": true,
+        "encoderDiff": 0
+      },
+      "percentagePointChange": 7.16368179925031
+    }
+  ]
+}

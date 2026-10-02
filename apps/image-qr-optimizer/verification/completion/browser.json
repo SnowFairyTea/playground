@@ -1,0 +1,25 @@
+{
+  "chromium": "153.0.8010.0",
+  "rows": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "nativeCanvas": true,
+      "worker": true,
+      "pngDecoded": true,
+      "svgDecoded": true,
+      "offline": true,
+      "horizontalOverflow": false
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "nativeCanvas": true,
+      "worker": true,
+      "pngDecoded": true,
+      "svgDecoded": true,
+      "offline": true,
+      "horizontalOverflow": false
+    }
+  ]
+}

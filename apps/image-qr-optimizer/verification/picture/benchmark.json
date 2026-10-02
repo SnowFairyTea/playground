@@ -1,0 +1,2351 @@
+{
+  "node": "v24.19.0",
+  "baselineRef": "af92ce2c76e791776a67a253f40d95b2d94b8e8a",
+  "settings": {
+    "version": 8,
+    "ecc": "M",
+    "masks": "all",
+    "rotations": [
+      0
+    ],
+    "passes": 3,
+    "reserve": 8,
+    "samples": 64,
+    "seed": 1,
+    "seconds": 20,
+    "candidates": 1,
+    "perception": 0.35,
+    "fullCharset": true,
+    "encoding": "byte",
+    "artistic": true,
+    "artisticBudget": 0.7
+  },
+  "method": "Same pristine QR candidate, exact payload bytes, QR version, ECC, mask and rotation for each before/after pair. Baseline full pipeline chooses its best square-module artwork. New drawing receives that same pristine candidate, tries square artwork plus the pristine centers, and chooses a verified picture. Both drawings measured by normalized luminance MAE at 8 pixels/module, excluding the quiet zone but including protected structure. Binary geometry uses a repeated module target; the photograph uses the supplied 147x147 RGB image. These are five fixtures, not an arbitrary-image quality or real-camera guarantee.",
+  "rows": [
+    {
+      "name": "ring",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "baselineSeconds": 20.933761852,
+      "newDrawingSeconds": 0.2469998889999988,
+      "previous": {
+        "text": "https://example.com/#4C4LLC4LLHCC9SC4LLC334C4ILc4C4C4CiS4lCHC444CLL4LLBiLC4LC3334CC933lC5334LC34c4C334C33434FllclLLC33344LFc4LcC33LLCC73L0CCLsCC334vS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.741038456198806,
+          "weighted": 0.7321949187838401,
+          "raw": 0.73219491878384,
+          "fixedMismatch": 242,
+          "blackRate": 0.43690129112869636,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.8094512195121951,
+          "backgroundBlack": 0.2968481375358166
+        },
+        "renderMetrics": {
+          "visual": 0.7410384561988062,
+          "weighted": 0.7321949187838401,
+          "raw": 0.7321949187838401,
+          "binary": 0.73219491878384,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 28,
+        "changedModules": 162,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 162,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#4C4LLC4LLHCC9SC4LLC334C4ILc4C4C4CiS4lCHC444CLL4LLBiLC4LC3334CC933lC5334LC34c4C334C33434FllclLLC33344LFc4LcC33LLCC73L0CCLsCC334vS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.741038456198806,
+          "weighted": 0.7321949187838401,
+          "raw": 0.73219491878384,
+          "fixedMismatch": 242,
+          "blackRate": 0.43690129112869636,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.8094512195121951,
+          "backgroundBlack": 0.2968481375358166
+        },
+        "renderMetrics": {
+          "visual": 0.8793044130917673,
+          "weighted": 0.8757223552686381,
+          "raw": 0.8757223552686381,
+          "binary": 0.8757223552686381,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "image-color",
+        "core": 0.375,
+        "changedWords": 28,
+        "changedModules": 162,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "renderingOK": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 162,
+          "scans": [
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 12,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "transform": "area-downsample-50%",
+              "width": 228,
+              "ok": true
+            },
+            {
+              "transform": "blur-3x3",
+              "width": 456,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "regular": {
+        "text": "https://example.com/#4C4LLC4LLHCC9SC4LLC334C4ILc4C4C4CiS4lCHC444CLL4LLBiLC4LC3334CC933lC5334LC34c4C334C33434FllclLLC33344LFc4LcC33LLCC73L0CCLsCC334vS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.675315840621963,
+          "weighted": 0.6647230320699709,
+          "raw": 0.6647230320699709,
+          "fixedMismatch": 242,
+          "blackRate": 0.4435651811745106,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.698170731707317,
+          "backgroundBlack": 0.3478510028653295
+        },
+        "renderMetrics": {
+          "visual": 0.675315840621963,
+          "weighted": 0.6647230320699709,
+          "raw": 0.6647230320699709,
+          "binary": 0.6647230320699709,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 0,
+        "changedModules": 0,
+        "validation": {
+          "ok": true,
+          "payload": true,
+          "absolute": true,
+          "encoderDiff": 0,
+          "actualDiff": 0,
+          "moduleReloadDiff": 0,
+          "decodeOK": true,
+          "rsOK": true,
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            }
+          ]
+        }
+      },
+      "note": "",
+      "budgets": [
+        {
+          "budget": 0,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 0,
+          "renderMetrics": {
+            "visual": 0.8700621702762739,
+            "weighted": 0.8662341211995003,
+            "raw": 0.8662341211995003,
+            "binary": 0.8662341211995002,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            }
+          ]
+        },
+        {
+          "budget": 0.5,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 20,
+          "renderMetrics": {
+            "visual": 0.8769987331667362,
+            "weighted": 0.8733210120783007,
+            "raw": 0.8733210120783007,
+            "binary": 0.8733210120783007,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            }
+          ]
+        },
+        {
+          "budget": 0.7,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 28,
+          "renderMetrics": {
+            "visual": 0.8793044130917673,
+            "weighted": 0.8757223552686381,
+            "raw": 0.8757223552686381,
+            "binary": 0.8757223552686381,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        },
+        {
+          "budget": 0.9,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 36,
+          "renderMetrics": {
+            "visual": 0.8813270078439539,
+            "weighted": 0.8777722823823407,
+            "raw": 0.8777722823823407,
+            "binary": 0.8777722823823407,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 21,
+              "remaining": 2,
+              "budget": 9
+            }
+          ]
+        }
+      ],
+      "percentagePointChange": 14.352743648479793
+    },
+    {
+      "name": "diagonal",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "baselineSeconds": 20.78491146,
+      "newDrawingSeconds": 0.1864994269999952,
+      "previous": {
+        "text": "https://example.com/#5Gjq6kQphZ69MBtMIXTnDkVlHNHnHjmINFlkT5GcFiTa6AwlYj2T09XTnFoH7VkvnGhryRveNBMOByWkU4ghRmDhQoMOHMNFdbmhYR4gaNFhV4a62kRVhRSINA7fYnLO",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.735762876579203,
+          "weighted": 0.7288629737609329,
+          "raw": 0.7288629737609329,
+          "fixedMismatch": 247,
+          "blackRate": 0.3548521449396085,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7830985915492957,
+          "backgroundBlack": 0.2805474095796676
+        },
+        "renderMetrics": {
+          "visual": 0.7357628765792033,
+          "weighted": 0.728862973760933,
+          "raw": 0.728862973760933,
+          "binary": 0.7288629737609329,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 28,
+        "changedModules": 148,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 148,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#5Gjq6kQphZ69MBtMIXTnDkVlHNHnHjmINFlkT5GcFiTa6AwlYj2T09XTnFoH7VkvnGhryRveNBMOByWkU4ghRmDhQoMOHMNFdbmhYR4gaNFhV4a62kRVhRSINA7fYnLO",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.735762876579203,
+          "weighted": 0.7288629737609329,
+          "raw": 0.7288629737609329,
+          "fixedMismatch": 247,
+          "blackRate": 0.3548521449396085,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7830985915492957,
+          "backgroundBlack": 0.2805474095796676
+        },
+        "renderMetrics": {
+          "visual": 0.8755171456337637,
+          "weighted": 0.8734641815910038,
+          "raw": 0.8734641815910038,
+          "binary": 0.8734641815910037,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "image-color",
+        "core": 0.375,
+        "changedWords": 28,
+        "changedModules": 148,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "renderingOK": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 148,
+          "scans": [
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 12,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "transform": "area-downsample-50%",
+              "width": 228,
+              "ok": true
+            },
+            {
+              "transform": "blur-3x3",
+              "width": 456,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "regular": {
+        "text": "https://example.com/#5Gjq6kQphZ69MBtMIXTnDkVlHNHnHjmINFlkT5GcFiTa6AwlYj2T09XTnFoH7VkvnGhryRveNBMOByWkU4ghRmDhQoMOHMNFdbmhYR4gaNFhV4a62kRVhRSINA7fYnLO",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.6746078023045954,
+          "weighted": 0.6672219908371512,
+          "raw": 0.6672219908371512,
+          "fixedMismatch": 247,
+          "blackRate": 0.3923365264473136,
+          "targetBlackRate": 0.14785506039150353,
+          "blackRecall": 0.7014084507042253,
+          "backgroundBlack": 0.3387096774193548
+        },
+        "renderMetrics": {
+          "visual": 0.6746078023045954,
+          "weighted": 0.6672219908371513,
+          "raw": 0.6672219908371513,
+          "binary": 0.6672219908371512,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 0,
+        "changedModules": 0,
+        "validation": {
+          "ok": true,
+          "payload": true,
+          "absolute": true,
+          "encoderDiff": 0,
+          "actualDiff": 0,
+          "moduleReloadDiff": 0,
+          "decodeOK": true,
+          "rsOK": true,
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            }
+          ]
+        }
+      },
+      "note": "",
+      "budgets": [
+        {
+          "budget": 0,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 0,
+          "renderMetrics": {
+            "visual": 0.8669749149659864,
+            "weighted": 0.8647959183673469,
+            "raw": 0.8647959183673469,
+            "binary": 0.8647959183673469,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            }
+          ]
+        },
+        {
+          "budget": 0.5,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 20,
+          "renderMetrics": {
+            "visual": 0.873448780022213,
+            "weighted": 0.8712971157850895,
+            "raw": 0.8712971157850895,
+            "binary": 0.8712971157850895,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            }
+          ]
+        },
+        {
+          "budget": 0.7,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 28,
+          "renderMetrics": {
+            "visual": 0.8755171456337637,
+            "weighted": 0.8734641815910038,
+            "raw": 0.8734641815910038,
+            "binary": 0.8734641815910037,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        },
+        {
+          "budget": 0.9,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 36,
+          "renderMetrics": {
+            "visual": 0.8775202172705817,
+            "weighted": 0.875631247396918,
+            "raw": 0.875631247396918,
+            "binary": 0.875631247396918,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 21,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 21,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            }
+          ]
+        }
+      ],
+      "percentagePointChange": 14.46012078300708
+    },
+    {
+      "name": "heart",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "baselineSeconds": 20.788708633000002,
+      "newDrawingSeconds": 0.1987846900000004,
+      "previous": {
+        "text": "https://example.com/#4LC4C34C4O3LFc4LLLC334C4IS3734K8CLC4C3CLC4C3LC3S4MUC4LLC3334CC9S2C34C34Ls4C34LC4C34LLCTILsLLlLC33344LIS4C3LC3LC3LS3LL3K33Ls4H4IS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.7387893933083438,
+          "weighted": 0.7305289462723865,
+          "raw": 0.7305289462723865,
+          "fixedMismatch": 249,
+          "blackRate": 0.4281549354435652,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.8148760330578513,
+          "backgroundBlack": 0.2978841870824053
+        },
+        "renderMetrics": {
+          "visual": 0.7387893933083437,
+          "weighted": 0.7305289462723865,
+          "raw": 0.7305289462723865,
+          "binary": 0.7305289462723865,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 28,
+        "changedModules": 159,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 159,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/#4LC4C34C4O3LFc4LLLC334C4IS3734K8CLC4C3CLC4C3LC3S4MUC4LLC3334CC9S2C34C34Ls4C34LC4C34LLCTILsLLlLC33344LIS4C3LC3LC3LS3LL3K33Ls4H4IS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.7387893933083438,
+          "weighted": 0.7305289462723865,
+          "raw": 0.7305289462723865,
+          "fixedMismatch": 249,
+          "blackRate": 0.4281549354435652,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.8148760330578513,
+          "backgroundBlack": 0.2978841870824053
+        },
+        "renderMetrics": {
+          "visual": 0.8743218971261975,
+          "weighted": 0.8729826114119117,
+          "raw": 0.8729826114119117,
+          "binary": 0.8729826114119117,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "image-color",
+        "core": 0.375,
+        "changedWords": 28,
+        "changedModules": 159,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "renderingOK": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 159,
+          "scans": [
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 12,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "transform": "area-downsample-50%",
+              "width": 228,
+              "ok": true
+            },
+            {
+              "transform": "blur-3x3",
+              "width": 456,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "regular": {
+        "text": "https://example.com/#4LC4C34C4O3LFc4LLLC334C4IS3734K8CLC4C3CLC4C3LC3S4MUC4LLC3334CC9S2C34C34Ls4C34LC4C34LLCTILsLLlLC33344LIS4C3LC3LC3LS3LL3K33Ls4H4IS",
+        "mask": 1,
+        "metrics": {
+          "visual": 0.6727613494377342,
+          "weighted": 0.6643065389421074,
+          "raw": 0.6643065389421074,
+          "fixedMismatch": 249,
+          "blackRate": 0.4602249062890462,
+          "targetBlackRate": 0.2519783423573511,
+          "blackRecall": 0.7471074380165289,
+          "backgroundBlack": 0.36358574610244987
+        },
+        "renderMetrics": {
+          "visual": 0.6727613494377344,
+          "weighted": 0.6643065389421074,
+          "raw": 0.6643065389421074,
+          "binary": 0.6643065389421074,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 0,
+        "changedModules": 0,
+        "validation": {
+          "ok": true,
+          "payload": true,
+          "absolute": true,
+          "encoderDiff": 0,
+          "actualDiff": 0,
+          "moduleReloadDiff": 0,
+          "decodeOK": true,
+          "rsOK": true,
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            }
+          ]
+        }
+      },
+      "note": "",
+      "budgets": [
+        {
+          "budget": 0,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 0,
+          "renderMetrics": {
+            "visual": 0.8651931053033458,
+            "weighted": 0.8636700853810912,
+            "raw": 0.8636700853810912,
+            "binary": 0.8636700853810912,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            }
+          ]
+        },
+        {
+          "budget": 0.5,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 20,
+          "renderMetrics": {
+            "visual": 0.8719791232819659,
+            "weighted": 0.8706398375676802,
+            "raw": 0.8706398375676802,
+            "binary": 0.8706398375676802,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 20,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            }
+          ]
+        },
+        {
+          "budget": 0.7,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 28,
+          "renderMetrics": {
+            "visual": 0.8743218971261975,
+            "weighted": 0.8729826114119117,
+            "raw": 0.8729826114119117,
+            "binary": 0.8729826114119117,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 20,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        },
+        {
+          "budget": 0.9,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 36,
+          "renderMetrics": {
+            "visual": 0.8763601103706788,
+            "weighted": 0.8752668159100375,
+            "raw": 0.8752668159100375,
+            "binary": 0.8752668159100375,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            }
+          ]
+        }
+      ],
+      "percentagePointChange": 14.245366513952519
+    },
+    {
+      "name": "fixed-url",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/qr-art?theme=green#demo"
+        }
+      ],
+      "baselineSeconds": 1.3865005719999972,
+      "newDrawingSeconds": 0.2550231020000065,
+      "previous": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.5863251423018188,
+          "weighted": 0.5660141607663474,
+          "raw": 0.5660141607663474,
+          "fixedMismatch": 240,
+          "blackRate": 0.4789670970428988,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.5823170731707317,
+          "backgroundBlack": 0.44011461318051576
+        },
+        "renderMetrics": {
+          "visual": 0.5863251423018189,
+          "weighted": 0.5660141607663475,
+          "raw": 0.5660141607663475,
+          "binary": 0.5660141607663474,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 28,
+        "changedModules": 174,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 174,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.5863251423018188,
+          "weighted": 0.5660141607663474,
+          "raw": 0.5660141607663474,
+          "fixedMismatch": 240,
+          "blackRate": 0.4789670970428988,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.5823170731707317,
+          "backgroundBlack": 0.44011461318051576
+        },
+        "renderMetrics": {
+          "visual": 0.8582637008885187,
+          "weighted": 0.8530690337359434,
+          "raw": 0.8530690337359434,
+          "binary": 0.8530690337359433,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "image-color",
+        "core": 0.375,
+        "changedWords": 28,
+        "changedModules": 174,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "renderingOK": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 174,
+          "scans": [
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 12,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "transform": "area-downsample-50%",
+              "width": 228,
+              "ok": true
+            },
+            {
+              "transform": "blur-3x3",
+              "width": 456,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "regular": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 7,
+        "metrics": {
+          "visual": 0.5138553380535889,
+          "weighted": 0.49354435651811746,
+          "raw": 0.49354435651811746,
+          "fixedMismatch": 240,
+          "blackRate": 0.5039566847147022,
+          "targetBlackRate": 0.273219491878384,
+          "blackRecall": 0.4954268292682927,
+          "backgroundBlack": 0.5071633237822349
+        },
+        "renderMetrics": {
+          "visual": 0.5138553380535889,
+          "weighted": 0.49354435651811757,
+          "raw": 0.49354435651811757,
+          "binary": 0.49354435651811746,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 0,
+        "changedModules": 0,
+        "validation": {
+          "ok": true,
+          "payload": true,
+          "absolute": true,
+          "encoderDiff": 0,
+          "actualDiff": 0,
+          "moduleReloadDiff": 0,
+          "decodeOK": true,
+          "rsOK": true,
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            }
+          ]
+        }
+      },
+      "note": "",
+      "budgets": [
+        {
+          "budget": 0,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 0,
+          "renderMetrics": {
+            "visual": 0.8480726346661114,
+            "weighted": 0.842877967513536,
+            "raw": 0.842877967513536,
+            "binary": 0.842877967513536,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            }
+          ]
+        },
+        {
+          "budget": 0.5,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 20,
+          "renderMetrics": {
+            "visual": 0.8555109416215466,
+            "weighted": 0.8503162744689713,
+            "raw": 0.8503162744689713,
+            "binary": 0.8503162744689713,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            }
+          ]
+        },
+        {
+          "budget": 0.7,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 28,
+          "renderMetrics": {
+            "visual": 0.8582637008885187,
+            "weighted": 0.8530690337359434,
+            "raw": 0.8530690337359434,
+            "binary": 0.8530690337359433,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        },
+        {
+          "budget": 0.9,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 36,
+          "renderMetrics": {
+            "visual": 0.8607802304595307,
+            "weighted": 0.8557632236568097,
+            "raw": 0.8557632236568097,
+            "binary": 0.8557632236568097,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            }
+          ]
+        }
+      ],
+      "percentagePointChange": 28.705487296959596
+    },
+    {
+      "name": "astronaut",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/qr-art?theme=green#demo"
+        }
+      ],
+      "baselineSeconds": 1.3607728170000046,
+      "newDrawingSeconds": 0.2513480850000051,
+      "previous": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 0,
+        "metrics": {
+          "visual": 0.6392614188532555,
+          "weighted": 0.5889212827988338,
+          "raw": 0.5889212827988338,
+          "fixedMismatch": 213,
+          "blackRate": 0.514369012911287,
+          "targetBlackRate": 0.5422740524781341,
+          "blackRecall": 0.5952380952380952,
+          "backgroundBlack": 0.41856232939035487
+        },
+        "renderMetrics": {
+          "visual": 0.6494025795823503,
+          "weighted": 0.5503898062694575,
+          "raw": 0.5503898062694575,
+          "binary": 0.5795501874219076,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 28,
+        "changedModules": 173,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 173,
+          "scans": [
+            {
+              "scale": 2,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "current": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 0,
+        "metrics": {
+          "visual": 0.6392614188532555,
+          "weighted": 0.5889212827988338,
+          "raw": 0.5889212827988338,
+          "fixedMismatch": 213,
+          "blackRate": 0.514369012911287,
+          "targetBlackRate": 0.5422740524781341,
+          "blackRecall": 0.5952380952380952,
+          "backgroundBlack": 0.41856232939035487
+        },
+        "renderMetrics": {
+          "visual": 0.8905687281232233,
+          "weighted": 0.8577864051130676,
+          "raw": 0.8577864051130676,
+          "binary": 0.8630583610995418,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "image-color",
+        "core": 0.375,
+        "changedWords": 28,
+        "changedModules": 173,
+        "validation": {
+          "ok": true,
+          "samePayload": true,
+          "sameShape": true,
+          "structuralOK": true,
+          "absolute": true,
+          "zeroWeightOK": true,
+          "withinBudget": true,
+          "renderingOK": true,
+          "decodeOK": true,
+          "moduleReloadDiff": 0,
+          "changedModules": 173,
+          "scans": [
+            {
+              "scale": 4,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 8,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "scale": 12,
+              "quiet": 4,
+              "ok": true
+            },
+            {
+              "transform": "area-downsample-50%",
+              "width": 228,
+              "ok": true
+            },
+            {
+              "transform": "blur-3x3",
+              "width": 456,
+              "ok": true
+            }
+          ],
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        }
+      },
+      "regular": {
+        "text": "https://example.com/qr-art?theme=green#demo",
+        "mask": 0,
+        "metrics": {
+          "visual": 0.5682771067610718,
+          "weighted": 0.5168679716784673,
+          "raw": 0.5168679716784673,
+          "fixedMismatch": 213,
+          "blackRate": 0.5156184922948771,
+          "targetBlackRate": 0.5422740524781341,
+          "blackRecall": 0.5299539170506913,
+          "backgroundBlack": 0.4986351228389445
+        },
+        "renderMetrics": {
+          "visual": 0.6023069613108806,
+          "weighted": 0.5058276713746657,
+          "raw": 0.5058276713746657,
+          "binary": 0.5098656809662641,
+          "scale": 8,
+          "metric": "luminance-MAE"
+        },
+        "mode": "modules",
+        "core": 1,
+        "changedWords": 0,
+        "changedModules": 0,
+        "validation": {
+          "ok": true,
+          "payload": true,
+          "absolute": true,
+          "encoderDiff": 0,
+          "actualDiff": 0,
+          "moduleReloadDiff": 0,
+          "decodeOK": true,
+          "rsOK": true,
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11
+            }
+          ]
+        }
+      },
+      "note": "",
+      "budgets": [
+        {
+          "budget": 0,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 0,
+          "renderMetrics": {
+            "visual": 0.884239074873488,
+            "weighted": 0.8514791581734753,
+            "raw": 0.8514791581734753,
+            "binary": 0.8532512494793836,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 0,
+              "nonzeroSyndromes": 0,
+              "remaining": 11,
+              "budget": 0
+            }
+          ]
+        },
+        {
+          "budget": 0.5,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 20,
+          "renderMetrics": {
+            "visual": 0.8886951299040035,
+            "weighted": 0.8560110811059134,
+            "raw": 0.8560110811059134,
+            "binary": 0.86044226364015,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 5,
+              "nonzeroSyndromes": 22,
+              "remaining": 6,
+              "budget": 5
+            }
+          ]
+        },
+        {
+          "budget": 0.7,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 28,
+          "renderMetrics": {
+            "visual": 0.8905687281232233,
+            "weighted": 0.8577864051130676,
+            "raw": 0.8577864051130676,
+            "binary": 0.8630583610995418,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 7,
+              "nonzeroSyndromes": 22,
+              "remaining": 4,
+              "budget": 7
+            }
+          ]
+        },
+        {
+          "budget": 0.9,
+          "mode": "image-color",
+          "core": 0.375,
+          "changedWords": 36,
+          "renderMetrics": {
+            "visual": 0.8917365898441021,
+            "weighted": 0.8592500477844217,
+            "raw": 0.8592500477844217,
+            "binary": 0.8653165347771762,
+            "scale": 8,
+            "metric": "luminance-MAE"
+          },
+          "blocks": [
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 38,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            },
+            {
+              "dataWords": 39,
+              "eccWords": 22,
+              "errors": 9,
+              "nonzeroSyndromes": 22,
+              "remaining": 2,
+              "budget": 9
+            }
+          ]
+        }
+      ],
+      "percentagePointChange": 30.739659884361004
+    }
+  ]
+}

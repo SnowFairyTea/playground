@@ -1,0 +1,224 @@
+{
+  "node": "v24.19.0",
+  "settings": {
+    "version": 8,
+    "ecc": "M",
+    "masks": "all",
+    "rotations": [
+      0
+    ],
+    "passes": 3,
+    "reserve": 8,
+    "samples": 64,
+    "seed": 1,
+    "seconds": 20,
+    "candidates": 1,
+    "perception": 0.35,
+    "fullCharset": true,
+    "encoding": "byte",
+    "artistic": true,
+    "artisticBudget": 0.7
+  },
+  "method": "Only the post-encoding matrix changes between each pair. The full decoded bytes, Version, ECC, mask, rotation and quiet zone are identical. Generated geometric target, uniform weights, no hard constraints. The artwork uses at most 70% of each RS block correction capacity and must decode at 2, 4 and 8 pixels per module.",
+  "rows": [
+    {
+      "name": "fixed",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/qr-art?theme=green#demo"
+        }
+      ],
+      "text": "https://example.com/qr-art?theme=green#demo",
+      "mask": 7,
+      "regular": {
+        "visual": 0.5138553380535889,
+        "weighted": 0.49354435651811746,
+        "raw": 0.49354435651811746,
+        "fixedMismatch": 240,
+        "blackRate": 0.5039566847147022,
+        "targetBlackRate": 0.273219491878384,
+        "blackRecall": 0.4954268292682927,
+        "backgroundBlack": 0.5071633237822349
+      },
+      "artistic": {
+        "visual": 0.5863251423018188,
+        "weighted": 0.5660141607663474,
+        "raw": 0.5660141607663474,
+        "fixedMismatch": 240,
+        "blackRate": 0.4789670970428988,
+        "targetBlackRate": 0.273219491878384,
+        "blackRecall": 0.5823170731707317,
+        "backgroundBlack": 0.44011461318051576
+      },
+      "percentagePointChange": 7.246980424822991,
+      "changedModules": 174,
+      "changedWords": 28,
+      "validation": {
+        "ok": true,
+        "samePayload": true,
+        "sameShape": true,
+        "structuralOK": true,
+        "absolute": true,
+        "withinBudget": true,
+        "decodeOK": true,
+        "moduleReloadDiff": 0,
+        "changedModules": 174,
+        "scans": [
+          {
+            "scale": 2,
+            "quiet": 4,
+            "ok": true
+          },
+          {
+            "scale": 4,
+            "quiet": 4,
+            "ok": true
+          },
+          {
+            "scale": 8,
+            "quiet": 4,
+            "ok": true
+          }
+        ],
+        "blocks": [
+          {
+            "dataWords": 38,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 38,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 39,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 39,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          }
+        ]
+      },
+      "backoffSteps": 0
+    },
+    {
+      "name": "variable",
+      "segments": [
+        {
+          "kind": "fixed",
+          "text": "https://example.com/#"
+        },
+        {
+          "kind": "variable",
+          "length": 128,
+          "allowed": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        }
+      ],
+      "text": "https://example.com/#hQMmIWHLjPVUSKHipuTvvmVIqIviVQVmVjLhmVMUJmhWtMiHQpNQuoIPvnliUVSjoPWjjlpIVrIviVkliOoNoSktKirqMWUKnvHhsUniivVvjWRSsRNIonWUnvVnTotn",
+      "mask": 0,
+      "regular": {
+        "visual": 0.6597389976398722,
+        "weighted": 0.6468138275718451,
+        "raw": 0.646813827571845,
+        "fixedMismatch": 240,
+        "blackRate": 0.44814660558100794,
+        "targetBlackRate": 0.273219491878384,
+        "blackRecall": 0.6737804878048781,
+        "backgroundBlack": 0.36332378223495704
+      },
+      "artistic": {
+        "visual": 0.716590309593225,
+        "weighted": 0.7051228654727197,
+        "raw": 0.7051228654727197,
+        "fixedMismatch": 240,
+        "blackRate": 0.4323198667221991,
+        "targetBlackRate": 0.273219491878384,
+        "blackRecall": 0.7515243902439024,
+        "backgroundBlack": 0.3123209169054441
+      },
+      "percentagePointChange": 5.830903790087472,
+      "changedModules": 140,
+      "changedWords": 28,
+      "validation": {
+        "ok": true,
+        "samePayload": true,
+        "sameShape": true,
+        "structuralOK": true,
+        "absolute": true,
+        "withinBudget": true,
+        "decodeOK": true,
+        "moduleReloadDiff": 0,
+        "changedModules": 140,
+        "scans": [
+          {
+            "scale": 2,
+            "quiet": 4,
+            "ok": true
+          },
+          {
+            "scale": 4,
+            "quiet": 4,
+            "ok": true
+          },
+          {
+            "scale": 8,
+            "quiet": 4,
+            "ok": true
+          }
+        ],
+        "blocks": [
+          {
+            "dataWords": 38,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 38,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 39,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          },
+          {
+            "dataWords": 39,
+            "eccWords": 22,
+            "errors": 7,
+            "nonzeroSyndromes": 22,
+            "remaining": 4,
+            "budget": 7
+          }
+        ]
+      },
+      "backoffSteps": 0
+    }
+  ]
+}

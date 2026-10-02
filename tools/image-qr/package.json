@@ -1,0 +1,18 @@
+{
+  "name": "image-qr-verification",
+  "private": true,
+  "scripts": {
+    "test": "node --test --test-concurrency=1 *.test.cjs",
+    "benchmark": "node benchmark.cjs",
+    "benchmark:numeric": "node benchmark-numeric.cjs",
+    "benchmark:artistic": "node benchmark-artistic.cjs",
+    "benchmark:completion": "node benchmark-completion.cjs",
+    "benchmark:picture": "node benchmark-picture.cjs",
+    "test:browser": "node browser-smoke.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "playwright": "1.62.1",
+    "pngjs": "7.0.0"
+  }
+}
