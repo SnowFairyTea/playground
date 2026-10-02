@@ -21,6 +21,7 @@ permalink: /apps/image-qr-optimizer/
       <div class="qr-section-heading"><h2 id="target-title">2. 絵と領域を調整</h2><span id="target-size" class="qr-note"></span></div>
       <div class="qr-canvas-wrap" id="paint-wrap"><canvas id="paint-canvas" width="420" height="420" aria-label="目標画像。ブラシ、矩形、円形で領域を指定できます。"></canvas><canvas id="selection-canvas" width="420" height="420" aria-hidden="true"></canvas></div>
       <p id="image-status" class="qr-note" role="status">画像を選ぶと、QRのマスに合わせた目標を表示します。</p>
+      <label class="qr-check"><input id="preview-source" type="checkbox" checked>元画像の色・濃淡で表示（外すと白黒の目標）</label>
       <div class="qr-grid-3">
         <div><label for="brush-mode">領域の指定</label><select id="brush-mode"><option value="soft-black">できるだけ黒</option><option value="soft-white">できるだけ白</option><option value="black">絶対黒</option><option value="white">絶対白</option><option value="weight">重要度</option><option value="clear">絶対指定を消す</option><option value="erase-soft">黒白の目標編集を消す</option></select></div>
         <div><label for="region-shape">形</label><select id="region-shape"><option value="brush">ブラシ</option><option value="rect" selected>矩形</option><option value="circle">円形</option></select></div>
@@ -87,7 +88,12 @@ permalink: /apps/image-qr-optimizer/
     <div class="qr-toolbar qr-spaced"><label class="qr-check"><input id="full-charset" type="checkbox" checked>許可文字全体を使って追加改善</label><label class="qr-check"><input id="auto-length" type="checkbox">可変部分の長さも探索</label><label class="qr-check"><input id="compare-versions" type="checkbox">Versionの範囲も比較</label></div>
     <div class="qr-toolbar qr-spaced"><label class="qr-check"><input id="adaptive-charset" type="checkbox" checked>画像に合わせて文字の初期集合を選ぶ</label></div>
     <p class="qr-note">許可文字・禁止文字・長さを保ち、Byte方式の可変部分を画像に合わせます。詳細で初期集合を手動指定した部分は、その指定を使います。</p>
-    <div class="qr-grid-2 qr-spaced"><div><label class="qr-check"><input id="make-artistic" type="checkbox" checked>生成後に加工版も作る</label><p class="qr-note">正規版を残し、読み取り検証を通った加工版を別に表示します。</p></div><div><label for="artistic-budget">加工に使う誤り訂正の余力</label><select id="artistic-budget"><option value="0.5">50%・余力を多く残す</option><option value="0.7" selected>70%・バランス</option><option value="0.9">90%・絵を優先</option></select><p class="qr-note">ブロックごとの訂正可能な語数に対する上限です。黒く塗れる面積の割合ではありません。</p></div></div>
+    <div class="qr-grid-3 qr-spaced">
+      <div><label class="qr-check"><input id="make-artistic" type="checkbox" checked>生成後に加工版も作る</label><p class="qr-note">正規版を残し、読み取り検証を通った加工版を別に表示します。</p></div>
+      <div><label for="artistic-mode">絵に近づけるモード</label><select id="artistic-mode"><option value="auto" selected>自動・検証できた完成画像を比較</option><option value="image-color">元画像の色を残す</option><option value="image-mono">白黒の濃淡を残す</option><option value="modules">マス単位で加工する</option></select><p class="qr-note">画像モードは中央に読み取り用の模様を残し、周囲に絵を描きます。読めなければ中央を太くし、それでも難しい場合はマス加工へ戻します。</p></div>
+      <div><label for="artistic-budget">加工に使う誤り訂正の余力</label><select id="artistic-budget"><option value="0">0%・中央のマスを変更しない</option><option value="0.5">50%・余力を多く残す</option><option value="0.7" selected>70%・バランス</option><option value="0.9">90%・絵を優先</option></select><p class="qr-note">ブロックごとの訂正可能な語数に対する上限です。画像モードでは中央のマスについて数えます。</p></div>
+    </div>
+    <p class="qr-note">自動モードは、訂正予算を使ったマスと変更していないマスの両方から描画を試します。小さく縮めた画像と軽くぼかした画像でも、元の全文字列へ復号できるものを選びます。</p>
     <details class="qr-details"><summary>探索範囲と詳細設定</summary>
       <div class="qr-grid-3 qr-spaced">
         <div><label for="version-min">最小Version</label><input id="version-min" type="number" min="1" max="40" value="1"></div><div><label for="version-max">最大Version</label><input id="version-max" type="number" min="1" max="40" value="40"></div>

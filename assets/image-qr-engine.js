@@ -519,7 +519,19 @@
     const hard = src.hard ? Int8Array.from(src.hard) : new Int8Array(bits.length).fill(-1);
     if (weights.length !== bits.length || hard.length !== bits.length || weights.some(v => !Number.isFinite(v) || v < 0 || v > 1) || hard.some(v => v < -1 || v > 1)) throw new Error('重要度または絶対指定が不正です。');
     if (!weights.some(v => v > 0)) throw new Error('重要度がすべて0です。少なくとも一つの領域に重要度を設定してください。');
-    return size === n ? { size, bits, weights, hard } : { size: n, bits: projectField(bits, size, n), weights: projectField(weights, size, n), hard: projectHard(hard, size, n) };
+    const target = size === n ? { size, bits, weights, hard } : { size: n, bits: projectField(bits, size, n), weights: projectField(weights, size, n), hard: projectHard(hard, size, n) };
+    if (src.image) {
+      const image = src.image, width = integer(image.size, 1, 177 * 8, '画像の寸法');
+      if (image.rgba.length !== width * width * 4 || image.rgba.some(v => !Number.isInteger(v) || v < 0 || v > 255)) throw new Error('加工用画像の画素が不正です。');
+      const dst = n * 3, rgba = new Uint8ClampedArray(dst * dst * 4);
+      for (let y = 0; y < dst; y++) for (let x = 0; x < dst; x++) {
+        const j = (Math.min(width - 1, Math.floor((y + .5) * width / dst)) * width + Math.min(width - 1, Math.floor((x + .5) * width / dst))) * 4;
+        for (let k = 0; k < 3; k++) rgba[(y * dst + x) * 4 + k] = Math.round((image.rgba[j + k] * image.rgba[j + 3] + 255 * (255 - image.rgba[j + 3])) / 255);
+        rgba[(y * dst + x) * 4 + 3] = 255;
+      }
+      target.image = { size: dst, rgba };
+    }
+    return target;
   }
   function improve(mapping, model, startX, hardSolution, tgt, settings, deadline, seed) {
     const random = rng(seed), n = mapping.size, loss = new Loss(predict(mapping, startX), tgt.bits, tgt.weights, n, settings.perception);
@@ -594,6 +606,96 @@
       out[r * size + c] = raster.data[i] < 128 ? 1 : 0;
     }
     return out;
+  }
+  function artworkImage(target, size) {
+    if (target.image) return target.image;
+    const width = size * 3, rgba = new Uint8ClampedArray(width * width * 4);
+    for (let y = 0; y < width; y++) for (let x = 0; x < width; x++) {
+      const j = (y * width + x) * 4, value = target.bits[Math.floor(y / 3) * size + Math.floor(x / 3)] ? 0 : 255;
+      rgba[j] = rgba[j + 1] = rgba[j + 2] = value; rgba[j + 3] = 255;
+    }
+    return { size: width, rgba };
+  }
+  function artworkEditable(original, model, target) {
+    const symbol = encode(original.bytes, original.version, original.ecc, original.mask, model), layout = blockLayout(original.version, original.ecc), out = new Uint8Array(original.size ** 2);
+    for (const j of placement(symbol).slice(0, layout.raw * 8)) {
+      const index = rotateIndex(j, original.size, original.rotation || 0);
+      if (target.hard[index] < 0 && target.weights[index] > 0) out[index] = 1;
+    }
+    return out;
+  }
+  const luminance = (data, j) => .2126 * data[j] + .7152 * data[j + 1] + .0722 * data[j + 2];
+  function renderCandidate(candidate, scale = 8, quiet = 4) {
+    const { matrix, size, rendering } = candidate, raster = renderRGBA(matrix, size, scale, quiet);
+    if (!rendering) return raster;
+    const core = Math.ceil(scale * rendering.core), start = Math.ceil((scale - core) / 2), image = rendering.image;
+    for (let j = 0; j < matrix.length; j++) if (rendering.editable[j]) {
+      const row = Math.floor(j / size), col = j % size;
+      for (let y = 0; y < scale; y++) for (let x = 0; x < scale; x++) {
+        if (x >= start && x < start + core && y >= start && y < start + core) continue;
+        const src = (Math.floor((row + (y + .5) / scale) * 3) * image.size + Math.floor((col + (x + .5) / scale) * 3)) * 4;
+        const dst = (((row + quiet) * scale + y) * raster.width + (col + quiet) * scale + x) * 4;
+        if (rendering.mode === 'image-mono') raster.data[dst] = raster.data[dst + 1] = raster.data[dst + 2] = Math.round(luminance(image.rgba, src));
+        else for (let k = 0; k < 3; k++) raster.data[dst + k] = image.rgba[src + k];
+      }
+    }
+    return raster;
+  }
+  function renderedMetrics(candidate, target, perception = .35) {
+    // Measure the actual drawing, including protected structure, at 8 px/module.
+    // Similarity is 1 minus normalized luminance MAE, not center-module accuracy.
+    const scale = 8, quiet = 4, raster = renderCandidate(candidate, scale, quiet), size = candidate.size, image = artworkImage(target, size), differences = new Float64Array(size * size);
+    let error = 0, rawError = 0, sum = 0, binaryMatches = 0;
+    for (let row = 0; row < size; row++) for (let col = 0; col < size; col++) {
+      const j = row * size + col, w = target.weights[j];
+      for (let y = 0; y < scale; y++) for (let x = 0; x < scale; x++) {
+        const src = (Math.floor((row + (y + .5) / scale) * 3) * image.size + Math.floor((col + (x + .5) / scale) * 3)) * 4;
+        const dst = (((row + quiet) * scale + y) * raster.width + (col + quiet) * scale + x) * 4;
+        const a = luminance(raster.data, dst) / 255, b = luminance(image.rgba, src) / 255, d = a - b;
+        rawError += Math.abs(d); error += w * Math.abs(d); differences[j] += w * d / (scale * scale); sum += w;
+        binaryMatches += Number((a < .5) === (b < .5));
+      }
+    }
+    let coarse = 0;
+    for (const block of [2, 4, 8]) {
+      const width = Math.ceil(size / block), values = new Float64Array(width * width);
+      for (let j = 0; j < differences.length; j++) values[Math.floor(Math.floor(j / size) / block) * width + Math.floor(j % size / block)] += differences[j];
+      coarse += values.reduce((a, b) => a + Math.abs(b), 0);
+    }
+    const count = size * size * scale * scale;
+    return { visual: clamp(1 - (1 - perception) * error / (sum || 1) - perception * coarse / (3 * (sum / (scale * scale) || 1)), 0, 1), weighted: 1 - error / (sum || 1), raw: 1 - rawError / count, binary: binaryMatches / count, scale, metric: 'luminance-MAE' };
+  }
+  function resizeRaster(raster, factor) {
+    const width = Math.max(1, Math.round(raster.width * factor)), data = new Uint8ClampedArray(width * width * 4), step = raster.width / width;
+    for (let y = 0; y < width; y++) for (let x = 0; x < width; x++) {
+      const totals = [0, 0, 0]; let sum = 0;
+      for (let sy = Math.floor(y * step); sy < (y + 1) * step; sy++) for (let sx = Math.floor(x * step); sx < (x + 1) * step; sx++) {
+        const weight = (Math.min(sy + 1, (y + 1) * step) - Math.max(sy, y * step)) * (Math.min(sx + 1, (x + 1) * step) - Math.max(sx, x * step));
+        const j = (sy * raster.width + sx) * 4; for (let k = 0; k < 3; k++) totals[k] += weight * raster.data[j + k]; sum += weight;
+      }
+      const j = (y * width + x) * 4; for (let k = 0; k < 3; k++) data[j + k] = Math.round(totals[k] / sum); data[j + 3] = 255;
+    }
+    return { data, width, height: width };
+  }
+  function blurRaster(raster) {
+    const { width } = raster, temp = new Uint8ClampedArray(raster.data.length), data = new Uint8ClampedArray(raster.data.length);
+    for (const [src, dst, vertical] of [[raster.data, temp, false], [temp, data, true]]) for (let y = 0; y < width; y++) for (let x = 0; x < width; x++) {
+      const j = (y * width + x) * 4;
+      for (let k = 0; k < 3; k++) { let v = 0; for (let d = -1; d <= 1; d++) v += src[((vertical ? clamp(y + d, 0, width - 1) : y) * width + (vertical ? x : clamp(x + d, 0, width - 1))) * 4 + k] * (d === 0 ? 2 : 1); dst[j + k] = Math.round(v / 4); }
+      dst[j + 3] = 255;
+    }
+    return { data, width, height: width };
+  }
+  function candidateSvg(candidate, scale = 8, quiet = 4) {
+    if (!candidate.rendering) return svg(candidate.matrix, candidate.size, scale, quiet);
+    // Pixel-aligned vector runs reproduce the saved PNG, including color and cores.
+    const raster = renderCandidate(candidate, scale, quiet), paths = new Map();
+    for (let y = 0; y < raster.width; y++) for (let x = 0; x < raster.width;) {
+      const j = (y * raster.width + x) * 4, color = Array.from(raster.data.slice(j, j + 3)).map(v => v.toString(16).padStart(2, '0')).join(''); let end = x + 1;
+      while (end < raster.width) { const next = (y * raster.width + end) * 4; if ([0, 1, 2].some(k => raster.data[next + k] !== raster.data[j + k])) break; end++; }
+      if (color !== 'ffffff') { if (!paths.has(color)) paths.set(color, []); paths.get(color).push(`M${x},${y}h${end - x}v1h-${end - x}z`); } x = end;
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${raster.width}" height="${raster.height}" viewBox="0 0 ${raster.width} ${raster.height}" shape-rendering="crispEdges"><rect width="${raster.width}" height="${raster.height}" fill="#fff"/>${[...paths].map(([color, commands]) => `<path fill="#${color}" d="${commands.join('')}"/>`).join('')}</svg>`;
   }
   function maskBit(mask, r, c) {
     return [() => (r + c) % 2 === 0, () => r % 2 === 0, () => c % 3 === 0, () => (r + c) % 3 === 0, () => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0, () => (r * c) % 2 + (r * c) % 3 === 0, () => ((r * c) % 2 + (r * c) % 3) % 2 === 0, () => ((r + c) % 2 + (r * c) % 3) % 2 === 0][mask]();
@@ -672,15 +774,27 @@
     const zeroWeightOK = target.weights.every((w, j) => w > 0 || variant.matrix[j] === original.matrix[j]);
     const blocks = rsReport(canonical, reference, symbol, ecc, mask).map(b => ({ ...b, budget: wordBudget(b.eccWords, fraction) }));
     const withinBudget = blocks.every(b => b.errors <= b.budget && b.remaining >= 1);
+    let renderingOK = true;
+    if (variant.rendering) {
+      const r = variant.rendering, expected = artworkImage(target, size), allowed = artworkEditable(original, model, target);
+      renderingOK = ['image-mono', 'image-color'].includes(r.mode) && [.375, .5, .625, .75, .875].includes(r.core) && r.image?.size === size * 3 && r.image.rgba?.length === expected.rgba.length && r.image.rgba.every((v, j) => v === expected.rgba[j]) && r.editable?.length === allowed.length && r.editable.every((v, j) => v === allowed[j]);
+    }
     const changedModules = canonical.reduce((sum, v, j) => sum + Number(v !== reference[j]), 0), scans = [];
     let moduleReloadDiff = 0;
-    if (samePayload && structuralOK && absolute && zeroWeightOK && withinBudget) for (const scale of [2, 4, 8]) {
-      const raster = renderRGBA(variant.matrix, size, scale, 4), decoded = jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' });
+    if (samePayload && structuralOK && absolute && zeroWeightOK && withinBudget && renderingOK) for (const scale of variant.rendering ? [4, 8, 12] : [2, 4, 8]) {
+      const raster = renderCandidate(variant, scale, 4), decoded = jsQR(raster.data, raster.width, raster.height, { inversionAttempts: 'dontInvert' });
       moduleReloadDiff += reloadModules(raster, size).reduce((sum, v, j) => sum + Number(v !== variant.matrix[j]), 0);
       scans.push({ scale, quiet: 4, ok: !!decoded && decoded.binaryData.length === bytes.length && decoded.binaryData.every((b, i) => b === bytes[i]) });
     }
-    const decodeOK = scans.length === 3 && scans.every(s => s.ok);
-    return { ok: samePayload && sameShape && structuralOK && absolute && zeroWeightOK && withinBudget && decodeOK && !moduleReloadDiff, samePayload, sameShape, structuralOK, absolute, zeroWeightOK, withinBudget, decodeOK, moduleReloadDiff, changedModules, scans, blocks };
+    if (variant.rendering && scans.length === 3 && scans.every(s => s.ok)) {
+      const raster = renderCandidate(variant, 8, 4);
+      for (const [transform, image] of [['area-downsample-50%', resizeRaster(raster, .5)], ['blur-3x3', blurRaster(raster)]]) {
+        const decoded = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
+        scans.push({ transform, width: image.width, ok: !!decoded && decoded.binaryData.length === bytes.length && decoded.binaryData.every((b, i) => b === bytes[i]) });
+      }
+    }
+    const decodeOK = scans.length === (variant.rendering ? 5 : 3) && scans.every(s => s.ok);
+    return { ok: samePayload && sameShape && structuralOK && absolute && zeroWeightOK && withinBudget && renderingOK && decodeOK && !moduleReloadDiff, samePayload, sameShape, structuralOK, absolute, zeroWeightOK, withinBudget, renderingOK, decodeOK, moduleReloadDiff, changedModules, scans, blocks };
   }
   async function makeArtistic(original, model, target, options = {}) {
     const fraction = artworkBudget(options.budget), perception = options.perception ?? .35;
@@ -731,6 +845,36 @@
     }
     return { variant: null, reason: attempts ? '加工量を減らしても読み取り検証を通る改善版が見つかりませんでした。正規版を保存できます。' : '指定と訂正余力の範囲内では、さらに絵へ近づけられるマスがありませんでした。正規版を保存できます。' };
   }
+  async function makeArtwork(original, model, target, options = {}) {
+    const mode = options.mode || 'modules';
+    if (!['modules', 'auto', 'image-mono', 'image-color'].includes(mode)) throw new Error('加工モードが不正です。');
+    const regularArt = await makeArtistic(original, model, target, options);
+    if (mode === 'modules') return regularArt;
+    const perception = options.perception ?? .35, budget = artworkBudget(options.budget), baseline = renderedMetrics(original, target, perception), editable = artworkEditable(original, model, target), image = artworkImage(target, original.size);
+    let best = regularArt.variant ? { ...regularArt.variant, renderMetrics: renderedMetrics(regularArt.variant, target, perception) } : null, trials = 0;
+    // Also try the undamaged matrix: a recognisable image need not spend RS words.
+    const bases = [regularArt.variant, original].filter(Boolean);
+    for (const base of bases) {
+      const modes = mode === 'auto' ? ['image-color', 'image-mono'] : [mode];
+      let accepted = false;
+      for (const style of modes) {
+        for (const core of [.375, .5, .625, .75, .875]) {
+          const variant = { ...base, bytes: original.bytes.slice(), matrix: base.matrix.slice(), metrics: base.metrics || new Loss(base.matrix, target.bits, target.weights, original.size, perception).metrics(), text: text.decode(original.bytes), kind: 'artistic', budget, rendering: { mode: style, core, editable, image } };
+          const validation = verifyArtistic(variant, original, model, target, budget); trials++;
+          if (validation.ok) {
+            variant.validation = validation; variant.renderMetrics = renderedMetrics(variant, target, perception);
+            variant.changedModules = validation.changedModules; variant.changedWords = validation.blocks.reduce((sum, b) => sum + b.errors, 0);
+            if ((!best || variant.renderMetrics.visual > best.renderMetrics.visual + 1e-10) && variant.renderMetrics.visual > baseline.visual + 1e-10) best = variant;
+            accepted = true; break;
+          }
+          await tick();
+        }
+        if (accepted) break;
+      }
+    }
+    if (best && best.renderMetrics.visual > baseline.visual + 1e-10) return { variant: { ...best, renderingTrials: trials }, reason: best.rendering ? '' : '画像を残す描画では検証を通る改善版が見つからず、マス単位の加工版を表示しています。' };
+    return { variant: null, reason: regularArt.reason || '描画を調整しても読み取り検証を通る改善版が見つかりませんでした。正規版を保存できます。' };
+  }
   function svg(matrix, size, scale = 8, quiet = 4) {
     integer(scale, 1, 32, '1マスのピクセル数'); integer(quiet, 4, 32, '余白');
     const total = size + quiet * 2, paths = [];
@@ -753,7 +897,7 @@
     return out;
   }
   function normalizeSettings(input = {}) {
-    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, adaptiveCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, artistic: false, artisticBudget: .7, ...input };
+    const s = { encoding: 'byte', ecc: 'M', masks: 'all', version: 'auto', versionMin: 1, versionMax: 40, compareVersions: false, rotations: [0], passes: 3, reserve: 8, samples: 64, candidates: 6, seconds: 20, seed: 1, perception: .35, fullCharset: true, adaptiveCharset: true, autoLength: false, lengthTrials: 12, coarsePoints: 6, refineRadius: 2, artistic: false, artisticBudget: .7, artisticMode: 'modules', ...input };
     if (!['byte', 'numeric'].includes(s.encoding)) throw new Error('符号化方式が不正です。');
     if (!eccInfo(s.ecc)) throw new Error('誤り訂正レベルが不正です。');
     s.versionMin = integer(s.versionMin, 1, 40, '最小Version'); s.versionMax = integer(s.versionMax, s.versionMin, 40, '最大Version');
@@ -764,6 +908,7 @@
     s.rotations = [...new Set(s.rotations.map(x => integer(x, 0, 3, '回転')))];
     s.perception = Number(s.perception); if (!Number.isFinite(s.perception) || s.perception < 0 || s.perception > 1) throw new Error('濃淡の評価割合が不正です。');
     s.artisticBudget = artworkBudget(s.artisticBudget);
+    if (!['modules', 'auto', 'image-mono', 'image-color'].includes(s.artisticMode)) throw new Error('加工モードが不正です。');
     s.seed = Number(s.seed) | 0; return s;
   }
   async function search(options, report = () => {}) {
@@ -866,10 +1011,11 @@
       const validation = verify(candidate, model, target);
       if (!validation.ok) { rejected++; continue; }
       candidate.validation = validation; candidate.text = text.decode(candidate.bytes);
+      if (settings.artistic && settings.artisticMode !== 'modules') candidate.renderMetrics = renderedMetrics(candidate, target, settings.perception);
       if (settings.artistic) {
         artisticTested++;
         report({ stage: 'artistic', message: `候補${candidates.length + 1}の加工版を作成し、元の文字列に読み取れるか検証しています。` }); await tick();
-        try { const art = await makeArtistic(candidate, model, target, { budget: settings.artisticBudget, perception: settings.perception }); candidate.artistic = art.variant; candidate.artisticNote = art.reason; }
+        try { const art = await makeArtwork(candidate, model, target, { mode: settings.artisticMode, budget: settings.artisticBudget, perception: settings.perception }); candidate.artistic = art.variant; candidate.artisticNote = art.reason; }
         catch (e) { candidate.artistic = null; candidate.artisticNote = `加工版を作成できませんでした: ${e.message} 正規版は保存できます。`; }
       }
       candidates.push(candidate);
@@ -877,9 +1023,9 @@
       await tick();
     }
     if (!candidates.length) throw new Error(infeasible && !solved ? '今回の探索では絶対黒白指定を満たす解が見つかりませんでした。時間・マスク・Version・可変長の範囲を広げるか、指定を見直してください。指定は保持されています。' : failures[0] || '指定を満たし、独立した読み取り検証にも合格する候補が見つかりませんでした。探索時間や範囲を広げてください。');
-    const finalMetrics = c => c.artistic?.validation.ok ? c.artistic.metrics : c.metrics;
+    const finalMetrics = c => c.artistic?.validation.ok ? c.artistic.renderMetrics || c.artistic.metrics : c.renderMetrics || c.metrics;
     candidates.sort((a, b) => finalMetrics(b).visual - finalMetrics(a).visual || finalMetrics(b).weighted - finalMetrics(a).weighted || b.metrics.visual - a.metrics.visual);
     return { candidates: candidates.slice(0, settings.candidates), stats: { seconds: (now() - started) / 1000, searchSeconds, budgetSeconds: settings.seconds, timedOut, attempted, solved, infeasible, rejected, artisticTested, lengthsPlanned: queue.length, baselineBest: Number.isFinite(baselineBest) ? baselineBest : null, greedyBest: Number.isFinite(greedyBest) ? greedyBest : null, failures: [...new Set(failures)].slice(0, 8) }, settings };
   }
-  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, byteSubspace, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, reloadModules, maskBit, rsReport, verify, verifyArtistic, makeArtistic, svg, lengthPlan, normalizeSettings, search };
+  return { URLSAFE, analyzeCharset, allowedBytes, makeModel, encode, applyX, payloadOK, payloadBits, maxVariableLength, blockLayout, placement, gfMul, rsRemainder, buildMapping, predict, rotate, orient, byteSubspace, LinearSystem, hardSystem, greedy, Loss, projectField, projectHard, renderRGBA, renderCandidate, renderedMetrics, resizeRaster, blurRaster, candidateSvg, reloadModules, maskBit, rsReport, verify, verifyArtistic, makeArtistic, makeArtwork, svg, lengthPlan, normalizeSettings, search };
 });

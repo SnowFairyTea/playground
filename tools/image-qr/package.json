@@ -7,6 +7,7 @@
     "benchmark:numeric": "node benchmark-numeric.cjs",
     "benchmark:artistic": "node benchmark-artistic.cjs",
     "benchmark:completion": "node benchmark-completion.cjs",
+    "benchmark:picture": "node benchmark-picture.cjs",
     "test:browser": "node browser-smoke.cjs"
   },
   "devDependencies": {

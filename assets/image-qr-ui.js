@@ -8,7 +8,7 @@
     bits: null, worker: null, workerURL: null, workerReject: null, busy: false, request: 0, revision: 0, candidates: [], selected: null, analyses: [], disabled: new Map()
   };
   const imageFields = ['fit-mode', 'threshold', 'contrast', 'brightness', 'image-zoom', 'outside-level', 'image-offset-x', 'image-offset-y', 'gray-method', 'crop-x', 'crop-y', 'crop-w', 'crop-h', 'target-safe-inset', 'invert-target', 'image-smoothing', 'avoid-corner-patterns'];
-  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'adaptive-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed', 'make-artistic', 'artistic-budget'];
+  const settingFields = ['encoding', 'version', 'ecc', 'mask', 'search-seconds', 'perception', 'rotation', 'full-charset', 'adaptive-charset', 'auto-length', 'compare-versions', 'version-min', 'version-max', 'length-trials', 'coarse-points', 'soft-passes', 'reserve-free', 'null-samples', 'candidate-count', 'optimizer-seed', 'make-artistic', 'artistic-budget', 'artistic-mode'];
   const number = id => Number($(id).value);
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const percent = value => value == null ? '対象なし' : (value * 100).toFixed(1) + '%';
@@ -17,7 +17,7 @@
   function settings() {
     return E.normalizeSettings({
       encoding: $('encoding').value,
-      artistic: $('make-artistic').checked, artisticBudget: number('artistic-budget'),
+      artistic: $('make-artistic').checked, artisticBudget: number('artistic-budget'), artisticMode: $('artistic-mode').value,
       version: $('version').value, ecc: $('ecc').value, masks: $('mask').value,
       versionMin: number('version-min'), versionMax: number('version-max'), compareVersions: $('compare-versions').checked,
       rotations: $('rotation').value === 'all' ? [0, 1, 2, 3] : [Number($('rotation').value)],
@@ -89,8 +89,8 @@
     for (const id of imageFields) if ($(id).type === 'number' && (!$(id).checkValidity() || !Number.isFinite(number(id)))) throw new Error('画像の変換値を確認してください。');
     return Object.fromEntries(imageFields.map(id => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).type === 'number' ? number(id) : $(id).value]));
   }
-  function sourceBits(size) {
-    if (!state.source) return new Uint8Array(size * size);
+  function sourceBits(size, moduleSize = size, image = false) {
+    if (!state.source) return image ? { size, rgba: new Uint8ClampedArray(size * size * 4).fill(255) } : new Uint8Array(size * size);
     const p = imageParameters(), canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
     const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.imageSmoothingEnabled = p['image-smoothing']; ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = `rgb(${p['outside-level']},${p['outside-level']},${p['outside-level']})`; ctx.fillRect(0, 0, size, size);
@@ -98,12 +98,19 @@
     const sx = width * p['crop-x'] / 100, sy = height * p['crop-y'] / 100, sw = width * Math.min(p['crop-w'], 100 - p['crop-x']) / 100, sh = height * Math.min(p['crop-h'], 100 - p['crop-y']) / 100;
     if (sw <= 0 || sh <= 0) throw new Error('切り出し範囲が画像の外になっています。');
     const safe = p['avoid-corner-patterns'], fit = safe ? 'contain' : p['fit-mode'];
-    const zoom = Math.min(p['image-zoom'] / 100, safe ? Math.max(1, size - p['target-safe-inset'] * 2) / size : Infinity);
+    const zoom = Math.min(p['image-zoom'] / 100, safe ? Math.max(1, moduleSize - p['target-safe-inset'] * 2) / moduleSize : Infinity);
     let dw = size * zoom, dh = size * zoom;
     if (fit !== 'stretch') { const ratio = fit === 'cover' ? Math.max(size / sw, size / sh) : Math.min(size / sw, size / sh); dw = sw * ratio * zoom; dh = sh * ratio * zoom; }
     const dx = (size - dw) / 2 + (safe ? 0 : p['image-offset-x'] * size / state.size), dy = (size - dh) / 2 + (safe ? 0 : p['image-offset-y'] * size / state.size);
     ctx.drawImage(state.source, sx, sy, sw, sh, dx, dy, dw, dh);
     const rgba = ctx.getImageData(0, 0, size, size).data, bits = new Uint8Array(size * size);
+    if (image) {
+      for (let j = 0; j < rgba.length; j += 4) {
+        for (let k = 0; k < 3; k++) { let value = Math.max(0, Math.min(255, (rgba[j + k] - 128) * p.contrast + 128 + p.brightness)); if (p['invert-target']) value = 255 - value; rgba[j + k] = Math.round(value); }
+        rgba[j + 3] = 255;
+      }
+      return { size, rgba };
+    }
     for (let j = 0; j < bits.length; j++) {
       const r = rgba[j * 4], g = rgba[j * 4 + 1], b = rgba[j * 4 + 2];
       let v = p['gray-method'] === 'average' ? (r + g + b) / 3 : p['gray-method'] === 'max' ? Math.max(r, g, b) : .2126 * r + .7152 * g + .0722 * b;
@@ -112,10 +119,18 @@
     }
     return bits;
   }
-  function targetAt(size) {
+  function targetAt(size, includeImage = false) {
     const bits = sourceBits(size), soft = E.projectField(state.soft, state.size, size);
     for (let j = 0; j < bits.length; j++) if (soft[j] >= 0) bits[j] = soft[j];
-    return { size, bits, weights: E.projectField(state.weights, state.size, size), hard: E.projectHard(state.hard, state.size, size) };
+    const target = { size, bits, weights: E.projectField(state.weights, state.size, size), hard: E.projectHard(state.hard, state.size, size) };
+    if (includeImage) {
+      target.image = sourceBits(size * 3, size, true);
+      for (let j = 0; j < soft.length; j++) if (soft[j] >= 0) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+        const p = ((Math.floor(j / size) * 3 + y) * target.image.size + j % size * 3 + x) * 4;
+        target.image.rgba[p] = target.image.rgba[p + 1] = target.image.rgba[p + 2] = soft[j] ? 0 : 255;
+      }
+    }
+    return target;
   }
   function refreshTarget() {
     try {
@@ -139,9 +154,15 @@
     const canvas = $('paint-canvas'), overlay = $('selection-canvas'), size = state.size, scale = Math.max(3, Math.min(12, Math.floor(640 / size)));
     canvas.width = canvas.height = overlay.width = overlay.height = size * scale; canvas.dataset.scale = scale;
     const ctx = canvas.getContext('2d');
+    const showSource = state.source && $('preview-source').checked;
+    if (showSource) {
+      const image = sourceBits(size * 3, size, true), sourceCanvas = document.createElement('canvas'); sourceCanvas.width = sourceCanvas.height = image.size;
+      sourceCanvas.getContext('2d').putImageData(new ImageData(image.rgba, image.size, image.size), 0, 0);
+      ctx.imageSmoothingEnabled = false; ctx.drawImage(sourceCanvas, 0, 0, size * scale, size * scale);
+    }
     for (let j = 0; j < size * size; j++) {
       const x = (j % size) * scale, y = Math.floor(j / size) * scale;
-      ctx.fillStyle = state.bits?.[j] ? '#000' : '#fff'; ctx.fillRect(x, y, scale, scale);
+      if (!showSource || state.soft[j] >= 0) { ctx.fillStyle = state.bits?.[j] ? '#000' : '#fff'; ctx.fillRect(x, y, scale, scale); }
       if (state.weights[j] !== 1) { ctx.fillStyle = `rgba(34,197,94,${.12 + (1 - state.weights[j]) * .25})`; ctx.fillRect(x, y, scale, scale); }
       if (state.hard[j] >= 0) { ctx.strokeStyle = state.hard[j] ? '#ef4444' : '#3b82f6'; ctx.lineWidth = Math.max(1, scale * .18); ctx.strokeRect(x + .5, y + .5, scale - 1, scale - 1); }
     }
@@ -222,8 +243,8 @@
       state.worker.postMessage({ id, type, input });
     });
   }
-  function drawResult(canvas, candidate, scale = 5, quiet = 4) {
-    const raster = E.renderRGBA(candidate.matrix, candidate.size, scale, quiet); canvas.width = raster.width; canvas.height = raster.height;
+  function drawResult(canvas, candidate, scale = 8, quiet = 4) {
+    const raster = E.renderCandidate(candidate, scale, quiet); canvas.width = raster.width; canvas.height = raster.height;
     canvas.getContext('2d').putImageData(new ImageData(raster.data, raster.width, raster.height), 0, 0);
     return raster;
   }
@@ -241,10 +262,11 @@
     $('artistic-image').hidden = $('artistic-badge').hidden = $('artistic-export-controls').hidden = !available;
     if (available) {
       drawResult($('artistic-canvas'), a);
-      const gain = (100 * (a.metrics.raw - c.metrics.raw)).toFixed(1), signedGain = Number(gain) >= 0 ? '+' + gain : gain;
-      $('artistic-summary').textContent = `画素一致 ${percent(a.metrics.raw)}（正規版から ${signedGain}ポイント） · 黒領域の再現 ${percent(a.metrics.blackRecall)} · 背景への黒混入 ${percent(a.metrics.backgroundBlack)}`;
+      const metric = a.renderMetrics || a.metrics, baseMetric = c.renderMetrics || c.metrics, gain = (100 * (metric.raw - baseMetric.raw)).toFixed(1), signedGain = Number(gain) >= 0 ? '+' + gain : gain;
+      const label = a.renderMetrics ? '画像の濃淡一致' : '画素一致', style = a.rendering ? `${a.rendering.mode === 'image-color' ? 'カラー画像' : '白黒画像'}・中央の幅 ${a.rendering.core * 100}%` : 'マス単位の加工';
+      $('artistic-summary').textContent = `${style} · ${label} ${percent(metric.raw)}（正規版から ${signedGain}ポイント） · ${a.rendering ? '中央のマス一致 ' + percent(a.metrics.raw) : '黒領域の再現 ' + percent(a.metrics.blackRecall)}${c.artisticNote ? ' · ' + c.artisticNote : ''}`;
       const checks = a.validation;
-      $('artistic-details').innerHTML = `<p class="qr-note">${a.changedModules}マス・${a.changedWords}語を変更。1マス2 / 4 / 8px、白い余白4マスで、すべて元の文字列に復号できました。四隅などの構造と絶対指定は保持しています。</p><table><thead><tr><th>ブロック</th><th>変更した語</th><th>加工の上限</th><th>残る訂正余力</th></tr></thead><tbody>${checks.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.budget}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
+      $('artistic-details').innerHTML = `<p class="qr-note">${a.changedModules}マス・${a.changedWords}語を変更。${a.rendering ? '1マス4 / 8 / 12px、8px画像の50%縮小と3×3ぼかし' : '1マス2 / 4 / 8px'}、白い余白4マスで、すべて元の文字列に復号できました。構造・余りビット・絶対指定・重要度0のマスは、マス全体を保持しています。</p>${a.renderMetrics ? '<p class="qr-note">濃淡一致は、余白を除いた完成画像と目標画像の明るさの平均差から求めます。位置検出などの構造も含む、1マス8pxでの測定です。</p>' : ''}${a.rendering ? '<p class="qr-note">訂正語数と余力は中央のマスについての理論値です。周囲の画像による読み取りへの影響は、上記の画像復号で確認しています。</p>' : ''}<table><thead><tr><th>ブロック</th><th>変更した語</th><th>加工の上限</th><th>残る訂正余力</th></tr></thead><tbody>${checks.blocks.map((b, i) => `<tr><td>${i + 1}</td><td>${b.errors}</td><td>${b.budget}</td><td>${b.remaining}</td></tr>`).join('')}</tbody></table>`;
     } else $('artistic-summary').textContent = c.artisticNote || '';
   }
   async function generate() {
@@ -255,7 +277,7 @@
       if (!state.source && !state.soft.some(v => v >= 0) && !state.hard.some(v => v >= 0)) throw new Error('元画像を選ぶか、目標の黒白領域を指定してください。');
       const config = settings(), targets = {};
       const first = config.version === 'auto' ? config.versionMin : config.version, last = config.version === 'auto' ? config.versionMax : config.version;
-      for (let version = first; version <= last; version++) { try { targets[version] = targetAt(version * 4 + 17); } catch (e) { targets[version] = { error: e.message }; } }
+      for (let version = first; version <= last; version++) { try { targets[version] = targetAt(version * 4 + 17, config.artistic && config.artisticMode !== 'modules'); } catch (e) { targets[version] = { error: e.message }; } }
       const input = { segments: structuredClone(state.segments), settings: config, targets }, revision = state.revision;
       busy(true); status('画像に近いQRコードを探索しています。'); $('export-controls').hidden = true; $('validation-badge').hidden = true; $('artistic-section').hidden = true;
       const task = runWorker('search', input, p => { status(p.message); if (p.candidate) { drawResult($('result-canvas'), p.candidate); $('result-summary').textContent = `探索中 · スコア ${score(p.candidate.metrics.visual)}（最終検証前）`; } });
@@ -263,7 +285,7 @@
       const result = await task;
       if (revision !== state.revision) return;
       state.candidates = result.candidates; const container = $('candidates'); container.replaceChildren();
-      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'), completed = c.artistic?.validation.ok ? c.artistic : c; drawResult(canvas, completed, 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · ${completed === c ? '正規版' : '加工版'} · 画素一致 ${percent(completed.metrics.raw)} · スコア ${score(completed.metrics.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
+      result.candidates.forEach((c, i) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'qr-candidate'; button.setAttribute('aria-pressed', 'false'); const canvas = document.createElement('canvas'), completed = c.artistic?.validation.ok ? c.artistic : c, metric = completed.renderMetrics || completed.metrics; drawResult(canvas, completed, completed.rendering ? 8 : 3); const caption = document.createElement('span'); caption.textContent = `候補 ${i + 1} · ${completed === c ? '正規版' : '加工版'} · ${completed.renderMetrics ? '濃淡一致' : '画素一致'} ${percent(metric.raw)} · スコア ${score(metric.visual)} / V${c.version}`; button.append(canvas, caption); button.addEventListener('click', () => selectCandidate(i)); container.appendChild(button); });
       $('candidates-section').hidden = false; selectCandidate(0);
       const s = result.stats; $('search-stats').textContent = `${s.seconds.toFixed(1)}秒 · ${s.attempted}条件を比較${s.artisticTested ? ` · 加工後の${s.artisticTested}候補を検証・比較` : ''} · 絶対指定の解が見つからなかった ${s.infeasible}条件 · 読み取り検証で除外 ${s.rejected}候補${s.timedOut ? ' · 時間の目安に達したため、その時点までの最良候補を表示' : ''}`;
       status(`検証に合格した${result.candidates.length}候補を生成しました。PNG・SVGとして保存できます。${s.failures.length ? '\n探索できなかった条件: ' + s.failures.join(' / ') : ''}`);
@@ -280,7 +302,7 @@
       const actual = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
       const modules = E.reloadModules({ ...raster, data: actual.data }, c.size), decoded = jsQR(actual.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
       if (modules.some((v, j) => v !== c.matrix[j]) || !decoded || decoded.binaryData.length !== c.bytes.length || decoded.binaryData.some((b, i) => b !== c.bytes[i])) throw new Error('この保存サイズでの読み取り検証に失敗しました。1マスのピクセル数を大きくしてください。');
-      const blob = kind === 'svg' ? new Blob([E.svg(c.matrix, c.size, scale, quiet)], { type: 'image/svg+xml' }) : await new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('PNGを作成できませんでした。')), 'image/png'));
+      const blob = kind === 'svg' ? new Blob([E.candidateSvg(c, scale, quiet)], { type: 'image/svg+xml' }) : await new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('PNGを作成できませんでした。')), 'image/png'));
       download(blob, `image-qr${artistic ? '-artistic' : ''}-v${c.version}-m${c.mask}.${kind}`); status(`${artistic ? '加工版' : '正規版'}${kind.toUpperCase()}を保存しました。読み取り文字列も検証済みです。`);
     } catch (e) { status(e.message, true); }
   }
@@ -296,6 +318,7 @@
   $('clear-absolute').addEventListener('click', () => { state.hard.fill(-1); invalidate(); refreshTarget(); });
   $('clear-soft').addEventListener('click', () => { state.soft.fill(-1); invalidate(); refreshTarget(); });
   $('reset-weights').addEventListener('click', () => { state.weights.fill(1); invalidate(); refreshTarget(); });
+  $('preview-source').addEventListener('change', drawTarget);
   for (const button of root.querySelectorAll('.radius-preset')) button.addEventListener('click', () => { $('brush-radius').value = button.dataset.radius; $('region-shape').value = 'brush'; });
   for (const id of [...imageFields, ...settingFields]) $(id).addEventListener('change', () => { if (id === 'encoding') { state.analyses = []; state.segments.forEach(s => { s.affineChoice = 'auto'; }); renderSegments(); } invalidate(); refreshTarget(); });
   $('prepare-numeric').addEventListener('click', () => {

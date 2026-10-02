@@ -145,6 +145,8 @@ test('regular and artistic results have separate downloads with the same URL, an
   const app = application(), { w, d, set } = app;
   assert.equal(d.getElementById('encoding').value, 'byte'); assert.equal(d.getElementById('segment-1-length').value, '128');
   assert.equal(d.getElementById('adaptive-charset').checked, true);
+  assert.equal(d.getElementById('artistic-mode').value, 'auto');
+  set('artistic-mode', 'modules');
   set('segment-0-text', 'https://example.com/p?q='); set('segment-1-length', 6); set('segment-1-allowed', 'ABCdef-12');
   set('version', 5); set('mask', 3); set('candidate-count', 1); set('search-seconds', 1);
   set('brush-mode', 'soft-white'); d.getElementById('apply-all').click();
@@ -174,5 +176,24 @@ test('regular and artistic results have separate downloads with the same URL, an
   set('segment-0-text', 'https://example.com/changed?q=');
   assert.equal(d.getElementById('export-controls').hidden, true); assert.equal(d.getElementById('artistic-section').hidden, true);
   set('adaptive-charset', false);
+  assert.deepEqual(app.errors, []); app.dom.window.close();
+});
+
+test('picture controls send the edited high-resolution image and keep the URL and painting unchanged', async () => {
+  const app = application(), { w, d, set } = app;
+  set('segment-0-text', 'https://example.com/full#固定'); d.getElementById('segments').lastElementChild.querySelector('[data-action="delete"]').click();
+  set('version', 5); set('mask', 2); set('candidate-count', 1); set('search-seconds', 1);
+  set('brush-mode', 'soft-black'); set('region-shape', 'brush'); set('brush-radius', 3);
+  d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerdown', { clientX: 230, clientY: 230, bubbles: true }));
+  d.getElementById('paint-canvas').dispatchEvent(new w.MouseEvent('pointerup', { clientX: 230, clientY: 230, bubbles: true }));
+  set('artistic-mode', 'image-mono'); set('artistic-budget', 0);
+  const before = w.ImageQrApp.snapshot(); await w.ImageQrApp.generate(); assert.deepEqual(w.ImageQrApp.snapshot(), before);
+  const input = app.requests.find(r => r.type === 'search').input, target = input.targets[5];
+  assert.equal(input.settings.artisticMode, 'image-mono'); assert.equal(input.settings.artisticBudget, 0); assert.equal(target.image.size, 37 * 3);
+  assert(target.image.rgba.some((v, j) => j % 4 !== 3 && v === 0));
+  assert.match(d.getElementById('artistic-summary').textContent, /白黒画像.*濃淡一致/);
+  assert.equal(d.getElementById('artistic-export-controls').hidden, false);
+  assert.equal(d.getElementById('result-text').value, 'https://example.com/full#固定');
+  set('artistic-mode', 'modules'); assert.equal(d.getElementById('artistic-section').hidden, true);
   assert.deepEqual(app.errors, []); app.dom.window.close();
 });
